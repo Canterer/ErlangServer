@@ -1,0 +1,102 @@
+rpc:abcast(Nodes, NamedProc, Msg)
+net_adm:ping(Node)
+
+gen_server:call	//同步RPC调用，一般不带Node，处理本地进程通信
+rpc:call		//异步RPC调用
+
+gen_server:cast和erlang:send()都可以向指定进程发消息。
+区别gen_server:cast内部调用的就是erlang:send，消息为{'$gen_cast',Request}，但是加上了
+no_connect。如果没有连上，那么返回false
+
+gen_server远程call一个节点方法的过程： empd的概念及其相关过程。
+
+gen_server:call({Name,Node},Request)可以调用远程节点的进程
+rpc:call(Node,Module,Function,Args)也可以调用远程节点的进程。
+两者区别：rpc:call是调用远程节点的rex进程来处理的，内部也是调用gen_server:call，不过其中Name为rex进程。
+
+erlang:apply
+erlang:element(N, Tuple)	 该方法返回元组中的第Nth元素
+
+timer:sleep	用于使当前进程休眠指定的毫秒数
+
+supervisor:start_child
+
+erlang:send_after、erlang:start_time的区别
+
+
+string:tokens()//指定字符分割关键字
+string:str
+
+ets:delete_all_objects()//删除所有数据
+ets:match()
+
+erlang内置函数即erlang:xxx()
+node()、nodes()
+atom_to_list()
+
+lists列表相关
+lists:foreach(Func,DataList)
+lists:foldl(Func, Acc0, List)//Func :: fun((Elem :: T, AccIn) -> AccOut)
+lists:foldr(Func, Acc0, List)//从列表尾取数据
+lists:filter(Func, List)Func(Elem)返回bool值来确定是否筛选原列表
+lists:map(Func, List)Func(A)返回B
+lists:delete(Elem, List)//删除第一个匹配Elem的元素，返回删除之后的列表
+lists:duplicate(N, Elem)//返回由N个Elem组成的列表
+lists:prefix(List1,List2)//List1是否为List2的前缀
+
+lists:member(Elem, List)//查找是否存在该元素
+lists:partition(Pred,List)->{List1,List2}//通过Pred函数接受每个元素返回true放入List1，否则反之。
+lists:zipwith(Fun, List1, List2)//Func接受两个列表中的元素，并返回新元素作为合并之后列表的元素
+
+列表里的元素是元组
+lists:keymap(Fun,N,TupleList)//对tupleList中的每个元素的第N项作为参数在Fun中处理并替换成返回值
+lists:keyfind(Key,N,TupleList)->Tuple|false//查找匹配的tuple，其中第N个元素和key一样。
+lists:keyreplace(Key, N, TupleList,NewTuple)->NewTupleList//查找匹配的tuple并替换
+
+
+mnesia数据库相关
+create_schema(NodeList)在NodeList里的所有节点上都初始化一个新的Mnesia数据库
+start()启动数据库
+create_table(xxx_tableID, [{attributes, record_info(fields, xxx_record)}])创建xxx_tabID表
+table(xxx_tableID)返回表的数据
+
+//自定义函数
+do(Q)->
+   F = fun() -> qlc:e(Q) end
+   {atomic, Val} = mnesia:transaction(F).
+   Val.
+
+do(qlc:q( [X||X<-mnesia:table(xxx_tableID) )
+qlc:q 把查询编译成一种用于查询数据库的内部格式，编译后的查询传递给do函数
+
+do(qlc:q( [ {X#xxx_record.itemA, X#xxx_record.itemB} || X<-mnesia:table(xxx_tableID) )从表中选择itemA和itemB列
+
+Row = #xxx_tableID{itemA=A1,itemB=B1},
+F = fun()-> mnesia:write(Row) end,
+mnesia:transaction(F)创建一个记录并插入表中
+
+Oid = {xxx_tableID, Item},
+F = fun()-> mnesia:delete(Oid) end,
+mnesia:transaction(F)
+事务transaction能限制并发访问，以及屏蔽错误操作
+对mnesia:write和mnesia:delete的调用应该只出现在事务transaction中
+
+mnesia:system_info()
+	system_info(tables) This argument returns a list of all locally known tables
+	system_info(is_running) 
+	system_info(db_nodes) This argument returns the nodes which make up the persistent database.
+
+mnesia:wait_for_tables()
+Some applications need to wait for certain tables to be accessible in order to do useful work
+
+mnesia的脏操作，有时在事务的范围以外而且没有设置任何锁来执行一次操作，是可以接受的操作称为脏操作。
+脏操作的速度比在事务中执行的速度快大约十倍，在可以保证表一致性，隔离性，持久性，以及分布式特性，脏操作可以提高程序性能。
+
+mnesia:dirty_read(Tab, Key)返回所有带Key的记录
+mnesia:dirty_index_read(Tab, Key, Attr)
+mnesia:dirty_index_match_object
+mnesia:dirty_delete
+mnesia:dirty_delete_object
+mnesia:dirty_write
+mnesia:wread((Tab, Key)
+注意：dirty_read速度是dirty_index_read速度近三倍。

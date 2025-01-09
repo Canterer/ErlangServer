@@ -1,0 +1,22 @@
+[
+	%%备份数据
+	{dbback, %%引用文件 base_db_master_server
+		[	
+			{output,"../backup/"},
+			{checkinterval,60000}, %% 1 min check
+			{ignortables,[]},
+			{between_hour,{4,5}},
+			{backinterval,86400000}, 
+			{serverbackupdbfile,"zybackup_db"}
+		]
+	},
+	{serverids, %%引用文件 base_db_master_server
+		[1]
+	},
+	{dmp, 
+		[
+			{flush_interval,300000},%%引用文件 base_db_dal_dmp_server
+			{ets_swap_seconds,300}	%%引用文件 base_dp_dmp_util
+		]
+	},
+].

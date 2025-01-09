@@ -1,0 +1,41 @@
+备注：
+
+gm.option里的
+	{nodes,[{gate,['gate1','gate2','gate3','gate4','gate5','gate6']}
+			,{map,['map1','map2','map3','map4','map5','map6','map7','map8'
+			      ,'map9','map10','map11','map12','map13','map14','map_share']}			
+			,{gm,['gm']}
+			,{cross,['cross']}
+			,{chat,['chat1','chat2','chat3','chat4','chat5','chat6']}
+			,{db,['db']}
+			,{dbslave,['dbslave']}
+			,{guild,['guild']}
+			,{line,['line']}
+			,{auth,['auth']}
+			,{timer,['timer']}
+			%%跨服进程
+			,{map_travel,['map_share']}
+			%%{全局唯一的进程,[启动节点]}
+			,{guild_manager,['guild']}
+			,{country_manager,['guild']}
+			,{auth_processor,['auth']}
+			,{line_processor,['line']}
+			,{mailid_generator,['line']}
+			,{petid_generator,['line']}
+			,{roleid_generator,['line']}
+			,{visitor_generator,['line']}
+			,{activity_manager,['map2','map_share']}
+			,{auction_manager,['map1']}
+			,{battle_ground_manager,['map2']}
+			,{guildbattle_manager,['map2']}
+			,{group_manager,['map1']}
+			,{loop_instance_mgr,['map2']}
+			,{db_node,['db']}												%%数据库进程所在节点
+			,{gm_node,['gm']}
+			,{guild_instance_processor,['map2']}
+			]},
+
+{nodes,[{appType,[NodeStr]}]
+	其中启动的node关联运行对应app，启动的时候指定的节点名NodeStr字符串是包含其对于的app字符串的。
+类似role_id_generator,['line']是所属节点line 其中对于的line.app后续创建的
+line节点是中心节点，其它节点通过net_adm:ping连接该节点。
