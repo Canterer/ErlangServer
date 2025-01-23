@@ -1,5 +1,5 @@
 %% Description: TODO: Add description to base_dp_dmp_util
--module(base_dp_dmp_util).
+-module(base_db_dmp_util).
 
 %%
 %% Include files

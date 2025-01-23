@@ -58,7 +58,7 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({query_time}, _From, State) ->
-   Reply = now(),
+   Reply = erlang:system_time(),
    {reply, Reply, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -122,11 +122,11 @@ start_at_app()->
 	put_deviation_seconds(Now).
 	
 get_correct_now()->
-	{A,B,C} = now(),
+	{A,B,C} = erlang:system_time(),
 	{A,B+get_deviation_seconds(),C}.
 
 get_time_of_day()->
-	{A,B,C} = now(),
+	{A,B,C} = erlang:system_time(),
 	{A2,B2,_} = get_server_start_time(),
 	{A - A2,B - B2,C}.
 
@@ -144,7 +144,7 @@ get_server_start_time()->
 
 put_deviation_seconds(OtherTimer)->
 	{A2,B2,_C2} = OtherTimer,
-	{A1,B1,_C1} = now(),
+	{A1,B1,_C1} = erlang:system_time(),
 	Deviation = B2 + A2*1000000 - B1 - A1*1000000,
 	ets:new(?DEVIATION_SECONDS_ETS, [set,public,named_table]),
 	ets:insert(?DEVIATION_SECONDS_ETS, {1,Deviation}),

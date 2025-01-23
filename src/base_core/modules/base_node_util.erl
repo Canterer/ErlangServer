@@ -8,7 +8,9 @@
 %% Exported Functions
 %%
 -export([get_all_nodes/0,get_nodes_without_hidden/0]).
--export([get_node_host/0,get_node_sname/0,get_node_sname_str/0]).
+-export([get_node_host/1,get_node_sname/1,get_node_sname_str/1]).
+-export([get_allowable_nodes/1,get_node_procs/1,check_node_allowable/2]).
+-export([get_dbnode/0,get_linenode/0,check_match_map_and_line/2]).
 %%
 %% API Functions
 %%
@@ -46,9 +48,9 @@ convert_sname_str(Node)->
 	end.
 
 % 使用Fun检测列表中的元素，当检测某个元素为真时立刻返回序号
-check_list(Fun, List)->
+check_list(Fun, List) ->
 	check_list(Fun, List, 1).
-check_list(Fun, [H|T], Index) 
+check_list(Fun, [H|T], Index) ->
 	case Fun(H) of
 		true -> Index;
 		false-> check_list(Fun, T, Index+1)
@@ -73,24 +75,9 @@ check_node_allowable(Key, Node) ->
 	NodeNameStr = get_node_sname_str(Node),
 	check_list(
 		fun(AllowNode) ->
-			NodeNameStr ==:== atom_to_list(AllowNode)
+			NodeNameStr =:= atom_to_list(AllowNode)
 		end
 		, get_allowable_nodes(Key)) > 0.
-
-
-check_snode_match(AllowNodeList,SNode)->
-	% SNodeStr = atom_to_list(SNode),
-	% lists:foldl(fun(Node,Acc)->
-	% 					AllowNodeStr = atom_to_list(Node),
-	% 					case Acc of
-	% 						true-> true;
-	% 						_-> Index = string:str(SNodeStr, AllowNodeStr),
-	% 							if Index>= 1 -> true;
-	% 							   true-> false
-	% 							end
-	% 					end
-	% 			end, false, AllowNodeList).
-	lists:member(get_node_sname(SNode), get_appnodes(AppType)).
 
 get_filter_nodes(Key)->
 	SNodes = get_allowable_nodes(Key),

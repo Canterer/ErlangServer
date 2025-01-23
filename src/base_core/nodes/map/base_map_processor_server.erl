@@ -1,14 +1,4 @@
-%%% -------------------------------------------------------------------
-%%% 9秒社团全球首次开源发布
-%%% http://www.9miao.com
-%%% -------------------------------------------------------------------
-%%% -------------------------------------------------------------------
-%%% Author  : adrian
-%%% Description :
-%%%
-%%% Created : 2010-4-11
-%%% -------------------------------------------------------------------
--module(map_processor).
+-module(base_map_processor_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
@@ -179,15 +169,15 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 					nothing;
 				MapInfo_->
 					MapDataId = map_info_db:get_serverdataname(MapInfo_),
-					map_db:load_map_ext_file(MapDataId,MapDb),
-					map_db:load_map_file(MapDataId,MapDb)
+					base_map_db:load_map_ext_file(MapDataId,MapDb),
+					base_map_db:load_map_file(MapDataId,MapDb)
 			end;
 		_->
 			nothing
 	end,
 	if
 		InstanceId =/=[]->
-			instance_pos_db:reg_instance_pos_to_mnesia(InstanceId,Creation,now(),true,node(),MapProcName,MapId,ProtoId,[]),
+			instance_pos_db:reg_instance_pos_to_mnesia(InstanceId,Creation,erlang:system_time(),true,node(),MapProcName,MapId,ProtoId,[]),
 			put(instanceid,InstanceId),
 			case ProtoInfo of
 				[]->

@@ -49,7 +49,7 @@ start_child(MapProcName,MapId_line,Tag)->
 				  	      		transient,2000,worker,[base_map_processor_server]},
 		supervisor:start_child(?SERVER, AChild)
 	catch
-		E:R-> io:format("can not start map(~p:~p) ~p ~p ~p~n",[E,R,MapProcName,MapId_line,Tag]),
+		E:R-> base_logger_util:msg("can not start map(~p:~p) ~p ~p ~p~n",[E,R,MapProcName,MapId_line,Tag]),
 			  {error,R}
  	end.
 

@@ -88,6 +88,7 @@ line节点
 	
 map节点
 	开启两个服务：manager_processor
+	第一步：
 	通过base_lines_manager:regist_map_manager注册自己，将自身记录在ETS_MAP_MANAGER_DB中
 	并load_map(Node);//Node指map类节点，例如map1节点、map2节点
 	每个map节点开启后，根据id搭配LineID开启processor。
@@ -97,15 +98,24 @@ map节点
 	通过base_lines_manager_server:regist_map_processor({node(), LineId, MapId，MapName})最终通过line_processor:do_regist()注册
 	将相关数据记录在MAP_PROC_DB中。
 
+	第二步：
+	遍历所有的MapInfo，为初次base_map_db:load_map_file(MapDataId，MapDb)
+	其会将maps/map_xxxx文件中的内容加载进MapId_db表中
+
 	每个map节点与一个line_processor相关联，可开启多个map_processor。通过LineId可获取到其关联的多个MapId
 	配置中lines_info 记录了每一个line上对应的map节点名以及其关联的多个MapId。	
 	
 	每个base_map_processor_server初始化后，通过map_db_pprocessor:make_db_name(MapId)。
 	
+	map节点负责开启role_app
 
 base_map_info_db
 	初始化时通过db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid)通过数据库读取至表
 base_map_db
+	base_map_processor_server初始化时使用base_map_db:load_map_file从文件中读取内容写入ets中
 	
 	
+xxx_db.erl 用于管理数据
+xxx_op.erl 用于协议的数据操作接口
+xxx_packet.erl	用于erlang数据封装成包packet，实质依赖login_pb.erl
 

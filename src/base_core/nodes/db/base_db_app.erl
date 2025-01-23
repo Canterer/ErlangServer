@@ -70,7 +70,7 @@ stop(_State) ->
 do_start()->
 	filelib:ensure_dir("../log/"),
 	error_logger:logfile({open, "../log/db_node.log"}),
-	?RELOADER_RUN,
+	% ?RELOADER_RUN,
 	% 仅等待timer节点
 	base_ping_util:wait_node_connect(timer),
 
@@ -83,15 +83,15 @@ do_start()->
 	case base_db_sup:start_master() of
 		{ok, _Pid} ->
 			base_db_tools:wait_for_tables_loop(local,1000,mnesia:system_info(tables)),
-			io:format("---------------------------------------------------------~n"),
-			io:format("2)To generate data input: data_gen:import_config(\"game\").~n"),
-			io:format("3)To backup   data input: db_backup:backup(YourFileName).~n"),
-			io:format("4)To recovery data input: db_backup:recovery(YourFileName).~n"),
-			io:format("5)To recovery data input: data_gen:backup_ext(YourFileName).~n"),
-			io:format("6)To recovery data input: data_gen:recovery_ext(YourFileName).~n"),
-			io:format("7)To recovery data input: combin_server:backup(YourFileName).~n"),
-			io:format("8)To recovery data input: combin_server:recovery(YourFileName).~n"),
-			io:format("---------------------------------------------------------~n");
+			base_logger_util:msg("---------------------------------------------------------~n"),
+			base_logger_util:msg("2)To generate data input: data_gen:import_config(\"game\").~n"),
+			base_logger_util:msg("3)To backup   data input: db_backup:backup(YourFileName).~n"),
+			base_logger_util:msg("4)To recovery data input: db_backup:recovery(YourFileName).~n"),
+			base_logger_util:msg("5)To recovery data input: data_gen:backup_ext(YourFileName).~n"),
+			base_logger_util:msg("6)To recovery data input: data_gen:recovery_ext(YourFileName).~n"),
+			base_logger_util:msg("7)To recovery data input: combin_server:backup(YourFileName).~n"),
+			base_logger_util:msg("8)To recovery data input: combin_server:recovery(YourFileName).~n"),
+			base_logger_util:msg("---------------------------------------------------------~n");
 		Error ->
 			Error
 	end,

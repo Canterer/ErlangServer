@@ -70,7 +70,7 @@ start(_Type, _StartArgs) ->
 			start_map_sup(),
 			start_map_manager_sup(),
 
-			% case node_util:check_snode_match(battle_ground_manager, node()) of
+			% case node_util:check_node_allowable(battle_ground_manager, node()) of
 			% 	true->
 			% 		start_battle_ground_sup(),
 			% 		start_battle_ground_manager_sup();

@@ -9,7 +9,7 @@
 %% Exported Functions
 %%
 
--export([init/0,is_in_global/1,regist_global_proc/2,get_global_proc_node/1,get_all_global_nodes/0]).
+-export([init/0,is_global_proc_registed/1,regist_global_proc/2,get_global_proc_node/1,get_registed_global_procs/0]).
 
 init()->
 	try
@@ -43,7 +43,7 @@ get_global_proc_node(ModuleName)->
 					Node
 			end;
 		ProcNodeList->
-			case lists:keyfind(ModuleName, 1, GlobalNodes) of
+			case lists:keyfind(ModuleName, 1, ProcNodeList) of
 				{_,Node}->
 					Node;
 				_->

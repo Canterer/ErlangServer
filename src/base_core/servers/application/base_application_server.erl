@@ -103,7 +103,7 @@ handle_call({sp_call,M,F,A},_From,State)->
 	try
 		apply(M,F,A)
 	catch
-		E:R-> io:format("~p : ~p~n",[E,R])
+		E:R-> base_logger_util:msg("~p : ~p~n",[E,R])
 	end,
 	Reply = ok,
     {reply, Reply, State};

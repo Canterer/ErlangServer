@@ -5,7 +5,6 @@
 %% Include files
 %% --------------------------------------------------------------------
 -include("common_define.hrl").
--include("little_garden.hrl").
 -define(GAME_MAP_MANAGER,local_map_manager).
 %% --------------------------------------------------------------------
 %% External exports
@@ -81,8 +80,8 @@ init([]) ->
 %%		case ets:info(MapDb) of
 %%			undefined->
 %%				ets:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
-%%				map_db:load_map_ext_file(MapId,MapDb),
-%%				map_db:load_map_file(MapId,MapDb);
+%%				base_map_db:load_map_ext_file(MapId,MapDb),
+%%				base_map_db:load_map_file(MapId,MapDb);
 %%			_->
 %%				nothing
 %%		end end,DefaultLoadMapIDs),

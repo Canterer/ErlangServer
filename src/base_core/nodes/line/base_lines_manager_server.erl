@@ -31,7 +31,7 @@
 	 regist_to_manager/2,
 	 unregist_map_by_node/1,
 	 get_line_map_in_node/1,
-	 get_rolenum_by_mapid/0,
+	 get_role_num_by_mapId/0,
 	 open_dynamic_line/1
 	 ]).
 
@@ -159,7 +159,7 @@ unregist_map_by_node(Node)->
 %% FromProcName: the query process's name
 %% @spec query_line_status(atom(), atom(), ) -> void()
 query_line_status(FromNode, FromProcName, Mapid) ->
-	 :send(?MODULE, {get_role_count_by_map, {FromNode, FromProcName, Mapid}}).
+	base_global_proc_util:send(?MODULE, {get_role_count_by_map, {FromNode, FromProcName, Mapid}}).
 
 get_line_status(MapId)->
 	base_global_proc_util:call(?MODULE, {get_line_status,MapId}).
@@ -187,8 +187,8 @@ get_chat_name()->
 %%
 %%
 %%
-get_rolenum_by_mapid()->
-	base_global_proc_util:call(?MODULE, {get_rolenum_by_mapid}).
+get_role_num_by_mapId()->
+	base_global_proc_util:call(?MODULE, {get_role_num_by_mapId}).
 
 	
 %% ====================================================================
@@ -221,7 +221,7 @@ handle_call(Request, From, State) ->
 			wait_lines_manager->
 				true;
 			{lookup_map_manager, Node} ->
-				lookup_map_manager(Node);
+				check_map_manager_node(Node);
 			{get_all_map_node}->
 				get_all_map_node();
 			{get_map_node,{LineId, MapId}}->
@@ -238,8 +238,8 @@ handle_call(Request, From, State) ->
 			{get_line_status,MapId}->		
 				LineInfo = base_line_processor_server:get_role_count_by_map(MapId),
 				LineInfo;
-			{get_rolenum_by_mapid} ->
-				base_line_processor_server:get_rolenum_by_mapid();
+			{get_role_num_by_mapId} ->
+				base_line_processor_server:get_role_num_by_mapId();
 			{whereis_name}->
 				erlang:whereis(?MODULE);
 			{regist_map_processor, Args}->
@@ -405,7 +405,7 @@ start_map_processor(MapConfigFlag, LineId, MapNode)->
 	base_logger_util:msg("~p start_map_processor mapconfigflag ~p ~n",[?MODULE,MapConfigFlag]).
 	
 
-lookup_map_manager(Node) ->
+check_map_manager_node(Node) ->
 	case ets:lookup(?ETS_MAP_MANAGER_DB, Node) of
 		[] ->
 			wrong;

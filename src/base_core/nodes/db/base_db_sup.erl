@@ -17,7 +17,7 @@
 	 init/1,
 	 start_master/0,
 	 start_db_line_master/0,
-	 start_dal_dmp/0
+	 start_db_dmp_server/0
         ]).
 
 %% --------------------------------------------------------------------

@@ -13,11 +13,16 @@
 -export([
 	 start_link/1,
 	 lookup_map_name/2,
+	 do_regist/3,
+	 unregist_by_node/1,
+	 get_map/3
+	]).
+-export([
 	 get_role_count_by_map/1,
-	 get_role_count_by_line_map/2
+	 get_role_num_by_mapId/0
 	]).
 
--compile(export_all).
+% -compile(export_all).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -138,7 +143,7 @@ do_regist(regist_map_processor, Args, State) ->
 	{NodeName, LineId, MapId, MapName} = Args,
 	Key = make_map_id(LineId, MapId),
 	%% {key, nodename, mapname, lineid, mapid, rolecount}
-	%slogger:msg("regist_map_processor ~p ~n ",[Args]),
+	%base_logger_util:msg("regist_map_processor ~p ~n ",[Args]),
 	ets:insert(?MAP_PROC_DB, {Key, NodeName, MapName, LineId, MapId}),
 	ok.
 
@@ -165,3 +170,17 @@ lookup_map_name(LineId, MapId) ->
 
 make_map_id(LineId, MapId) ->
 	integer_to_list(LineId) ++"_"++ integer_to_list(MapId).
+
+%% Description: get the rold count by mapid
+%% return: [{LineId, Count}, {LineId, Count}]
+%% DB field: {key, nodename, mapname, lineid, mapid, rolecount}
+%%           {'_', '_',      '_',     '_',    mapid, '$1'}).
+get_role_count_by_map(MapId) ->
+	todo.
+
+%%
+%%get role num in the map (all line)
+%%return [{MapId,RoleNum},.....]
+%%
+get_role_num_by_mapId() ->
+	todo.

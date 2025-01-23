@@ -1,8 +1,7 @@
-
 -ifndef(COMMON_DEFINE_H).
 -define(COMMON_DEFINE_H,true).
 
-
+%%
 -define(SERVER_MAX_ROLE_NUMBER,50000000).
 -define(MIN_ROLE_ID,10000000).
 -define(DYNAMIC_NPC_INDEX,9000000).
@@ -26,7 +25,7 @@
 %%最大等级
 -define(ROLE_MAX_LEVEL,100).
 %%性别
--define(GENDER_MALE,1).				
+-define(GENDER_MALE,1).
 -define(GENDER_FEMALE,0).
 %%移动更新距离间隔
 -define(MOVE_UPDATE_RANGE,3).
@@ -151,10 +150,4 @@
 
 -define(DEFAULT_ROLE_DISPLAYID,0).		
 
-
-
-
-
-
 -endif.		%%请在这个上面定义
-

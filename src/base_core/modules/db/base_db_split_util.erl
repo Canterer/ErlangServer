@@ -130,7 +130,7 @@ get_splitted_info(CurTable)->
 create_split_table_by_name(Table)->
 	case base_db_split_util:get_splitted_info(Table) of
 		false-> 
-			slogger:msg("create_split_table_by_name error ! not split table! (~p)~n",[Table]),
+			base_logger_util:msg("create_split_table_by_name error ! not split table! (~p)~n",[Table]),
 			error;
 		TableInfo->
 			CreateMod = get_table_mod(TableInfo),

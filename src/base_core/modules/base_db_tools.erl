@@ -19,6 +19,8 @@
 
 -export([wait_for_all_db_tables_in_db_node/0,wait_for_all_db_tables/0,wait_for_tables_loop/3]).
 
+-export([check_mnesia_table_exist/1]).
+
 %%
 %% API Functions
 %%
@@ -301,9 +303,9 @@ wait_for_tables_loop(IsRemote,N,TabList)->
 	
 wait_ets_init()->
 	wait_for_all_db_tables(),
-	io:format("wait_for_all_db_tables ~n"),
+	base_logger_util:msg("wait_for_all_db_tables ~n"),
 	EtsInit = get_ets_table_mods(node()),
-	io:format("EtsInit ~p ~n",[EtsInit]),
+	base_logger_util:msg("EtsInit ~p ~n",[EtsInit]),
 	config_ets_init(EtsInit).
 
 wait_ets_init_fliter(EtsFliter)->
@@ -385,7 +387,7 @@ wait_for_all_db_tables_in_db_node()->
 	
 wait_for_all_db_tables()->	
 	wait_tables_in_dbnode(),	
-	io:format("wait_tables_in_dbnode end ~n"),
+	base_logger_util:msg("wait_tables_in_dbnode end ~n"),
 	wait_for_local_ram_tables().
 
 wait_tables_in_dbnode()->
@@ -420,4 +422,10 @@ get_node_ram_tables(Node)->
 	end.
 	
 	
-	
+check_mnesia_table_exist(Table)->
+	try
+		mnesia:table_info(Table,type),
+		true
+	catch
+		_:_-> false
+	end.

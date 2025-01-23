@@ -1,10 +1,10 @@
-slogger   日志打印接口
+base_logger_util   日志打印接口
 
 
-base_application 用于设置cookie并启动app
+base_application_server 用于设置cookie并启动app
 	其是被动开启server,并负责初始化base_env_ets模块
 
-base_ping_center用于主动阻塞连接各个节点，确保pre_connect_nodes正常互联后开始逻辑
+base_ping_util用于主动阻塞连接各个节点，确保pre_connect_nodes正常互联后开始逻辑
 
 
 base_node_util 用于提供公告接口获取各个节点，以及验证各节点关联的app

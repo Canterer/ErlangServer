@@ -4,8 +4,8 @@
 %%% -------------------------------------------------------------------
 %% Author: adrian
 %% Created: 2010-7-24
-%% Description: TODO: Add description to map_db
--module(map_db).
+%% Description: TODO: Add description to base_map_db
+-module(base_map_db).
 
 %%
 %% Include files
@@ -147,10 +147,10 @@ map_data_format(String,EtsName)->
 	map_data_format(Tail,EtsName).
 
 processe_map_file_by_parse(File,EtsName)->
-	Now1 = now(),
+	Now1 = erlang:system_time(),
 	case file:read_file(File) of
 		{ok,BinData}->
-			Now2 = now(),
+			Now2 = erlang:system_time(),
 			String = string:tokens(binary_to_list(BinData),".\n"),
 			map_data_format(String,EtsName);
 		Reason->

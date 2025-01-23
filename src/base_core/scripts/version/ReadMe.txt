@@ -1,0 +1,2 @@
+makeversion.py 主要是负责替换version.erl中的特定字符串，通过查找version.erl.template文件中特定字符来替换
+version.erl主要是定义协议内容反馈给服务端。version.erl.template作为替换模板。

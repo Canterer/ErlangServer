@@ -18,8 +18,11 @@ wait_all_nodes_connect()->
 	wait_nodes(AllNodes).
 
 wait_node_connect(AppType)->
-	AppNodeList = base_env_ets:get2(nodes,AppType,[]),
-	NeedConNodes = lists:filter(fun(Node)-> base_node_util:check_snode_match(AppNodeList,Node) end, base_env_ets:get(pre_connect_nodes,[])),
+	AllNodes = base_env_ets:get(pre_connect_nodes,[]),
+	NeedConNodes = lists:filter(
+		fun(Node)-> 
+			base_node_util:check_node_allowable(AppType,Node) 
+		end, AllNodes),
 	wait_nodes(NeedConNodes).
 	
 wait_nodes(AllNodes)->

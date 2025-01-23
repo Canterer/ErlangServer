@@ -4,6 +4,8 @@
 %%
 %% Include files
 %%
+-define(OPTION_ETS,option_value_ets).
+-define(SERVER_NAME_ETS,option_servers_name).
 -define(OPTION_FILE,"../option/game_server.option").
 -define(GM_OPTION,"../option/gm.option").
 -define(SERVER_START_TIME,"../option/server_start_time.option").

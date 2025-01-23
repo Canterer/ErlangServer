@@ -38,7 +38,7 @@ init()->
 		ets:new(?SERVER_NAME_ETS, [named_table,public ,set])
 	catch
 		_:_-> ignor
-	end,
+	end.
 
 read_from_file(File,Ets)->
 	case file:consult(File) of
@@ -91,8 +91,8 @@ put2(Key,Key2,Value)->
 
 reset()->
 	ets:delete_all_objects(?OPTION_ETS),
-	ets:delete_all_objects(?SERVER_NAME_ETS).
-	base_env_ets:read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS),
+	ets:delete_all_objects(?SERVER_NAME_ETS),
+	base_env_ets:read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).
 
 get_server_name(ServerId)->
 	try
