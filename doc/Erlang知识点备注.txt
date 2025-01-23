@@ -98,5 +98,39 @@ mnesia:dirty_index_match_object
 mnesia:dirty_delete
 mnesia:dirty_delete_object
 mnesia:dirty_write
-mnesia:wread((Tab, Key)
+mnesia:wread(Tab, Key)
 注意：dirty_read速度是dirty_index_read速度近三倍。
+
+Mnesia使用5种锁
+读锁，在复制记录读前加锁
+写锁，在事务写记录前，会在指定记录的所有复件上添加写锁
+读表锁，如果一个事务遍历整个表搜索指定条件记录，低效的方式是设置记录锁，同时也是大量内存消耗。
+写表锁，类似读表锁。
+粘锁，当一个事务操作完成后，锁依然存在。
+Mnesia采用动态策略应对如mnesia:read/1，自动添加和释放锁。
+
+
+file：在这个模块中包含了用于文件的打开，关闭，读取，写入和目录列表等功能的函数
+filename：此模块以平台独立的方式提供了一套操纵文件名的函数。可以达到在不同的操作系统中执行相同的操作。
+filelib：这个模块是file模块的的扩展，提供了一套辅助函数用于生成文件列表、校验文件类型等操作。
+io：这个模块提供了一系列对已经打开的文件进行操作的函数，这个模块中的函数可以用于对文件中数据的解析以及向文件中写入格式化的数据
+
+file:open(File, Modes)
+file:path_open(Path, Filename, Modes)
+file:write()
+file:read()
+file:close()
+file:read_file(Filename)
+file:copy()
+file:consult(Filename)
+file:read_file_info(Filename)
+file:list_dir(Dir)
+
+filename:rootname(Filename)//返回消除后缀的文件名
+filename:basename(Filename, Ext)//返回消除后缀与路径的 文件名
+filename:join(Components)//Joins a list of filenames with directory separators
+filename:dirname(Filename)//返回路径
+
+filelib:ensure_dir(Name)
+filelib:wildcard(Wildcard)//用于查找匹配指定模式的文件路径
+filelib:file_size()
