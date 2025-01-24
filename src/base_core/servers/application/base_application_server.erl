@@ -72,6 +72,7 @@ sp_call(M,F,A)->
 %% --------------------------------------------------------------------
 init([]) ->
 	base_env_ets:init(),
+	base_env_ets:reset(),
 	base_global_proc_ets:init(),
 	% version_up:init(),
 	base_db_tools:wait_ets_create(),

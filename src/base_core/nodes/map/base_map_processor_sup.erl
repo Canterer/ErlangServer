@@ -1,16 +1,14 @@
--module(base_lines_manager_sup).
+-module(base_map_processor_sup).
 
 -behaviour(supervisor).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("base_line_def.hrl").
+
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
--export([
-	 start_link/0
-	]).
+-export([start_link/0,start_child/3,stop_child/1]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
@@ -29,18 +27,9 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+start_link()->
+	supervisor:start_link({local,?SERVER}, ?MODULE, []).
 
-start_link() ->
-    %% LineProcDB: store the line server(s)'s information.
-    ets:new(?ETS_LINE_PROC_DB, [set, public, named_table]),
-    %% MapManagerDB: store the map manager's node information
-    ets:new(?ETS_MAP_MANAGER_DB, [set, public, named_table]),
-    %% MapLineDB: store the one map's user count of all lines.
-    ets:new(?ETS_MAP_LINE_DB, [set, public, named_table]),
-    %% ChatMaagerDB
-    ets:new(?ETS_CHAT_MANAGER_DB, [set, public, named_table]),
-    
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 %% ====================================================================
 %% Server functions
@@ -52,10 +41,28 @@ start_link() ->
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    Manager = {base_lines_manager,{base_lines_manager,start_link,[]},
-	       permanent,2000,worker,[base_lines_manager]},
-    {ok,{{one_for_one, 10, 10}, [Manager]}}.
+    {ok,{{one_for_one,10,10}, []}}.
 
+start_child(MapProcName,MapId_line,Tag)->
+	try
+		AChild = {MapProcName,{base_map_processor_server,start_link,[MapProcName,{MapId_line,Tag}]},
+				  	      		transient,2000,worker,[base_map_processor_server]},
+		supervisor:start_child(?SERVER, AChild)
+	catch
+		E:R-> base_logger_util:msg("can not start map(~p:~p) ~p ~p ~p~n",[E,R,MapProcName,MapId_line,Tag]),
+			  {error,R}
+ 	end.
+
+stop_child(MapProcName)->
+	case ets:info(MapProcName) of
+		undefined->
+			nothing;
+		_->
+			ets:delete(MapProcName)
+	end,
+	supervisor:terminate_child(?SERVER, MapProcName),
+	supervisor:delete_child(?SERVER, MapProcName).
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+

@@ -49,7 +49,7 @@ start_link({LineName, NamedProc})->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init({LineName, NamedProc}) ->
-	base_lines_manager_server:regist_to_manager(NamedProc,LineName),
+	base_line_manager_server:regist_to_manager(NamedProc,LineName),
 	{ok, #state{line_name = LineName}}.
 
 %% --------------------------------------------------------------------

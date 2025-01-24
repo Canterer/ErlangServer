@@ -139,10 +139,10 @@ map_data_format(String,EtsName)->
 	map_data_format(Tail,EtsName).
 
 processe_map_file_by_parse(File,EtsName)->
-	Now1 = erlang:system_time(),
+	Now1 = os:timestamp(),
 	case file:read_file(File) of
 		{ok,BinData}->
-			Now2 = erlang:system_time(),
+			Now2 = os:timestamp(),
 			String = string:tokens(binary_to_list(BinData),".\n"),
 			map_data_format(String,EtsName);
 		Reason->

@@ -1,0 +1,25 @@
+{application, base_db_app,
+[
+	{description,"base db application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_db_app,
+			base_db_sup,
+			base_db_master_server,
+			base_db_line_master_server,
+			base_db_dmp_server
+		]
+	},
+	{registered,
+		[
+			base_db_sup,
+			base_db_master_server,
+			base_db_line_master_server,
+			base_db_dmp_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_db_app,[]}}
+]
+}.

@@ -1,0 +1,25 @@
+{application, base_map_app,
+[
+	{description,"base map application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_map_app,
+			base_map_manager_sup,
+			base_map_manager_server,
+			base_map_processor_sup,
+			base_map_processor_server
+		]
+	},
+	{registered,
+		[
+			base_map_manager_sup,
+			base_map_manager_server,
+			base_map_processor_sup,
+			base_map_processor_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_map_app,[]}}
+]
+}.

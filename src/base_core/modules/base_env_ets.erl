@@ -5,7 +5,7 @@
 %%
 -define(OPTION_ETS,option_value_ets).
 -define(SERVER_NAME_ETS,option_servers_name).
--define(BASE_NODES_OPTION_FILE,"../option/base_nodes.option").
+-define(BASE_NODES_OPTION_FILE,"../option/base_nodes_config.option").
 
 
 %%

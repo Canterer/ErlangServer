@@ -344,7 +344,7 @@ clear_table(TableName)->
 	end.
 
 set_write_flag()->
-	ets:insert(?DAL_WRITE_RECORD,{1,erlang:system_time()}).
+	ets:insert(?DAL_WRITE_RECORD,{1,os:timestamp()}).
 
 get_write_flag()->
 	case ets:lookup(?DAL_WRITE_RECORD, 1) of

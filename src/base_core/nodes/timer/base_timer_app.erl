@@ -42,10 +42,12 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _) ->
+	filelib:ensure_dir("../log/"),
+	error_logger:logfile({open, "../log/timer_node.log"}),
 	base_timer_sup:start_link().
 
 start()->
-	base_application_server:start(timer_center).
+	base_application_server:start(?MODULE).
 
 
 %% --------------------------------------------------------------------

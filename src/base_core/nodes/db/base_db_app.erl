@@ -39,7 +39,7 @@
 %% ====================================================================!
 
 start()->
-	base_application_server:start(dbmaster).
+	base_application_server:start(?MODULE).
 
 import()->
  	% data_gen:import_config("game"),

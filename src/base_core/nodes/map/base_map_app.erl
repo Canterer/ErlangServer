@@ -64,7 +64,7 @@ start(_Type, _StartArgs) ->
 			base_logger_util:msg("wait_for_all_db_tables end ~n"),
 			% role_pos_db:unreg_role_pos_to_mnesia_by_node(node()),
 			% role_app:start(),
-			base_lines_manager_server:wait_lines_manager_loop(),
+			base_line_manager_server:wait_lines_manager_loop(),
 
 			%%load map
 			start_map_sup(),
@@ -95,7 +95,7 @@ stop(_State) ->
 %% ====================================================================
 
 start_map_sup()->
-	case base_map_sup:start_link() of
+	case base_map_processor_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
 		Error ->
@@ -111,7 +111,7 @@ start_map_manager_sup()->
 	end.
 
 % start_map_db_sup()->
-% 	case base_map_db_sup:start_link() of
+% 	case base_map_db_processor_sup:start_link() of
 % 		{ok,Pid} ->
 % 			{ok,Pid};
 % 		Error ->

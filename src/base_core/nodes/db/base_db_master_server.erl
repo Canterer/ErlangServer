@@ -164,7 +164,7 @@ handle_info({backupdata,FromProc}, State)->
 				undefined->
 					BackupFlag = true;
 				WriteTime->
-					BackupFlag = timer:now_diff(erlang:system_time(),WriteTime) > ?DAL_WRITE_INTERVAL 
+					BackupFlag = timer:now_diff(os:timestamp(),WriteTime) > ?DAL_WRITE_INTERVAL 
 			end;
 		true->
 			BackupFlag = false
@@ -195,7 +195,7 @@ handle_info({backupdata}, State)->
 				undefined->
 					BackupFlag = true;
 				WriteTime->
-					BackupFlag = timer:now_diff(erlang:system_time(),WriteTime) > ?DAL_WRITE_INTERVAL 
+					BackupFlag = timer:now_diff(os:timestamp(),WriteTime) > ?DAL_WRITE_INTERVAL 
 			end;
 		true->
 			BackupFlag = false

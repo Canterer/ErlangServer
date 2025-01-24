@@ -67,7 +67,7 @@ start(_Type, _StartArgs) ->
 	{ok, self()}.
 	
 start()->
-	base_application_server:start(line).
+	base_application_server:start(?MODULE).
 
 %% --------------------------------------------------------------------
 %% Func: stop/1
@@ -81,7 +81,7 @@ stop(_State) ->
 %% ====================================================================
 
 start_lines_manager_sup() ->
-	case base_lines_manager_sup:start_link() of
+	case base_line_manager_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
 		Error ->

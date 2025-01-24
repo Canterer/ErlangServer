@@ -1,7 +1,7 @@
 [
 	%%mapconfig_flag 1代表MAPCONFIG_FROM_DATA 2代表MAPCONFIG_FROM_OPTION
-	{mapconfig_flag,1}, %%引用文件 base_lines_manager_server	
-	{lines_info, %%引用文件 base_lines_manager_server、base_map_db_util、base_map_db	
+	{mapconfig_flag,1}, %%引用文件 base_line_manager_server	
+	{lines_info, %%引用文件 base_line_manager_server、base_map_db_util、base_map_db	
 		[
 			%% static line {lineid[{mapid,map_node}]}
 			{1,

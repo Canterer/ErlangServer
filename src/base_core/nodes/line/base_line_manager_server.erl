@@ -1,4 +1,4 @@
--module(base_lines_manager_server).
+-module(base_line_manager_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------

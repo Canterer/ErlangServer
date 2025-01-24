@@ -106,8 +106,6 @@ if not os.path.exists(out_dir):
 
 print('out_dir:'+out_dir)
 
-files = []
-include_path_map = {}
 
 class erl_object(object):
     def __init__(self,src):
@@ -184,8 +182,12 @@ def scan_dir(files,input_dir,suffix):
             if len(path) == 2 and path[1] == suffix:
                 files.append(absfile)
 
-        
+
+
+include_path_map = {}
+
 # 扫描include依赖文件
+files = []
 scan_dir(files,src_dir,'.hrl')  
 for filePath in files:
     existFilePath = include_path_map.get(filePath, False)
@@ -197,6 +199,24 @@ for filePath in files:
         fileName = path[1]
         include_path_map[fileName]=path[0]
         print("include fileName: "+fileName+" path: "+filePath)
+
+# 扫描app.src文件
+files = []
+scan_dir(files,src_dir,'.src')  
+for filePath in files:
+    path = os.path.split(filePath)
+    name = os.path.splitext(path[1])[0]
+    splitList = os.path.splitext(name)
+    if len(splitList) == 2 and splitList[1] == '.app':
+        print("find "+name+" path: "+filePath)
+        copyFilePath = os.path.join(out_dir, name)
+        with open(copyFilePath, 'wb') as copyFile:
+            with open(filePath, 'rb') as file:
+                content = file.read()
+                copyFile.write(content)
+    else:
+        print("error .src suffix file: "+filePath)
+
 
 files = []
 scan_dir(files,src_dir,'.erl')    

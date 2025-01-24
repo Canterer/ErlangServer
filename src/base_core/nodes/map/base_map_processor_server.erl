@@ -177,7 +177,7 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 	end,
 	if
 		InstanceId =/=[]->
-			instance_pos_db:reg_instance_pos_to_mnesia(InstanceId,Creation,erlang:system_time(),true,node(),MapProcName,MapId,ProtoId,[]),
+			instance_pos_db:reg_instance_pos_to_mnesia(InstanceId,Creation,os:timestamp(),true,node(),MapProcName,MapId,ProtoId,[]),
 			put(instanceid,InstanceId),
 			case ProtoInfo of
 				[]->

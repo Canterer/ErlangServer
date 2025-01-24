@@ -3,13 +3,13 @@ Map节点
 	启动服务base_map_manager_server
 base_map_manager_server
 	init初始化时，send_check_message出发handle_info的 global_line_check
-	通过base_lines_manager_server:regist_map_manager 注册当前启动的Map节点
-		其中会触发base_lines_manager_server:load_map，其为配置的lines列表中的每个lineId开启对于的map_processor
+	通过base_line_manager_server:regist_map_manager 注册当前启动的Map节点
+		其中会触发base_line_manager_server:load_map，其为配置的lines列表中的每个lineId开启对于的map_processor
 		lineId 一一对应 map节点
 		base_map_manager_server:start_map_processor进而间接开启base_map_processor_server服务
 
 base_map_processor_server
-	开启后，会通过base_lines_manager_server:regist_mapprocessor注册记录
+	开启后，会通过base_line_manager_server:regist_mapprocessor注册记录
 
 
 
@@ -92,10 +92,10 @@ map节点
 	通过base_lines_manager:regist_map_manager注册自己，将自身记录在ETS_MAP_MANAGER_DB中
 	并load_map(Node);//Node指map类节点，例如map1节点、map2节点
 	每个map节点开启后，根据id搭配LineID开启processor。
-	通过base_lines_manager_server:start_map_processor开启processor。
+	通过base_line_manager_server:start_map_processor开启processor。
 	通过base_map_info_db:get_maps_bylinetag(LineId)获取MapIDs，针对每个MapID开启processor。
 	通过base_map_manager_server:start_map_processor(MapNode，LineID, MapId, map)开启map_processor，并
-	通过base_lines_manager_server:regist_map_processor({node(), LineId, MapId，MapName})最终通过line_processor:do_regist()注册
+	通过base_line_manager_server:regist_map_processor({node(), LineId, MapId，MapName})最终通过line_processor:do_regist()注册
 	将相关数据记录在MAP_PROC_DB中。
 
 	第二步：

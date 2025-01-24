@@ -1,0 +1,25 @@
+{application, base_line_app,
+[
+	{description,"base line application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_line_app,
+			base_line_manager_sup,
+			base_line_manager_server,
+			base_line_processor_sup,
+			base_line_processor_server
+		]
+	},
+	{registered,
+		[
+			base_line_manager_sup,
+			base_line_manager_server,
+			base_line_processor_sup,
+			base_line_processor_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_line_app,[]}}
+]
+}.

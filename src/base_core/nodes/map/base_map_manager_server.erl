@@ -99,7 +99,7 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({start_instance,MapName,CreatInfo,MapId}, _From, State) ->
-	case base_map_sup:start_child(MapName,{-1,MapId},CreatInfo) of
+	case base_map_processor_sup:start_child(MapName,{-1,MapId},CreatInfo) of
 		{ok,Pid} ->
 			base_logger_util:msg("---start map ok \n"),
 		    Reply = ok;
@@ -131,7 +131,7 @@ handle_cast(Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({global_line_check}, State) ->
-	case base_lines_manager_server:whereis_name() of
+	case base_line_manager_server:whereis_name() of
 		error->
 			base_logger_util:msg("lines manager can not found ,1 sencond check\n"),
 			send_check_message();
@@ -139,19 +139,19 @@ handle_info({global_line_check}, State) ->
 			base_logger_util:msg("lines manager can not found ,1 sencond check\n"),
 			send_check_message();
 		_GlobalPid-> 
-			base_logger_util:msg("send to base_lines_manager_server {~p,~p}\n",[node(),?GAME_MAP_MANAGER]),
-			base_lines_manager_server:regist_map_manager({node(),?GAME_MAP_MANAGER})
+			base_logger_util:msg("send to base_line_manager_server {~p,~p}\n",[node(),?GAME_MAP_MANAGER]),
+			base_line_manager_server:regist_map_manager({node(),?GAME_MAP_MANAGER})
 	end,
 	{noreply, State};
 		
 handle_info({start_map_process,LineId,MapId,Tag}, State) ->		
 	base_logger_util:msg("receive the msg:start_map_process Line ~p Map ~p\n",[LineId,MapId]),
 	MapName = make_map_process_name(LineId,MapId),			
-	case base_map_sup:start_child(MapName,{LineId,MapId},Tag) of
+	case base_map_processor_sup:start_child(MapName,{LineId,MapId},Tag) of
 		{ok,Child} ->
-		        base_lines_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
+		        base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
 		{ok,Child,Info} ->
-		        base_lines_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
+		        base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
 		{error,Error} ->
 			base_logger_util:msg("---start map failed, reason: ~p\n", [Error])
 	end,
@@ -159,11 +159,11 @@ handle_info({start_map_process,LineId,MapId,Tag}, State) ->
 
 handle_info({stop_map_process,LineId,MapId}, State) ->
 	MapName = make_map_process_name(LineId,MapId),
-	base_map_sup:stop_child(MapName),	
+	base_map_processor_sup:stop_child(MapName),	
     {noreply, State};
 
 handle_info({stop_instance,MapName}, State) ->
-	base_map_sup:stop_child(MapName),	
+	base_map_processor_sup:stop_child(MapName),	
     {noreply, State};
 
 handle_info({change_map_bornpos,MapId,BronMap,BornX,BornY},State)->
