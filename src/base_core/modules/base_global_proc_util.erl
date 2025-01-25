@@ -31,7 +31,7 @@ send(ModuleName,Msg)->
 			error;
  			%%global:send(ModuleName,Msg);
 		Node->
-			base_rpc:cast(Node,ModuleName, Msg)
+			base_rpc_util:cast(Node,ModuleName, Msg)
 	end.
 
 call(ModuleName,Msg)->

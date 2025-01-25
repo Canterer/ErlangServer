@@ -54,6 +54,7 @@ stop_instance(MapManagerNode,MapName)->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	%% start time to check 
 	send_check_message(),
 	%%load all map

@@ -1,7 +1,7 @@
 @echo off
 chcp 65001
 echo 谨慎使用我会全编译!!!!!!!!!
-pause
+rem pause
 
 rem cd %~dp0/..
 set script_path=%~dp0

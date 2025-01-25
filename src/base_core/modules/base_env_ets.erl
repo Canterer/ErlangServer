@@ -91,7 +91,6 @@ put2(Key,Key2,Value)->
 	ets:insert(?OPTION_ETS, {Key,NewValue}).
 
 reset()->
-	base_logger_util:msg("reset"),
 	ets:delete_all_objects(?OPTION_ETS),
 	ets:delete_all_objects(?SERVER_NAME_ETS),
 	read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).

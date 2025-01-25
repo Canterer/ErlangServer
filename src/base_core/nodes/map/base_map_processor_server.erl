@@ -97,6 +97,7 @@ get_instance_id(MapProcName)->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([MapProcName, {{LineId,MapId}, Tag}])->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	process_flag(trap_exit, true),
 	AOIdb = ets:new(MapProcName, [set, public, named_table]),
 	NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),

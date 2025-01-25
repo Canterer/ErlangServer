@@ -44,7 +44,7 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-	case util:get_argument('-line') of
+	case base_node_util:get_argument('-line') of
 		[]->  base_logger_util:msg("Missing --line argument input the nodename");
 		[CenterNode|_]->
 			filelib:ensure_dir("../log/"),

@@ -10,7 +10,8 @@
 -export([get_all_nodes/0,get_nodes_without_hidden/0]).
 -export([get_node_host/1,get_node_sname/1,get_node_sname_str/1]).
 -export([get_allowable_nodes/1,get_node_procs/1,check_node_allowable/2]).
--export([get_dbnode/0,get_linenode/0,check_match_map_and_line/2]).
+-export([get_argument/1]).
+-export([get_timernode/0,get_linenode/0,get_dbnode/0,check_match_map_and_line/2]).
 %%
 %% API Functions
 %%
@@ -46,6 +47,20 @@ convert_sname_str(Node)->
 		[NodeName]-> NodeName;
 		_->[]
 	end.
+
+% 获取节点启动参数
+get_argument(Input) when is_atom(Input)->
+	case init:get_argument(Input) of
+		error-> [];
+		{ok, [ArgString]}-> lists:map(fun(E)-> list_to_atom(E) end, ArgString)
+	end;
+get_argument(Input) when is_list(Input)->
+	case init:get_argument(list_to_atom(Input)) of
+		error-> [];
+		{ok, [ArgString]}-> lists:map(fun(E)-> list_to_atom(E) end, ArgString)
+	end;
+get_argument(_Input)->
+	[].
 
 % 使用Fun检测列表中的元素，当检测某个元素为真时立刻返回序号
 check_list(Fun, List) ->
@@ -91,14 +106,19 @@ get_filter_nodes(Key)->
 		end, AliveNodes).
 
 % 统一接口
-% 仅存在一个db节点
-get_dbnode()->
-	[Node|_] = get_filter_nodes(db),
+% 仅存在一个timer节点
+get_timernode()->
+	[Node|_] = get_filter_nodes(timer),
 	Node.
 
 % 仅存在一个line节点
 get_linenode()->
 	[Node|_] = get_filter_nodes(line),
+	Node.
+
+% 仅存在一个db节点
+get_dbnode()->
+	[Node|_] = get_filter_nodes(db),
 	Node.
 
 % LineId 与 Map节点名字一一对应  Map1节点名对应LineId为1

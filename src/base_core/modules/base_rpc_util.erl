@@ -20,7 +20,7 @@ cast(NamedProc,Msg)->
 		NamedProc!Msg
 	catch
 		E:R->
-			base_logger_util:msg("base_rpc cast NamedProc ~p Msg ~p ERROR ~p ~n",[NamedProc,Msg,erlang:get_stacktrace()]),
+			base_logger_util:msg("base_rpc_util cast NamedProc ~p Msg ~p ERROR ~p ~n",[NamedProc,Msg,erlang:get_stacktrace()]),
 			error
 	end.
 cast(Node,NamedProc,Msg)->
@@ -32,7 +32,7 @@ cast(Node,NamedProc,Msg)->
 		end		
 	catch 
 		E:R ->
-			base_logger_util:msg("base_rpc:cast exception[~p:~p]!Node ~p NamedProc ~p Message ~p ~n~p ~n",
+			base_logger_util:msg("base_rpc_util:cast exception[~p:~p]!Node ~p NamedProc ~p Message ~p ~n~p ~n",
 				[E,R,Node,NamedProc,Msg,erlang:get_stacktrace()]),
 			error
 	end.

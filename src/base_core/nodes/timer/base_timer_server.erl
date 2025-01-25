@@ -167,7 +167,7 @@ query_time_rpc(N)->
 	case N of
 		0-> 0;
 		_->
-			case base_rpc:asyn_call(base_node_util:get_timernode(), ?MODULE, query_time, []) of
+			case base_rpc_util:asyn_call(base_node_util:get_timernode(), ?MODULE, query_time, []) of
 				{badrpc,Reason}-> base_logger_util:msg("query_timer error:~p~n",[Reason]),
 								  timer:sleep(1000),
 								  query_time_rpc(N-1);

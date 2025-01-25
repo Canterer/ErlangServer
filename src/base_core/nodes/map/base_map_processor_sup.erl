@@ -41,6 +41,7 @@ start_link()->
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
     {ok,{{one_for_one,10,10}, []}}.
 
 start_child(MapProcName,MapId_line,Tag)->

@@ -34,7 +34,6 @@ run()->
 	check_db_run(),
 	% map节点
 	check_map_run().
-
 %%
 %% Local Functions
 %%
