@@ -5,7 +5,7 @@
 %%
 -define(OPTION_ETS,option_value_ets).
 -define(SERVER_NAME_ETS,option_servers_name).
--define(BASE_NODES_OPTION_FILE,"../option/base_nodes_config.option").
+-define(BASE_NODES_OPTION_FILE,"../src/base_core/option/base_nodes_config.option").
 
 
 %%
@@ -41,13 +41,14 @@ init()->
 	end.
 
 read_from_file(File,Ets)->
+	base_logger_util:msg("base_env_ets init ets ~p from option file:~p~n",[Ets,File]),
 	case file:consult(File) of
 		{ok, [Terms]} ->
 			lists:foreach(fun(Term)->
 								  ets:insert(Ets, Term)
 						  end, Terms);
 		{error, Reason} -> 
-			base_logger_util:msg("load option file [~p] Error ~p",[File,Reason]) ,	
+			base_logger_util:msg("load option file [~p] Error ~p~n",[File,Reason]) ,	
 			{error, Reason}
 	end.
 
@@ -90,9 +91,10 @@ put2(Key,Key2,Value)->
 	ets:insert(?OPTION_ETS, {Key,NewValue}).
 
 reset()->
+	base_logger_util:msg("reset"),
 	ets:delete_all_objects(?OPTION_ETS),
 	ets:delete_all_objects(?SERVER_NAME_ETS),
-	base_env_ets:read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).
+	read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).
 
 get_server_name(ServerId)->
 	try

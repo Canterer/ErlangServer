@@ -391,7 +391,7 @@ start_map_processor(?MAPCONFIG_FROM_OPTION, LineId, MapNode) ->
 	SNode = base_node_util:get_node_sname(MapNode),
 	% SNode = base_node_util:get_match_snode(map,MapNode),
 	Host = base_node_util:get_node_host(MapNode),
-	AllMaps = env:get(lines_info, []),
+	AllMaps = base_env_ets:get(lines_info, []),
 	case base_line_processor_server:get_map(AllMaps, LineId, {SNode,Host,MapNode}) of
 		{true, MapInfos} ->
 			lists:foreach(fun({MapName, NodeName}) ->

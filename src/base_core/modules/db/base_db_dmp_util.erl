@@ -182,13 +182,13 @@ clear_deletekey(EtsName,NotUseEtsName,BundleId,Table,Key)->
 	
 
 get_using_ets()->
-	EtsSwapSeconds = env:get2(dmp, ?OPTION_SWAP_SECONDS, ?ETS_SWAP_SECONDS_DEFAULT),
+	EtsSwapSeconds = base_env_ets:get2(dmp, ?OPTION_SWAP_SECONDS, ?ETS_SWAP_SECONDS_DEFAULT),
 	{A,B,_C} = base_timer_server:get_correct_now(),
 	NowSeconds = A*1000000 + B,
 	get_using_ets_by_seconds(EtsSwapSeconds,NowSeconds).
 
 get_noinuse_ets()->
-	EtsSwapSeconds = env:get2(dmp, ?OPTION_SWAP_SECONDS, ?ETS_SWAP_SECONDS_DEFAULT),
+	EtsSwapSeconds = base_env_ets:get2(dmp, ?OPTION_SWAP_SECONDS, ?ETS_SWAP_SECONDS_DEFAULT),
 	{A,B,_C} = base_timer_server:get_correct_now(),
 	NowSeconds = A*1000000 + B,
 	get_notinuse_ets_seconds(EtsSwapSeconds,NowSeconds).

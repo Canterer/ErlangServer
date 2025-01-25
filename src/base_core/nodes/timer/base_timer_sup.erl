@@ -47,6 +47,7 @@ start_link()->
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	Worker = {base_timer_server,{base_timer_server,start_link,[]},
 					 	permanent,2000,worker,[base_timer_server]},
 	{ok,{{one_for_all, 10, 10}, [Worker]}}.

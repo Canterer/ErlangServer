@@ -74,7 +74,7 @@ init([]) ->
 			_->
 				nothing
 		end end,AllMapInfo),
-%%	DefaultLoadMapIDs = [?DEFAULT_MAP|env:get(preload_map,undefined)],
+%%	DefaultLoadMapIDs = [?DEFAULT_MAP|base_env_ets:get(preload_map,undefined)],
 %%	lists:foreach(fun(MapId)->
 %%		MapDb = base_map_db_processor_server:make_db_name(MapId),
 %%		case ets:info(MapDb) of

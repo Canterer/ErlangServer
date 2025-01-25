@@ -28,13 +28,13 @@
 
 start(Application)->
 	force_start(),
-	Cookie = env:get(cookie,?ERLNULL),
+	Cookie = base_env_ets:get(cookie,?ERLNULL),
 	erlang:set_cookie(node(), Cookie),
 	application:start(Application).
 
 start(Application,Type)->
 	force_start(),
-	Cookie = env:get(cookie,?ERLNULL),
+	Cookie = base_env_ets:get(cookie,?ERLNULL),
 	erlang:set_cookie(node(), Cookie),
 	application:start(Application,Type).
 
@@ -95,7 +95,7 @@ handle_call({wait_ets_init}, _From, State) ->
     {reply, Reply, State};
 
 handle_call({wait_ets_init_fliter,{EtsFliter}}, _From, State) ->
-	%%env:fresh(),
+	%%base_env_ets:fresh(),
 	base_db_tools:wait_ets_init_fliter(EtsFliter),
 	Reply = ok,
     {reply, Reply, State};

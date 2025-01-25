@@ -37,7 +37,7 @@ start_link()->
 %% --------------------------------------------------------------------
 init([]) ->
 	base_timer_server:start_at_process(),
-	FlushInterval = env:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
+	FlushInterval = base_env_ets:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
 	base_db_dmp_util:init(),
 	base_timer_util:send_after(FlushInterval, {flush_interval}),
 	{ok, #state{last_ets=base_db_dmp_util:get_noinuse_ets()}}.
@@ -81,7 +81,7 @@ handle_info({flush_interval},  #state{last_ets=LastEts} = State) ->
 				 true->
 		   			 nothing
 	end,
-	FlushInterval = env:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
+	FlushInterval = base_env_ets:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
 	base_timer_util:send_after(FlushInterval, {flush_interval}),
     {noreply,#state{last_ets=CurEts}};
 handle_info(Info, State) ->

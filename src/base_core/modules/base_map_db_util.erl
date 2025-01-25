@@ -17,7 +17,7 @@ init()->
 	nothing.
 	%%	init_ets(),
 	%%	CurNode = node(),
-	%%	case env:get(lines_info, []) of
+	%%	case base_env_ets:get(lines_info, []) of
 	%%		[]->base_logger_util:msg("read lines_info error,please check >>>gm.option<<< file\n");
 	%%		LinesInfo->process_line_config(CurNode,LinesInfo)
 	%%	end.

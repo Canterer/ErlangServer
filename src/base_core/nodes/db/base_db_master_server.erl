@@ -118,7 +118,7 @@ handle_cast(Msg, State) ->
 %% --------------------------------------------------------------------
 handle_info({check_backup},State)->
 	%% get backup filename
-	Dir = env:get2(dbback, output,[]),
+	Dir = base_env_ets:get2(dbback, output,[]),
 	case Dir of
 		[]-> ignor;
 		_->
@@ -128,7 +128,7 @@ handle_info({check_backup},State)->
 	end,
 	{noreply,State};
 handle_info({check_split},State)->
-	ServerList = env:get(serverids, [0]),
+	ServerList = base_env_ets:get(serverids, [0]),
 	Result = lists:foldl(fun(ServerId,Acc)->
 								 case Acc of
 									 ignor->ignor;
@@ -171,7 +171,7 @@ handle_info({backupdata,FromProc}, State)->
 	end,
 	if
 		BackupFlag->		
-			BackDir = env:get2(dbback, output,[]),
+			BackDir = base_env_ets:get2(dbback, output,[]),
 			BackPath = BackDir ++ "zybackup_db",
 			data_gen:backup_ext(BackPath),
 			base_rpc_util:cast(FromProc,{backup_db_ok}),
@@ -202,7 +202,7 @@ handle_info({backupdata}, State)->
 	end,
 	if
 		BackupFlag->		
-			BackDir = env:get2(dbback, output,[]),
+			BackDir = base_env_ets:get2(dbback, output,[]),
 			BackPath = BackDir ++ "zybackup_db",
 			data_gen:backup_ext(BackPath),
 			server_control:write_flag_file(),
@@ -214,7 +214,7 @@ handle_info({backupdata}, State)->
 
 handle_info({recoverydata,FromProc},State)->
 	base_logger_util:msg("recoverydata start~n"),
-	BackDir = env:get2(dbback, output,[]),
+	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zybackup_db",
 	data_gen:recovery_ext(BackPath),
 	data_gen:start(),
@@ -226,7 +226,7 @@ handle_info({recoverydata,FromProc},State)->
 
 handle_info({recoverydata},State)->
 	base_db_tools:wait_for_all_db_tables(),
-	BackDir = env:get2(dbback, output,[]),
+	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zybackup_db",
 	data_gen:recovery_ext(BackPath),
 	data_gen:start(),
@@ -239,7 +239,7 @@ handle_info({gen_data},State)->
 	%%data_gen:start(),
 	base_db_tools:wait_for_all_db_tables(),
 	data_gen:import_config("game"),
-	%%ServerId = env:get(serverid,1),
+	%%ServerId = base_env_ets:get(serverid,1),
 	%%giftcard_op:import("../config/gift_card-"++integer_to_list(ServerId)++"01.config"),
 	server_control:write_flag_file(),
 	base_logger_util:msg("data_gen gen db finish!!!"),
@@ -286,7 +286,7 @@ code_change(OldVsn, State, Extra) ->
 
 
 send_check_dump_message()->
-	CheckInterval = env:get2(dbback, checkinterval , []),
+	CheckInterval = base_env_ets:get2(dbback, checkinterval , []),
 	if is_integer(CheckInterval)->
 		   base_timer_util:send_after(CheckInterval, {check_backup});
 	   true-> ignor
@@ -310,7 +310,7 @@ check_today_dump(Dir)->
 	Now = base_timer_server:get_correct_now(),
 	{{Y,M,D},{H,_Min,_S}} = calendar:now_to_local_time(Now),
 	%% check time
-	Res = case env:get2(dbback, between_hour, []) of
+	Res = case base_env_ets:get2(dbback, between_hour, []) of
 		[]-> false;
 		{B,E}-> 
 			{NewB,NewE} = if B>E -> {E,B};
@@ -371,7 +371,7 @@ check_db_dump(Dir)->
 			nothing;
 		{idle,LastTime}->
 			Now = base_timer_server:get_correct_now(),
-			BackInterval = env:get2(dbback,backinterval,?DEFAULT_BACKUP_INTERVAL),
+			BackInterval = base_env_ets:get2(dbback,backinterval,?DEFAULT_BACKUP_INTERVAL),
 			TimeDiff = trunc(timer:now_diff(Now,LastTime)/1000),
 			if
 				BackInterval =< TimeDiff->
