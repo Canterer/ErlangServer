@@ -5,20 +5,20 @@ import sys
 import time
 
 def replace_bench(input_string,old_string_array,new_string_array):
-    temp_string = input_string
-    i=0
-    for old in old_string_array:
-        temp_string = temp_string.replace(old,new_string_array[i])
-        i=i+1
-    return temp_string
+	temp_string = input_string
+	i=0
+	for old in old_string_array:
+		temp_string = temp_string.replace(old,new_string_array[i])
+		i=i+1
+	return temp_string
 
 def gen_file(filename,content):
-    if not os.path.exists(filename):
-        open(filename, 'w').close()      
-    fd = open(filename, 'r+')
-    fd.truncate()
-    fd.write(content)
-    fd.close()
+	if not os.path.exists(filename):
+		open(filename, 'w').close()	  
+	fd = open(filename, 'r+')
+	fd.truncate()
+	fd.write(content)
+	fd.close()
 
 # makeversion.py path为 '../src/base_core/scripts'
 version_path = './modules/version'

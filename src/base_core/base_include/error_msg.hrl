@@ -42,7 +42,7 @@
 -define(GUILD_ERRNO_LESS_CONTRIBUTION,10037).					%%帮贡不足
 -define(GUILD_ERRNO_LIMITNUM,10038).							%%到达限购数
 -define(GUILD_ERRNO_APPLYNUM_FULL,10039).						%%申请人数已满
--define(GUILD_PACKAGE_LIMIT_BIND,1).      %%帮会仓库权限禁止
+-define(GUILD_PACKAGE_LIMIT_BIND,1).	  %%帮会仓库权限禁止
 -define(GUILD_PACKAGE_LIMIT_NOBIND,0).%%帮会仓库权限不禁止
 
 %%组队
@@ -64,8 +64,8 @@
 -define(ERROR_MISS_ITEM,10025).			%%缺少物品
 -define(ERROR_PACKEGE_FULL,10051).		%%包裹满
 -define(ERROR_LESS_HONOR,10052).		%%缺少荣誉
--define(ERROR_LESS_GOLD,10071).         %%元宝不够
--define(ERROR_LESS_TICKET,10072).       %%礼券不够
+-define(ERROR_LESS_GOLD,10071).		 %%元宝不够
+-define(ERROR_LESS_TICKET,10072).	   %%礼券不够
 -define(ERROR_LESS_INTEGRAL,10070).		%%积分不够
 -define(ERROR_NOT_LEAVE_ATTACK,10077).			%%尚未脱离战斗
 -define(ERROR_UNKNOWN,10003).				%%未知错误
@@ -127,7 +127,7 @@
 -define(ERRNO_NOT_ONLINE,10304).
 -define(ERRNO_HAS_NOGROUP,10305).
 -define(ERRNO_CHAT_COOLDOWN,10306).
--define(ERRNO_MAX_LOUDSPEAK,10307).                 %%喇叭使用排队人数到达上限
+-define(ERRNO_MAX_LOUDSPEAK,10307).				 %%喇叭使用排队人数到达上限
 -define(ERRNO_HAS_NOBATTLE,10308).
 
 %% npc 错误
@@ -217,8 +217,8 @@
 -define(ERROR_PET_ADD_ATTR_OK,10721).					%%玩家加点成功
 -define(ERROR_PET_WASH_POINT_OK,10723).					%%洗点成功
 
--define(ERROR_PET_CAN_NOT_TAKE,10724).	                %%宠物不可携带
--define(ERROR_PED_EVOLUTION_FAILED,10725).              %%进化失败
+-define(ERROR_PET_CAN_NOT_TAKE,10724).					%%宠物不可携带
+-define(ERROR_PED_EVOLUTION_FAILED,10725).			  %%进化失败
 -define(ERROR_PET_QUALITY_MAX,10726).					%%宠物已达最高代数
 -define(ERROR_PET_NOT_ENOUGH_ITEM,10727).				%%道具不足
 -define(ERROR_PET_NOT_ENOUGH_MONEY,10728).				%%钱币不足
@@ -359,15 +359,15 @@
 -define(QUEST_TIMEOUT,11021).					%%任务过期
 
 %%连续登录
--define(ERROR_REWARDED_TODAY,11030).            %%今天领过奖励
--define(ERROR_NOT_REACH_LEVEL,11031).            %%等级不够
+-define(ERROR_REWARDED_TODAY,11030).			%%今天领过奖励
+-define(ERROR_NOT_REACH_LEVEL,11031).			%%等级不够
 
 %%收藏有礼错误信息
--define(FAVORITE_GIFT_AWARDED,11034).            %%礼物已经领过
+-define(FAVORITE_GIFT_AWARDED,11034).			%%礼物已经领过
 
 %%邀请好友送礼  by zhangting
--define(ERROR_NO_MATCH_GIFTS,11035).      %%好友送礼没有匹配的礼物
--define(ERROR_HAD_REWARDED,11036).        %%好友送礼该礼物已领取，不能重复领取
+-define(ERROR_NO_MATCH_GIFTS,11035).	  %%好友送礼没有匹配的礼物
+-define(ERROR_HAD_REWARDED,11036).		%%好友送礼该礼物已领取，不能重复领取
 
 %%首充礼包奖励
 -define(GET_FIRST_CHARGE_GIFT_ERROR,11040).		%%领取失败
@@ -382,7 +382,7 @@
 %%祈福仓库
 -define(TREASURE_STORAGE_GET_ITEM_ERROR,11200).		%%领取物品失败 请稍候
 %%祈福
--define(TREASURE_CHEST_GOLD_NOT_ENOUGH,11201).           			%%元宝不足
+-define(TREASURE_CHEST_GOLD_NOT_ENOUGH,11201).		   			%%元宝不足
 -define(TREASURE_CHEST_ITEM_NOT_ENOUGH,11202).						%%天珠不足
 -define(TREASURE_CHEST_PACKET_NOT_ENOUGH,11203).  	%%祈福背包空间不足
 
@@ -392,13 +392,13 @@
 -define(ACTIVITY_VALUE_REWARD_SUCCESS,11302).		%%领取成功
 
 %%修为精通
--define(VENATION_NOT_OPEN,11400).           %%修为没开启
+-define(VENATION_NOT_OPEN,11400).		   %%修为没开启
 -define(VENATION_NO_ITEM,11401).			%%没有提升符
 -define(VENATION_NO_MONEY,11402).			%%没有钱
 -define(VENATION_FAILED,11403).				%%提升失败
 
 %%坐骑相关
--define(ERROR_IDENTIFY_NO_ITEM,11410).      %%坐骑鉴定
+-define(ERROR_IDENTIFY_NO_ITEM,11410).	  %%坐骑鉴定
 -define(ERROR_NOT_SAME_QULITY,11411).		%%坐骑合成
 
 -define(ERRNO_ALREADY_IN_INSTANCE,11420).		%%已在副本中,无法传送
@@ -444,7 +444,7 @@
 -define(ERRNO_MAINLINE_ENTRY_IN_TRAVEL_MAP,11501). %%跨服地图中无法进行挑战
 -define(ERRNO_ROLE_DEAD,10501).					%%死亡
 
--define(ERRNO_CAN_ONLY_USE_IN_PRISON,11505).            %%该物品只能在监狱中使用 
+-define(ERRNO_CAN_ONLY_USE_IN_PRISON,11505).			%%该物品只能在监狱中使用 
 
 -define(ERRNO_SENSWORDS,11510).							%%含有敏感文字
 -define(ERRNO_GUILDBATTLEAPPLY_TIME_ERROR,11511).		%%现在不是报名时间

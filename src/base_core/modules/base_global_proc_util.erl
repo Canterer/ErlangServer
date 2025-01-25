@@ -29,7 +29,7 @@ send(ModuleName,Msg)->
 		[]->
 			base_logger_util:msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),
 			error;
- 			%%global:send(ModuleName,Msg);
+			%%global:send(ModuleName,Msg);
 		Node->
 			base_rpc_util:cast(Node,ModuleName, Msg)
 	end.
@@ -42,7 +42,7 @@ call(ModuleName,Msg,TimeOut)->
 		[]->
 			base_logger_util:msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),
 			error;
- 			%%gen_server:call({global,ModuleName},Msg,TimeOut);
+			%%gen_server:call({global,ModuleName},Msg,TimeOut);
 		Node->
 			gen_server:call({ModuleName,Node}, Msg, TimeOut)
 	end.

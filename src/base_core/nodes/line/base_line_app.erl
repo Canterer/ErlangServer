@@ -11,16 +11,16 @@
 %% Behavioural exports
 %% --------------------------------------------------------------------
 -export([
-	 start/2,
-	 stop/1
-        ]).
+	start/2,
+	stop/1
+]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
 %% --------------------------------------------------------------------
 -export([
-	 start/0	 
-	]).
+	start/0	 
+]).
 
 %% --------------------------------------------------------------------
 %% Macros
@@ -40,13 +40,11 @@
 %% ====================================================================!
 %% --------------------------------------------------------------------
 %% Func: start/2
-%% Returns: {ok, Pid}        |
-%%          {ok, Pid, State} |
-%%          {error, Reason}
+%% Returns: {ok, Pid}		|
+%%		  {ok, Pid, State} |
+%%		  {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-	filelib:ensure_dir("../log/"),
-	error_logger:logfile({open, "../log/line_node.log"}),
 	% ?RELOADER_RUN,
 	% 等待配置中的pre_connect_nodes节点可连接
 	base_ping_util:wait_all_nodes_connect(),
@@ -81,6 +79,7 @@ stop(_State) ->
 %% ====================================================================
 
 start_lines_manager_sup() ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_line_manager_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
@@ -89,6 +88,7 @@ start_lines_manager_sup() ->
 	end.
 
 start_line_processor_sup() ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_line_processor_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};

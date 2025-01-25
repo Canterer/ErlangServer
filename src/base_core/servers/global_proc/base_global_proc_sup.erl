@@ -14,9 +14,9 @@
 %% Internal exports
 %% --------------------------------------------------------------------
 -export([
-	 init/1,
-	 start_checker/0
-        ]).
+	init/1,
+	start_checker/0
+]).
 
 %% --------------------------------------------------------------------
 %% Macros
@@ -39,17 +39,18 @@ start_checker()->
 %% --------------------------------------------------------------------
 %% Func: init/1
 %% Returns: {ok,  {SupFlags,  [ChildSpec]}} |
-%%          ignore                          |
-%%          {error, Reason}
+%%		  ignore						  |
+%%		  {error, Reason}
 %% --------------------------------------------------------------------
 init([DbType]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case DbType of
 		checker->
 			AChildList = [{base_global_proc_checker_server,{base_global_proc_checker_server,start_link,[]}, transient,2000,worker,[base_global_proc_checker_server]}];
 		_->
 			AChildList = []
 	end,
-    {ok,{{one_for_all,10,10}, AChildList}}.
+	{ok,{{one_for_all,10,10}, AChildList}}.
 
 %% ====================================================================
 %% Internal functions

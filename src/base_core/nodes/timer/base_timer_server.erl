@@ -39,53 +39,53 @@ query_time()->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-    {ok, #state{}}.
+	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({query_time}, _From, State) ->
    Reply = os:timestamp(),
    {reply, Reply, State};
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+	Reply = ok,
+	{reply, Reply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(_Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 
 handle_info(Info, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: terminate/2
@@ -93,7 +93,7 @@ handle_info(Info, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(_Reason, State) ->
-    ok.
+	ok.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -101,7 +101,7 @@ terminate(_Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
@@ -147,9 +147,9 @@ put_deviation_seconds(OtherTimer)->
 	{A2,B2,_C2} = OtherTimer,
 	{A1,B1,_C1} = os:timestamp(),
 	Deviation = B2 + A2*1000000 - B1 - A1*1000000,
-	ets:new(?DEVIATION_SECONDS_ETS, [set,public,named_table]),
-	ets:insert(?DEVIATION_SECONDS_ETS, {1,Deviation}),
-	ets:insert(?DEVIATION_SECONDS_ETS, {2,{A1,B1,0}}).
+	ets_operater_behaviour:new(?DEVIATION_SECONDS_ETS, [set,public,named_table]),
+	ets_operater_behaviour:insert(?DEVIATION_SECONDS_ETS, {1,Deviation}),
+	ets_operater_behaviour:insert(?DEVIATION_SECONDS_ETS, {2,{A1,B1,0}}).
 
 get_ets_deviation_seconds()->
 	case ets:lookup(?DEVIATION_SECONDS_ETS, 1) of

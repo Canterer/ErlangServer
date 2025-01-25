@@ -15,36 +15,37 @@
 -export([start_link/0]).
 
 %% gen_lines_manager interface
--export([add_line/1,
-	 wait_lines_manager_loop/0,
-	 delete_line/1,
-	 regist_map_manager/1,
-	 whereis_name/0,
-	 lookup_map_manager/1,
-	 regist_map_processor/1,
-	 regist_map_processor/2,
-	 query_line_status/3,
-	 get_line_status/1,
-	 get_map_name/2,
-	 get_map_node/2,
-	 get_map_nodes/0,
-	 regist_to_manager/2,
-	 unregist_map_by_node/1,
-	 get_line_map_in_node/1,
-	 get_role_num_by_mapId/0,
-	 open_dynamic_line/1
-	 ]).
+-export([
+	add_line/1,
+	wait_lines_manager_loop/0,
+	delete_line/1,
+	regist_map_manager/1,
+	whereis_name/0,
+	lookup_map_manager/1,
+	regist_map_processor/1,
+	regist_map_processor/2,
+	query_line_status/3,
+	get_line_status/1,
+	get_map_name/2,
+	get_map_node/2,
+	get_map_nodes/0,
+	regist_to_manager/2,
+	unregist_map_by_node/1,
+	get_line_map_in_node/1,
+	get_role_num_by_mapId/0,
+	open_dynamic_line/1
+]).
 
 
 %% gen_server callbacks
 -export([
-	 init/1, 
-	 handle_call/3, 
-	 handle_cast/2, 
-	 handle_info/2, 
-	 terminate/2, 
-	 code_change/3
-	]).
+	init/1, 
+	handle_call/3, 
+	handle_cast/2, 
+	handle_info/2, 
+	terminate/2, 
+	code_change/3
+]).
 
 %%add for chat
 % -export([regist_chatmanager/1,get_chat_name/0]).
@@ -86,7 +87,7 @@ regist_to_manager(LinesManagerName,LineName) ->
 %% Args: {node_name, map_center_name}
 %% @spec regist_map_manager(tupe()) -> Pid.
 regist_map_manager(Args) ->
-	base_global_proc_util:send(?MODULE, {regist_map_manager, Args}).    
+	base_global_proc_util:send(?MODULE, {regist_map_manager, Args}).	
 
 % %%
 % %%regist chatmagager
@@ -197,23 +198,24 @@ get_role_num_by_mapId()->
 
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	start_line_server(),
 	{ok, #state{}}.
 
 
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 handle_call(Request, From, State) ->
 	Reply = 
 	try
@@ -258,18 +260,18 @@ handle_call(Request, From, State) ->
 
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 handle_cast(Msg, State) ->
 	{noreply, State}.
 
 
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 
 handle_info(Info, State) ->
 	try
@@ -293,22 +295,22 @@ handle_info(Info, State) ->
 						base_logger_util:msg("~p is exist~n", [LineName])
 				end;
 			{regist_line_server, LineName} ->
-				ets:insert(?ETS_LINE_PROC_DB, {LineName});
+				ets_operater_behaviour:insert(?ETS_LINE_PROC_DB, {LineName});
 	
 			{delete_line_server, LineName} ->
 				base_base_line_processor_server_sup:delete_line(LineName),
-				ets:delete(?ETS_LINE_PROC_DB,LineName);
+				ets_operater_behaviour:delete(?ETS_LINE_PROC_DB,LineName);
 	
 			{regist_map_manager, {Node, Name}} ->
 				%% insert the map_manager's name into map_manager db, formate of
 				%% information: {Node, map_managerName}
-				ets:insert(?ETS_MAP_MANAGER_DB, {Node, Name}),
+				ets_operater_behaviour:insert(?ETS_MAP_MANAGER_DB, {Node, Name}),
 				%% load map data
 				load_map(Node);
 			
 			%% regist chatmanager
 			{regist_chatmanager, {Node, Name, Count}} ->
-				ets:insert(?ETS_CHAT_MANAGER_DB, {Node, Name,Count});
+				ets_operater_behaviour:insert(?ETS_CHAT_MANAGER_DB, {Node, Name,Count});
 			
 			{get_role_count_by_map, {FromNode, FromProcName, MapId}} ->
 				LineInfo = base_line_processor_server:get_role_count_by_map(MapId),
@@ -319,7 +321,7 @@ handle_info(Info, State) ->
 			{unregist_map_by_node,NodeName}->
 			  	base_line_processor_server:unregist_by_node(NodeName);
 			_ ->
-				base_logger_util:msg("receive message: {~p}~n", [Info])	    
+				base_logger_util:msg("receive message: {~p}~n", [Info])		
 		end
 	catch 
 		E:R->
@@ -359,8 +361,8 @@ load_map(MapNode) ->
 	Lines = base_env_ets:get(lines, []),
 	MapConfigFlag = base_env_ets:get(mapconfig_flag, []),
 	lists:foreach(fun(LineId) ->
-				      start_map_processor(MapConfigFlag,LineId, MapNode)
-		      end, Lines).
+					  start_map_processor(MapConfigFlag,LineId, MapNode)
+			  end, Lines).
 
 start_map_processor(LineId, MapNode)->
 	MapConfigFlag = base_env_ets:get(mapconfig_flag, []),

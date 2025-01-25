@@ -91,17 +91,17 @@ get_instance_id(MapProcName)->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([MapProcName, {{LineId,MapId}, Tag}])->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:msg("~p:~p([MapProcName:~p, {{LineId:~p,MapId:~p}, Tag:~p}])~n",[?MODULE,?FUNCTION_NAME,MapProcName,LineId,MapId,Tag]),
 	process_flag(trap_exit, true),
-	AOIdb = ets:new(MapProcName, [set, public, named_table]),
+	AOIdb = ets_operater_behaviour:new(MapProcName, [set, public, named_table]),
 	NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
-	ets:new(NpcInfoDB, [set,public,named_table]),
+	ets_operater_behaviour:new(NpcInfoDB, [set,public,named_table]),
 	put(npcinfo_db,NpcInfoDB),	
 	npc_sup:start_link(MapId,MapProcName,NpcInfoDB),
 	case Tag of
@@ -150,7 +150,7 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 							npc_db:get_creature_spawns_info({LineId,MapId}),
 			
 			lists:foreach(fun(NpcInfo)->
-				      NpcId = npc_db:get_spawn_id(NpcInfo),
+					  NpcId = npc_db:get_spawn_id(NpcInfo),
 					  case npc_db:get_born_with_map(NpcInfo) of
 						  1->
 					 		npc_manager:add_npc_by_option(NpcManagerProc,NpcId,LineId,MapId,NpcInfo,CreatorTag);
@@ -164,7 +164,7 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 	MapDb = mapdb_processor:make_db_name(MapId),
 	case ets:info(MapDb) of
 		undefined->
-			ets:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
+			ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 			case map_info_db:get_map_info(MapId) of
 				[]->
 					nothing;
@@ -214,12 +214,12 @@ handle_call(get_instance_details,_From,State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({get_instance_id}, _From,ProcState) ->
 	Reply = get(instanceid),
@@ -324,11 +324,11 @@ handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcS
 		role->
 			case ets:lookup(MapProcName, Grid) of
 				[] ->										
-					ets:insert(MapProcName, {Grid, [],[CreatureId],true});			
+					ets_operater_behaviour:insert(MapProcName, {Grid, [],[CreatureId],true});			
 				[{_, _,Roles,_}] ->			
 					case lists:member(CreatureId,Roles) of
 						false-> 
-							ets:update_element(MapProcName,Grid,{?ETS_POS_ROLES,[CreatureId]++Roles});
+							ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_ROLES,[CreatureId]++Roles});
 						_->
 							nothing
 					end												
@@ -336,11 +336,11 @@ handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcS
 		npc->
 			case ets:lookup(MapProcName, Grid) of
 				[] ->						
-					ets:insert(MapProcName, {Grid, [CreatureId],[],false});			
+					ets_operater_behaviour:insert(MapProcName, {Grid, [CreatureId],[],false});			
 				[{_, Units,_,_}] ->	
 					case lists:member(CreatureId,Units) of
 						false-> 
-							ets:update_element(MapProcName,Grid,{?ETS_POS_UNITS,[CreatureId]++Units});
+							ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_UNITS,[CreatureId]++Units});
 						_->
 							nothing
 					end															
@@ -356,9 +356,9 @@ handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=Proc
 		[{_,Units,Roles,_}] ->
 			case creature_op:what_creature(CreatureId) of
 				role ->																												
-					ets:update_element(MapProcName,Grid,{?ETS_POS_ROLES,lists:delete(CreatureId,Roles)});
+					ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_ROLES,lists:delete(CreatureId,Roles)});
 				npc->
-					ets:update_element(MapProcName,Grid,{?ETS_POS_UNITS,lists:delete(CreatureId,Units)})
+					ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_UNITS,lists:delete(CreatureId,Units)})
 			end					
 	end,
 	Reply = ok,
@@ -372,9 +372,9 @@ handle_call(Request, From, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
 	{noreply, State}.
@@ -382,9 +382,9 @@ handle_cast(Msg, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({on_destroy,WaitTime},ProcState)->
 	erlang:send_after(WaitTime,self(),{on_destroy}),

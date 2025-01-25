@@ -39,49 +39,50 @@ is_ready()->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(global_proc_ready,false),
 	do_wait(),
-    {ok, #state{}}.
+	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call(is_global_proc_ready, From, State) ->
 	Reply = get(global_proc_ready),
 	{reply, Reply, State};
 handle_call(Request, From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+	Reply = ok,
+	{reply, Reply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info( {check_global_proc},State)->
 	 do_wait(),
@@ -91,7 +92,7 @@ handle_info({stop}, State) ->
 	{stop,normal,State};
  
 handle_info(Info, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: terminate/2
@@ -99,7 +100,7 @@ handle_info(Info, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
-    ok.
+	ok.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -107,7 +108,7 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 do_wait()->
 	case base_env_ets:get(global_wait_proc,[]) of

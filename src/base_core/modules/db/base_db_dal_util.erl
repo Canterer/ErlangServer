@@ -21,7 +21,7 @@
 %%
 init()->
 	try 
-		ets:new(?DAL_WRITE_RECORD, [set,named_table,public]) 
+		ets_operater_behaviour:new(?DAL_WRITE_RECORD, [set,named_table,public]) 
 	catch 
 		E:R-> 
 			base_logger_util:msg("init_dal_write_record Exception(~p:~p)~n", [E,R])
@@ -89,7 +89,7 @@ index_match_object_rpc(Pattern,Pos)->
 index_match_object(Pattern,Pos)-> 
 	case catch mnesia:dirty_index_match_object(Pattern,Pos) of
 		{'EXIT', Reason} ->
-	    	base_logger_util:msg("index_match_object error ~p Pattern ~p ~n",[Reason,Pattern]),{failed,Reason};
+			base_logger_util:msg("index_match_object error ~p Pattern ~p ~n",[Reason,Pattern]),{failed,Reason};
 		Result when is_list(Result) -> {ok,Result};
 		Result->
 			base_logger_util:msg("index_match_object error ~p Pattern ~p ~n",[Result,Pattern]),{failed,Result}
@@ -344,7 +344,7 @@ clear_table(TableName)->
 	end.
 
 set_write_flag()->
-	ets:insert(?DAL_WRITE_RECORD,{1,os:timestamp()}).
+	ets_operater_behaviour:insert(?DAL_WRITE_RECORD,{1,os:timestamp()}).
 
 get_write_flag()->
 	case ets:lookup(?DAL_WRITE_RECORD, 1) of

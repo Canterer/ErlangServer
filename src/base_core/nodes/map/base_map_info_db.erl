@@ -26,7 +26,7 @@ delete_role_from_db(_)->
 	nothing.
 
 create()->	
-	ets:new(?MAP_INFO_ETS, [set,named_table]).
+	ets_operater_behaviour:new(?MAP_INFO_ETS, [set,named_table]).
 
 init()->
 	% 从数据库读取 

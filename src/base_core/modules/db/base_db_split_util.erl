@@ -21,19 +21,19 @@
 %% API Functions
 %%
 create_ets()->
-	ets:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
+	ets_operater_behaviour:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
 
 init_ets()->
 	nothing.
 	
 add_table_names(OriginalTable,SplittedTable)->
 	case ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
-		[]->ets:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable]});
+		[]->ets_operater_behaviour:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable]});
 		[{_,OldTables}]->
 			case lists:member(SplittedTable, OldTables) of
 				true-> ignor;
 				_->
-					ets:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable|OldTables]})
+					ets_operater_behaviour:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable|OldTables]})
 			end
 	end.
 
@@ -166,7 +166,7 @@ check_need_new_table(BaseTable,HiValue)->
 									   		{notable,erlang:max(PostNum,LastMaxIndex)}
 							   		  end
 							end %% case string:str
-				    end %% case TableName
+					end %% case TableName
 			end %% case Acc0
 		end,
 	case lists:foldl(F, {notable,-1}, Tables) of

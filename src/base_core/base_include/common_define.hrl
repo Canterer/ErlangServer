@@ -80,12 +80,12 @@
 -define(GROUP_UPDATE_TIME,5000).
 
 %%chat 定义
--define(CHAT_TYPE_WORLD,1).       %% 世界
--define(CHAT_TYPE_INTHEVIEW,2).       %% 附近
--define(CHAT_TYPE_PRIVATECHAT,3).       %% 私聊
--define(CHAT_TYPE_GROUP,4).       %% 组队
--define(CHAT_TYPE_SYSTEM,5).       %% 系统消息
--define(CHAT_TYPE_GM_NOTICE,6).       %%Gm喊话
+-define(CHAT_TYPE_WORLD,1).	   %% 世界
+-define(CHAT_TYPE_INTHEVIEW,2).	   %% 附近
+-define(CHAT_TYPE_PRIVATECHAT,3).	   %% 私聊
+-define(CHAT_TYPE_GROUP,4).	   %% 组队
+-define(CHAT_TYPE_SYSTEM,5).	   %% 系统消息
+-define(CHAT_TYPE_GM_NOTICE,6).	   %%Gm喊话
 -define(CHAT_TYPE_LARGE_EXPRESSION,14). %%大表情
 
 -define(CHAT_TYPE_GUILD,7).
@@ -110,7 +110,7 @@
 
 %%挂机涨经验间隔
 -define(TRAINING_TIME,10000).			%%10s
--define(CHARGE_SYSTEM_KEY,1).               %%充值开放标志
+-define(CHARGE_SYSTEM_KEY,1).			   %%充值开放标志
 
 %%战场类型
 -define(TANGLE_BATTLE,1).					%%群p

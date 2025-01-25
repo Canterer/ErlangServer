@@ -224,56 +224,56 @@ is_table_in_list(Table,SplitTables)->
 	TabStr = atom_to_list(Table),
 	SplitTableStr = lists:map(fun(T)-> atom_to_list(T) end, SplitTables),
 	NewTabs = lists:filter(fun(T)->
-						     StrIndex = string:str(TabStr, T),
-						     if ( StrIndex =:=0 )-> false;
-							    true-> true
-						     end
-					       end, SplitTableStr),
+							 StrIndex = string:str(TabStr, T),
+							 if ( StrIndex =:=0 )-> false;
+								true-> true
+							 end
+						   end, SplitTableStr),
 	if erlang:length(NewTabs) >0 -> true;
 	   true-> false
 	end.
 	
 
 add_db_ram_node(NewNode,Tables) -> 
-    RunningNodeList = mnesia:system_info(running_db_nodes),  
-    add_extra_node(RunningNodeList, NewNode),  
-    mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
-    base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
-    timer:sleep(1000),  
-    base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
-    timer:sleep(1000),  
+	RunningNodeList = mnesia:system_info(running_db_nodes),  
+	add_extra_node(RunningNodeList, NewNode),  
+	mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
+	base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
+	timer:sleep(1000),  
+	base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
+	timer:sleep(1000),  
 	NeedConfigTables = base_db_tools:correct_need_config_tables(Tables),
-    add_ram_tables(NeedConfigTables, NewNode).
+	add_ram_tables(NeedConfigTables, NewNode).
   
 add_dbslave_node(NewNode) -> 
-    RunningNodeList = mnesia:system_info(running_db_nodes),  
-    add_extra_node(RunningNodeList, NewNode),  
-    mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
-    base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
-    timer:sleep(1000),  
-    base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
-    timer:sleep(1000),  
+	RunningNodeList = mnesia:system_info(running_db_nodes),  
+	add_extra_node(RunningNodeList, NewNode),  
+	mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
+	base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
+	timer:sleep(1000),  
+	base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
+	timer:sleep(1000),  
 	TablesList = mnesia:system_info(tables),
-    add_disc_tables(TablesList, NewNode).
+	add_disc_tables(TablesList, NewNode).
 
 add_extra_node([], _NewNode) ->  
-    null;  
+	null;  
 add_extra_node(_RunningNodeList = [Node | T], NewNode) ->  
-    base_rpc_util:asyn_call(Node, mnesia, change_config, [extra_db_nodes, [NewNode]]),  
-    add_extra_node(T, NewNode).  
+	base_rpc_util:asyn_call(Node, mnesia, change_config, [extra_db_nodes, [NewNode]]),  
+	add_extra_node(T, NewNode).  
   
 add_ram_tables([], _NewNode) ->  
-    null;  
+	null;  
 add_ram_tables(_TableList = [Table | T], NewNode) ->  
-    mnesia:add_table_copy(Table, NewNode, ram_copies),  
-    add_ram_tables(T, NewNode).
+	mnesia:add_table_copy(Table, NewNode, ram_copies),  
+	add_ram_tables(T, NewNode).
 
 
 add_disc_tables([], _NewNode) ->  
-    null;  
+	null;  
 add_disc_tables(_TableList = [Table | T], NewNode) ->  
-    mnesia:add_table_copy(Table, NewNode, disc_copies),  
-    add_disc_tables(T, NewNode).
+	mnesia:add_table_copy(Table, NewNode, disc_copies),  
+	add_disc_tables(T, NewNode).
 
 wait_for_tables_loop(_IsRemote,0,_TabList)->
 	base_logger_util:msg("wait_for_tables out of times~n");

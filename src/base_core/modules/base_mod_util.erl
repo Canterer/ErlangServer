@@ -55,6 +55,7 @@ is_behaviour_attributes([_|Tail],Behav)->
 	is_behaviour_attributes(Tail,Behav).	
 
 safe_aplly(Mod, Func, Args)->
+	base_logger_util:msg("~p:~p(Mod:~p, Func:~p, Args:~p)~n",[?MODULE,?FUNCTION_NAME,Mod,Func,Args]),
 	try
 		erlang:apply(Mod, Func, Args)
 	catch 

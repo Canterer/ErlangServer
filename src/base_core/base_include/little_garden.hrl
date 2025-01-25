@@ -54,7 +54,7 @@
 %%运镖buff
 -define(ROLE_TREASURE_TRANSPORT_BUFFERS,{611111121,1}).		
 %%篝火buff
--define(BONFIRE_BUFFERS,{500000005,1}).    		
+-define(BONFIRE_BUFFERS,{500000005,1}).			
 
 %%复活需要的元宝
 -define(RESPAWN_WITH_CHTHEAL_INSITU_GOLD,18).

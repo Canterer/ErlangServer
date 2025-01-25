@@ -258,15 +258,15 @@
 -record(guild_monster,{guildid,monster,lefttimes,time,lastcalltime,activmonster}).
 -record(wing_role,
 		{roleid,
-		 level,                  %%飞剑等级
-		 social,                %%飞剑品阶
-		quality,               %%飞剑品质
-		streng,                %%强化
-		streng_up,             %%强化上限
-		perfect_value,         %%强化加成
-		skills,                           %%飞剑技能
-		echants,            %%洗练属性
-		lucky                      %%进阶幸运值
+		 level,				  %%飞剑等级
+		 social,				%%飞剑品阶
+		quality,			   %%飞剑品质
+		streng,				%%强化
+		streng_up,			 %%强化上限
+		perfect_value,		 %%强化加成
+		skills,						   %%飞剑技能
+		echants,			%%洗练属性
+		lucky					  %%进阶幸运值
 		}).
 -record(tangle_battle_role_killnum,{roleid,killnum}).
 -record(signature,{roleid,sign}).

@@ -7,14 +7,16 @@
 -include("map_define.hrl").
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/2,
-	 whereis/1,
-	 query_db_name/1,
-	 query_map_stand/2,
-	 get_map_data/1,
-	 make_db_name/1,
-	 query_born_pos/1,
-	 query_safe_grid/2]).
+-export([
+	start_link/2,
+	whereis/1,
+	query_db_name/1,
+	query_map_stand/2,
+	get_map_data/1,
+	make_db_name/1,
+	query_born_pos/1,
+	query_safe_grid/2
+]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -95,10 +97,10 @@ get_map_data(Map_id) ->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([MapFile,MapId]) ->
 %%	case {ok,{{0,0},true}} of % file:consult(MapFile)
@@ -106,12 +108,12 @@ init([MapFile,MapId]) ->
 
 %%		{ok,L}-> 
 			MapDB = make_db_name(MapId),
-			ets:new(MapDB, [set,named_table]),	%% first new the database, and then register proc
+			ets_operater_behaviour:new(MapDB, [set,named_table]),	%% first new the database, and then register proc
 			base_logger_util:msg("base_map_db_util:load_map_file MapId ~p MapDB~p ~n",[MapId,MapDB]),
 			base_map_db_util:load_map_file(MapId,MapDB),
 			register(make_db_proc(MapId),self()),
 			{true, Tree} = build_quadtree(MapFile),
-			ets:insert(MapDB, {map_data, Tree}),
+			ets_operater_behaviour:insert(MapDB, {map_data, Tree}),
 			{ok, #state{mapdb=MapDB}}.
 %%	end.
 
@@ -119,12 +121,12 @@ init([MapFile,MapId]) ->
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call(Request, From, State) ->
 	case Request of
@@ -137,9 +139,9 @@ handle_call(Request, From, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
 	{noreply, State}.
@@ -147,9 +149,9 @@ handle_cast(Msg, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info(Info, State) ->
 	{noreply, State}.
@@ -185,5 +187,5 @@ make_db_proc(MapId)->
 
 
 build_quadtree(_MapFile) ->
-	%%    {Rect, View} = file:consults(MapFile),
+	%%	{Rect, View} = file:consults(MapFile),
 	quadtree:build(?MapRect, ?View).

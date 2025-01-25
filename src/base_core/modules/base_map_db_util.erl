@@ -26,7 +26,7 @@ init()->
 %% Local Functions
 %%
 init_ets()->
-	try	ets:new(?MAP_DATA_ETS, [public,set,named_table]) catch _:_-> ignor end.
+	try	ets_operater_behaviour:new(?MAP_DATA_ETS, [public,set,named_table]) catch _:_-> ignor end.
 
 
 process_line_config(CurNode,LinesInfo)->
@@ -45,7 +45,7 @@ process_static_config(CurNode,Terms,MapIds)->
 								load_map_file(MapId,?MAP_DATA_ETS), [MapId|LoopMaps];
 							true-> LoopMaps
 						end	
-				     end,MapIds,Terms).
+					 end,MapIds,Terms).
 
 process_dynamic_config(CurNode,Terms,MapIds)->
 	lists:foldl(fun({MapId,Nodes},LoopMaps)->  
@@ -54,7 +54,7 @@ process_dynamic_config(CurNode,Terms,MapIds)->
 							   load_map_file(MapId,?MAP_DATA_ETS), [MapId|LoopMaps];
 							true-> LoopMaps
 						end	
-				     end,MapIds,Terms).
+					 end,MapIds,Terms).
 
 
 load_map_file(MapId,EtsName)->
@@ -78,13 +78,13 @@ processe_map_file(File,EtsName)->
 
 add_coord_to_ets(X,Y,V,EtsName)->
 	case X of
-		born_pos ->	ets:insert(EtsName, {born_pos,{Y,V}});
-		board -> ets:insert(EtsName, {board,{Y,V}});
-		safe_grid -> ets:insert(EtsName, {{sg,Y,V},1});
+		born_pos ->	ets_operater_behaviour:insert(EtsName, {born_pos,{Y,V}});
+		board -> ets_operater_behaviour:insert(EtsName, {board,{Y,V}});
+		safe_grid -> ets_operater_behaviour:insert(EtsName, {{sg,Y,V},1});
 		_->
 			case is_binary(V) of
 				true->
-					ets:insert(EtsName, {X,Y,V});
+					ets_operater_behaviour:insert(EtsName, {X,Y,V});
 				_->
 					nothing
 			end

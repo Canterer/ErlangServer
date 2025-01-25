@@ -11,16 +11,16 @@
 %% --------------------------------------------------------------------
 %% External exports
 -export([
-	 start_link/1,
-	 lookup_map_name/2,
-	 do_regist/3,
-	 unregist_by_node/1,
-	 get_map/3
-	]).
+	start_link/1,
+	lookup_map_name/2,
+	do_regist/3,
+	unregist_by_node/1,
+	get_map/3
+]).
 -export([
-	 get_role_count_by_map/1,
-	 get_role_num_by_mapId/0
-	]).
+	get_role_count_by_map/1,
+	get_role_num_by_mapId/0
+]).
 
 % -compile(export_all).
 
@@ -43,24 +43,25 @@ start_link({LineName, NamedProc})->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init({LineName, NamedProc}) ->
+	base_logger_util:msg("~p:~p({LineName:~p, NamedProc:~p})~n",[?MODULE,?FUNCTION_NAME,LineName,NamedProc]),
 	base_line_manager_server:regist_to_manager(NamedProc,LineName),
 	{ok, #state{line_name = LineName}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call(Request, From, State) ->
 	{reply, ok, State}.
@@ -68,9 +69,9 @@ handle_call(Request, From, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
 	{noreply, State}.
@@ -78,9 +79,9 @@ handle_cast(Msg, State) ->
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info(Info, State) ->
 	{noreply, State}.
@@ -116,9 +117,9 @@ get_map2([H|T], LineName, {SNode,Host,MapNode}) ->
 	case Line =:= LineName of
 		true ->
 			Fun = fun(MapRec) ->
-					      {_, Node} = MapRec,
-					      Node =:= SNode			      
-			      end,
+						{_, Node} = MapRec,
+						Node =:= SNode				  
+				  end,
 			Filt = lists:filter(Fun, Maps),
 			MakeNode = lists:map(fun({MapId,X})-> 
 										%% NodeStr = atom_to_list(X) ++"@" ++ Host,
@@ -144,7 +145,7 @@ do_regist(regist_map_processor, Args, State) ->
 	Key = make_map_id(LineId, MapId),
 	%% {key, nodename, mapname, lineid, mapid, rolecount}
 	%base_logger_util:msg("regist_map_processor ~p ~n ",[Args]),
-	ets:insert(?MAP_PROC_DB, {Key, NodeName, MapName, LineId, MapId}),
+	ets_operater_behaviour:insert(?MAP_PROC_DB, {Key, NodeName, MapName, LineId, MapId}),
 	ok.
 
 do_regist(RegistType, Args) ->
@@ -155,7 +156,7 @@ do_regist(RegistType, Args) ->
 
 unregist_by_node(NodeName)->
 	AllNodeMaps = ets:match(?MAP_PROC_DB, {'$1', NodeName, '_', '_', '_'}),
-	lists:foreach(fun(Key)-> ets:delete(?MAP_PROC_DB, Key) end, lists:append(AllNodeMaps)).
+	lists:foreach(fun(Key)-> ets_operater_behaviour:delete(?MAP_PROC_DB, Key) end, lists:append(AllNodeMaps)).
 	
 
 %% Description: get the map processor name by LineId and MapId
@@ -174,7 +175,7 @@ make_map_id(LineId, MapId) ->
 %% Description: get the rold count by mapid
 %% return: [{LineId, Count}, {LineId, Count}]
 %% DB field: {key, nodename, mapname, lineid, mapid, rolecount}
-%%           {'_', '_',      '_',     '_',    mapid, '$1'}).
+%%		   {'_', '_',	  '_',	 '_',	mapid, '$1'}).
 get_role_count_by_map(MapId) ->
 	todo.
 

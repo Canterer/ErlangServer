@@ -65,40 +65,43 @@ sp_call(M,F,A)->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	filelib:ensure_dir("../log/"),
+	FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ "_node.log", 
+	error_logger:logfile({open, FileName}),
 	base_env_ets:init(),
 	base_env_ets:reset(),
 	base_global_proc_ets:init(),
 	% version_up:init(),
 	base_db_tools:wait_ets_create(),
-    {ok, #state{}}.
+	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({wait_ets_init}, _From, State) ->
 	base_env_ets:fresh(),
 	base_db_tools:wait_ets_init(),
 	Reply = ok,
-    {reply, Reply, State};
+	{reply, Reply, State};
 
 handle_call({wait_ets_init_fliter,{EtsFliter}}, _From, State) ->
 	%%base_env_ets:fresh(),
 	base_db_tools:wait_ets_init_fliter(EtsFliter),
 	Reply = ok,
-    {reply, Reply, State};
+	{reply, Reply, State};
 	
 handle_call({sp_call,M,F,A},_From,State)->
 	try
@@ -107,31 +110,31 @@ handle_call({sp_call,M,F,A},_From,State)->
 		E:R-> base_logger_util:msg("~p : ~p~n",[E,R])
 	end,
 	Reply = ok,
-    {reply, Reply, State};
+	{reply, Reply, State};
 
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+	Reply = ok,
+	{reply, Reply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info(Info, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: terminate/2
@@ -139,7 +142,7 @@ handle_info(Info, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
-    ok.
+	ok.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -147,7 +150,7 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 %% --------------------------------------------------------------------
 %%% Internal functions

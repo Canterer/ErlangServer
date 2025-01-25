@@ -165,15 +165,15 @@ explain_auto_name(Data,Num5)->
 	end.
 
 string_to_term(String) ->
-    case erl_scan:string(String++".") of
-        {ok, Tokens, _} ->
-        	case erl_parse:parse_term(Tokens) of
-        		{ok, Term} -> Term;
-        		_Err -> error
-        	end;
-        _Error ->
-        	undefine
-    end.
+	case erl_scan:string(String++".") of
+		{ok, Tokens, _} ->
+			case erl_parse:parse_term(Tokens) of
+				{ok, Term} -> Term;
+				_Err -> error
+			end;
+		_Error ->
+			undefine
+	end.
 
 check_tuple_term(Value) when erlang:is_tuple(Value)->
 	erlang:list_to_tuple(check_tuple_term(erlang:tuple_to_list(Value)));

@@ -39,7 +39,7 @@ run() ->
 
 
 create_all_tables() ->
-    base_db_tools:create_table_disc(achieve_proto, record_info(fields,achieve_proto), [], set),
+	base_db_tools:create_table_disc(achieve_proto, record_info(fields,achieve_proto), [], set),
 	base_db_tools:create_table_disc(achieve_fuwen, record_info(fields,achieve_fuwen), [], set),
 	base_db_tools:create_table_disc(achieve_award, record_info(fields,achieve_award), [], set),
 	base_db_tools:create_table_disc(achieve, record_info(fields,achieve), [], set),
@@ -203,7 +203,7 @@ create_all_tables() ->
 	base_db_tools:create_table_disc(pet_fresh_skill, record_info(fields,pet_fresh_skill), [], set),
 	base_db_tools:create_table_disc(pet_base_attr, record_info(fields,pet_base_attr),[],set),
 	%%宠物洗髓
-     base_db_tools:create_table_disc(pet_xisui_rate, record_info(fields,pet_xisui_rate), [], set),
+	 base_db_tools:create_table_disc(pet_xisui_rate, record_info(fields,pet_xisui_rate), [], set),
 	base_db_tools:create_table_disc(pet_talent_item,record_info(fields,pet_talent_item),[],set),
 	base_db_tools:create_table_disc(pet_talent_proto,record_info(fields,pet_talent_proto),[],set),
 	base_db_tools:create_table_disc(pet_talent_template, record_info(fields,pet_talent_template),[], bag),
@@ -372,12 +372,12 @@ delete_all_tables() ->
 	mnesia:delete_table(instance_entrust),
 	mnesia:delete_table(activity_test01),
 	%%批量合成概率  by zhangting%%
-    mnesia:delete_table(stonemix_rateinfo),
+	mnesia:delete_table(stonemix_rateinfo),
 	mnesia:delete_table(pet_up_growth),
 
 	mnesia:delete_table(pet_attr_transform),
-    %%成就按客户端要求  @@wb20130301
-    mnesia:delete_table(achieve_proto),
+	%%成就按客户端要求  @@wb20130301
+	mnesia:delete_table(achieve_proto),
 	mnesia:delete_table(achieve_award),
 	mnesia:delete_table(achieve_fuwen),
 
@@ -426,15 +426,15 @@ write_game_db_old_zt(Fd) ->
 			file:close(Fd);
 		{ok,Term}->
 %% 			base_logger_util:msg("yanzengyan, Term: ~p~n", [Term]),
-           if  element(1,Term) =:= continuous_logging_gift ->
+		   if  element(1,Term) =:= continuous_logging_gift ->
 				  base_logger_util:msg("continuous_logging_op:init_data() 02 Item:~p~n",[Term]),
 				  if erlang:size(Term)=:=3 -> 
 					   base_db_dal_util:write( erlang:append_element(Term,[]));
 					   true->	  base_db_dal_util:write(Term)
 				  end;	 
 			 true->
-    		 	 	base_db_dal_util:write(Term)
-            end,           
+			 	 	base_db_dal_util:write(Term)
+			end,		   
 			 write_game_db(Fd),
 			 ok
 	end.
@@ -447,7 +447,7 @@ write_game_db(Fd) ->
 		eof ->
 			file:close(Fd);
 		{ok,Term}->
-    		 base_db_dal_util:write(Term),
+			 base_db_dal_util:write(Term),
 		 write_game_db(Fd),
 			 ok
 	end.

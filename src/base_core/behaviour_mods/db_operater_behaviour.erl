@@ -17,37 +17,37 @@
 %%
 
 behaviour_info(callbacks) ->
-    [
+	[
 	{start,0},								%% start mod							%% args:[module,option]
 	{create_mnesia_table,1},				%% create table not split 				%% args: ram/disc
 	{create_mnesia_split_table,2},			%% create split table					%% args:[BaseTable,TrueTabName]
 	{delete_role_from_db,1},				%% delete on role for persistent table  %% args:[roleid]
 	{tables_info,0}							%% {DB,Type} Type:disc_split/disc/ram/proto
-    ];
+	];
 behaviour_info(_Other) ->
-    undefined.
+	undefined.
 
 
 %% @doc start gen_mod
 start() ->
-    ?DB_MOD_TABLE = ets:new(?DB_MOD_TABLE,
-        [public, set, named_table, {keypos, 1}]),
-	?DB_SPLIT_TABLE = ets:new(?DB_SPLIT_TABLE,
-        [public, set, named_table, {keypos, 1}]),
+	?DB_MOD_TABLE = ets_operater_behaviour:new(?DB_MOD_TABLE,
+		[public, set, named_table, {keypos, 1}]),
+	?DB_SPLIT_TABLE = ets_operater_behaviour:new(?DB_SPLIT_TABLE,
+		[public, set, named_table, {keypos, 1}]),
 	base_mod_util:behaviour_apply(db_operater_behavior,start,[]),
 	base_logger_util:msg("db_operater_behavior start end ~n"),
-    ok.
+	ok.
 
 start_module(Module, Opts)->
 	TablesInfo = Module:tables_info(),
 	lists:foreach(fun({Table,Type})-> 
 				case Type of
 					disc_split->
-						true = ets:insert(?DB_SPLIT_TABLE, {Table,Module});
+						true = ets_operater_behaviour:insert(?DB_SPLIT_TABLE, {Table,Module});
 					_->
 						nothing
 				end end, TablesInfo),
-	true = ets:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
+	true = ets_operater_behaviour:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
 
 create_all_disc_table()->
 	ets:foldl(fun({Module,_,_},_)->
@@ -115,7 +115,8 @@ is_backup_filter_table(_)->
 %% EtsKeyPosOrPoses : [KeyPos]/[KeyPos1,KeyPos2,...]/KeyPos
 
 init_ets(SourceDb,Ets,EtsKeyPosOrPoses) ->
-	ets:delete_all_objects(Ets),
+	base_logger_util:msg("~p:~p(SourceDb:~p,Ets:~p,EtsKeyPosOrPoses:~p)~n",[?MODULE,?FUNCTION_NAME,SourceDb,Ets,EtsKeyPosOrPoses]),
+	ets_operater_behaviour:delete_all_objects(Ets),
 	case base_db_dal_util:read_rpc(SourceDb) of
 		{ok,TermList} ->
 			lists:foreach(fun(Term) -> 
@@ -133,8 +134,8 @@ add_term_to_ets(Term,Ets,KeyPoses)when is_list(KeyPoses)->
 			add_term_to_ets(Term,Ets,KeyPos);
 		_->
 			Key = erlang:list_to_tuple(Keyes),
-			true  = ets:insert(Ets,{Key,Term})
+			true  = ets_operater_behaviour:insert(Ets,{Key,Term})
 	end;
 add_term_to_ets(Term,Ets,KeyPos) ->
 	Key = erlang:element(KeyPos,Term),
-	true  = ets:insert(Ets,{Key,Term}).
+	true  = ets_operater_behaviour:insert(Ets,{Key,Term}).

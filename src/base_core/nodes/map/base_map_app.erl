@@ -11,10 +11,10 @@
 %% Behavioural exports
 %% --------------------------------------------------------------------
 -export([
-	 start/2,
-	 stop/1,
-	 start/0
-        ]).
+	start/2,
+	stop/1,
+	start/0
+]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
@@ -39,17 +39,14 @@
 %% ====================================================================!
 %% --------------------------------------------------------------------
 %% Func: start/2
-%% Returns: {ok, Pid}        |
-%%          {ok, Pid, State} |
-%%          {error, Reason}
+%% Returns: {ok, Pid}		|
+%%		  {ok, Pid, State} |
+%%		  {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
 	case base_node_util:get_argument('-line') of
 		[]->  base_logger_util:msg("Missing --line argument input the nodename");
 		[CenterNode|_]->
-			filelib:ensure_dir("../log/"),
-			FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ "_node.log", 
-			error_logger:logfile({open, FileName}),
 			% ?RELOADER_RUN,
 			base_ping_util:wait_all_nodes_connect(),
 			base_db_tools:wait_line_db(),
@@ -67,8 +64,8 @@ start(_Type, _StartArgs) ->
 			base_line_manager_server:wait_lines_manager_loop(),
 
 			%%load map
-			start_map_sup(),
 			start_map_manager_sup(),
+			start_map_processor_sup(),
 
 			% case node_util:check_node_allowable(battle_ground_manager, node()) of
 			% 	true->
@@ -94,7 +91,8 @@ stop(_State) ->
 %% Internal functions
 %% ====================================================================
 
-start_map_sup()->
+start_map_processor_sup()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_map_processor_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
@@ -103,6 +101,7 @@ start_map_sup()->
 	end.
 
 start_map_manager_sup()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_map_manager_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
@@ -111,7 +110,8 @@ start_map_manager_sup()->
 	end.
 
 % start_map_db_sup()->
-% 	case base_map_db_processor_sup:start_link() of
+% 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+%   case base_map_db_processor_sup:start_link() of
 % 		{ok,Pid} ->
 % 			{ok,Pid};
 % 		Error ->

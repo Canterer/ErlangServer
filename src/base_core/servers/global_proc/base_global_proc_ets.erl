@@ -13,7 +13,7 @@
 
 init()->
 	try
-		ets:new(?GLOBAL_PROC_ETS, [named_table,public ,set])
+		ets_operater_behaviour:new(?GLOBAL_PROC_ETS, [named_table,public,set])
 	catch
 		E:R-> base_logger_util:msg("base_global_proc_ets create error ~p ~p ~n",[E,R])
 	end.
@@ -30,7 +30,8 @@ is_global_proc_registed(ModuleName)->
 	end.
 
 regist_global_proc(ModuleName,NodeName)->
-	ets:insert(?GLOBAL_PROC_ETS,{ModuleName,NodeName}).
+	base_logger_util:msg("regist_global_proc ModuleName:~p NodeName:~p ~n",[ModuleName,NodeName]),
+	ets_operater_behaviour:insert(?GLOBAL_PROC_ETS,{ModuleName,NodeName}).
 
 get_global_proc_node(ModuleName)->
 	case get(global_proc_node_list) of

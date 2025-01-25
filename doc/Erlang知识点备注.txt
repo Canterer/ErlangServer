@@ -27,7 +27,15 @@ erlang:send_after、erlang:start_time的区别
 string:tokens()//指定字符分割关键字
 string:str
 
+ets:insert(Tab, ObjectOrObjects)//增
+ets:update_element()//改
+ets:lookup(Tab, Key)//查
+ets:delete(Tab)//删
 ets:delete_all_objects()//删除所有数据
+ets:info(Tab)//返回表的信息
+ets:info(Tab, Item)//返回表的特定信息
+ets:table_info(Tab,Item)//约束Item,内部调用ets:info
+
 ets:match()
 
 erlang内置函数即erlang:xxx()

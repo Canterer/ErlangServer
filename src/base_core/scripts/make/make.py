@@ -4,11 +4,11 @@ import sys
 import string
 
 def makeversion(param):
-    
-    if sys.platform=='linux2':
-        os.system('./makeversion.py '+ param)
-    else:
-        os.system('makeversion.py '+ param)
+	
+	if sys.platform=='linux2':
+		os.system('./makeversion.py '+ param)
+	else:
+		os.system('makeversion.py '+ param)
 
 cwd = os.path.abspath(os.path.split(sys.argv[0])[0])
 
@@ -23,19 +23,19 @@ PROTO_PATH='%s/../../../common/proto' % (cwd)
 
 debug = False
 if len(sys.argv)==2:
-    dbg = sys.argv[1]
-    if dbg == 'debug':
-       debug=True
+	dbg = sys.argv[1]
+	if dbg == 'debug':
+	   debug=True
 
 if sys.platform=='linux2':
 	if	debug:
 		cpcmd = 'cp Emakefile.linux.debug Emakefile'
 	else:
-    		cpcmd = 'cp Emakefile.linux Emakefile'
-    	mkcmd = 'escript erl_make.erl'
+			cpcmd = 'cp Emakefile.linux Emakefile'
+		mkcmd = 'escript erl_make.erl'
 else:
-    cpcmd = 'copy Emakefile.win Emakefile'
-    mkcmd = 'escript.exe erl_make.erl'
+	cpcmd = 'copy Emakefile.win Emakefile'
+	mkcmd = 'escript.exe erl_make.erl'
 
 os.chdir(cwd)
 

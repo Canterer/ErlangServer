@@ -3,8 +3,8 @@
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 说明: 
-%%     gs 表示该 record 是在game_server内部用的数据结构;
-%%     system 表示该 record 的信息是基础系统的信息, 与游戏逻辑系统没有关系;
+%%	 gs 表示该 record 是在game_server内部用的数据结构;
+%%	 system 表示该 record 的信息是基础系统的信息, 与游戏逻辑系统没有关系;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,7 +24,7 @@ set_proc_to_gs_system_mapinfo(GS_system_mapinfo, Proc)
   when is_record(GS_system_mapinfo, gs_system_map_info) ->
 	GS_system_mapinfo#gs_system_map_info{map_proc=Proc}.
 
-get_node_from_gs_system_mapinfo(GS_system_mapinfo)    
+get_node_from_gs_system_mapinfo(GS_system_mapinfo)	
   when is_record(GS_system_mapinfo, gs_system_map_info) ->
 	#gs_system_map_info{map_node=Node} = GS_system_mapinfo,
 	Node.

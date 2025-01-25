@@ -20,13 +20,13 @@
 -record(rolepro,{roleid,rolename,playerid,image,vocation,bluename}).
 -record(transports, {mapid,tranportid,coord,transid,description}).
 -record(skills,{id,level,name,
-	       type,rate,target_type,max_distance,
-	       isaoe,aoeradius,interrupt,aoe_max_target,
-	       target_destroy,aoe_target_destroy,self_destroy,
-	       cooldown,cast_type,cast_time,addtion_threat,
-	       target_buff,caster_buff,remove_buff,cost,flyspeed,learn_level,class,script,money,required_skills,hit_addition,soulpower,creature,items,addtion_power}).%%bag
+		   type,rate,target_type,max_distance,
+		   isaoe,aoeradius,interrupt,aoe_max_target,
+		   target_destroy,aoe_target_destroy,self_destroy,
+		   cooldown,cast_type,cast_time,addtion_threat,
+		   target_buff,caster_buff,remove_buff,cost,flyspeed,learn_level,class,script,money,required_skills,hit_addition,soulpower,creature,items,addtion_power}).%%bag
 %%宠物技能模板
--record(pet_skill_template,{skillid,skilllevel,skill,itemid}).	       
+-record(pet_skill_template,{skillid,skilllevel,skill,itemid}).		   
 -record(skillinfo,{skillid,skilllevel,casttime}).	
 -record(role_skill,{roleid,skillinfo}). %% set
 

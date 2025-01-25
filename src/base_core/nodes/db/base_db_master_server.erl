@@ -56,12 +56,13 @@ start_link()->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(db_prepare_finish,false),
 	base_timer_server:start_at_process(),
 
@@ -84,37 +85,37 @@ init([]) ->
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call(is_db_prepread, From, State) ->
-    Reply = get(db_prepare_finish),
-    {reply, Reply, State};
+	Reply = get(db_prepare_finish),
+	{reply, Reply, State};
 
 handle_call(Request, From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+	Reply = ok,
+	{reply, Reply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({check_backup},State)->
 	%% get backup filename
@@ -261,7 +262,7 @@ handle_info({format_data,Param},State)->
 	{noreply,State};
 
 handle_info(Info, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: terminate/2
@@ -270,7 +271,7 @@ handle_info(Info, State) ->
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
 	base_logger_util:msg("dbmaster terminate Reason ~p ~n",[Reason]),
-    ok.
+	ok.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -278,7 +279,7 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
@@ -358,7 +359,7 @@ db_dump_now(Dir,LastTime)->
 					put(dbfile_dump,{backup,LastTime}),
 				   	File = get_out_file(Dir),
 				   	data_gen:backup_ext(File),
-				    put(dbfile_dump,{idle,base_timer_server:get_correct_now()});
+					put(dbfile_dump,{idle,base_timer_server:get_correct_now()});
 			   _-> base_logger_util:msg("back database faild create dir [~p] failed!",[Dir])
 		   end
 	end.

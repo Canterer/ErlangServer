@@ -48,10 +48,10 @@ stop_instance(MapManagerNode,MapName)->
 %% --------------------------------------------------------------------
 %% Function: init/1
 %% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%% Returns: {ok, State}		  |
+%%		  {ok, State, Timeout} |
+%%		  ignore			   |
+%%		  {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
@@ -64,7 +64,7 @@ init([]) ->
 		MapDb = base_map_db_util:make_db_name(MapId),
 		case ets:info(MapDb) of
 			undefined->
-				ets:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
+				ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 				case MapDataId of
 					[]->
 						nothing;
@@ -80,56 +80,56 @@ init([]) ->
 %%		MapDb = base_map_db_processor_server:make_db_name(MapId),
 %%		case ets:info(MapDb) of
 %%			undefined->
-%%				ets:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
+%%				ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 %%				base_map_db:load_map_ext_file(MapId,MapDb),
 %%				base_map_db:load_map_file(MapId,MapDb);
 %%			_->
 %%				nothing
 %%		end end,DefaultLoadMapIDs),
 	erlang:garbage_collect(),
-    {ok, #state{}}.
+	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {reply, Reply, State}		  |
+%%		  {reply, Reply, State, Timeout} |
+%%		  {noreply, State}			   |
+%%		  {noreply, State, Timeout}	  |
+%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({start_instance,MapName,CreatInfo,MapId}, _From, State) ->
 	case base_map_processor_sup:start_child(MapName,{-1,MapId},CreatInfo) of
 		{ok,Pid} ->
 			base_logger_util:msg("---start map ok \n"),
-		    Reply = ok;
+			Reply = ok;
 		{ok,Pid,_Info} ->
 			base_logger_util:msg("---start map ok info ~p \n",[_Info]),
-		    Reply = ok;
+			Reply = ok;
 		{error,Error} ->
 			base_logger_util:msg("---start map failed, reason: ~p\n", [Error]),
 			Reply = error,
 			Pid = 0
 	end,		
-    {reply, Reply, State}.
+	{reply, Reply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
 %% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
 %% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({global_line_check}, State) ->
 	case base_line_manager_server:whereis_name() of
@@ -150,9 +150,9 @@ handle_info({start_map_process,LineId,MapId,Tag}, State) ->
 	MapName = make_map_process_name(LineId,MapId),			
 	case base_map_processor_sup:start_child(MapName,{LineId,MapId},Tag) of
 		{ok,Child} ->
-		        base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
+				base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
 		{ok,Child,Info} ->
-		        base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
+				base_line_manager_server:regist_map_processor({node(), LineId, MapId, MapName});
 		{error,Error} ->
 			base_logger_util:msg("---start map failed, reason: ~p\n", [Error])
 	end,
@@ -161,16 +161,16 @@ handle_info({start_map_process,LineId,MapId,Tag}, State) ->
 handle_info({stop_map_process,LineId,MapId}, State) ->
 	MapName = make_map_process_name(LineId,MapId),
 	base_map_processor_sup:stop_child(MapName),	
-    {noreply, State};
+	{noreply, State};
 
 handle_info({stop_instance,MapName}, State) ->
 	base_map_processor_sup:stop_child(MapName),	
-    {noreply, State};
+	{noreply, State};
 
 handle_info({change_map_bornpos,MapId,BronMap,BornX,BornY},State)->
 	try
 		MapDb = base_map_db_util:make_db_name(MapId),
-		ets:insert(MapDb,{born_pos,{BronMap,{BornX,BornY}}})
+		ets_operater_behaviour:insert(MapDb,{born_pos,{BronMap,{BornX,BornY}}})
 	catch
 		E:R->
 			base_logger_util:msg("change_map_bornpos error E:~p R:~p ~n",[E,R])
@@ -186,7 +186,7 @@ handle_info(_INFO, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
-    ok.
+	ok.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -194,7 +194,7 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 %% --------------------------------------------------------------------
 %%% Internal functions

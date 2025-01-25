@@ -10,11 +10,11 @@
 %% Behavioural exports
 %% --------------------------------------------------------------------
 -export([
-	 start/2,
-	 stop/1,
-	 start/0,
-	 import/0
-        ]).
+	start/2,
+	stop/1,
+	start/0,
+	import/0
+]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
@@ -49,9 +49,9 @@ import()->
 
 %% --------------------------------------------------------------------
 %% Func: start/2
-%% Returns: {ok, Pid}        |
-%%          {ok, Pid, State} |
-%%          {error, Reason}
+%% Returns: {ok, Pid}		|
+%%		  {ok, Pid, State} |
+%%		  {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
 	do_start().
@@ -61,15 +61,13 @@ start(_Type, _StartArgs) ->
 %% Returns: any
 %% --------------------------------------------------------------------
 stop(_State) ->
-    ok.
+	ok.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
 do_start()->
-	filelib:ensure_dir("../log/"),
-	error_logger:logfile({open, "../log/db_node.log"}),
 	% ?RELOADER_RUN,
 	% 仅等待timer节点
 	base_ping_util:wait_node_connect(timer),

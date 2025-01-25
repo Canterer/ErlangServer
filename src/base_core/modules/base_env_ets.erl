@@ -30,25 +30,40 @@ get_env(Opt, Default) ->
 
 init()->
 	try
-		ets:new(?OPTION_ETS, [named_table,public ,set])
+		ets_operater_behaviour:new(?OPTION_ETS, [named_table,public,set])
 	catch
 		_:_-> ignor
 	end,
 	try
-		ets:new(?SERVER_NAME_ETS, [named_table,public ,set])
+		ets_operater_behaviour:new(?SERVER_NAME_ETS, [named_table,public,set])
 	catch
 		_:_-> ignor
 	end.
 
 read_from_file(File,Ets)->
 	base_logger_util:msg("base_env_ets init ets ~p from option file:~p~n",[Ets,File]),
+	% case file:read_file(File) of
+	% 	{ok, Binary}->
+	% 		case io:read(Binary) of
+	% 			{ok, Term} ->
+	% 				lists:foreach(fun(Term)->
+	% 						ets_operater_behaviour:insert(Ets, Term)
+	% 					end, Terms);
+	% 			{error, ErrorInfo} ->
+	% 				base_logger_util:msg("load option file [~p] Error ~p~n",[File,Reason]),	
+	% 				{error, ErrorInfo}
+	% 		end;
+	% 	{error, Reason} -> 
+	% 		base_logger_util:msg("load option file [~p] Error ~p~n",[File,Reason]),	
+	% 		{error, Reason}
+	% end.
 	case file:consult(File) of
 		{ok, [Terms]} ->
 			lists:foreach(fun(Term)->
-								  ets:insert(Ets, Term)
+								  ets_operater_behaviour:insert(Ets, Term)
 						  end, Terms);
 		{error, Reason} -> 
-			base_logger_util:msg("load option file [~p] Error ~p~n",[File,Reason]) ,	
+			base_logger_util:msg("load option file [~p] Error ~p~n",[File,Reason]),	
 			{error, Reason}
 	end.
 
@@ -83,16 +98,16 @@ get_tuple2(Key,Key2,Default)->
 	end.
 
 put(Key,Value)->
-	ets:insert(?OPTION_ETS, {Key,Value}).
+	ets_operater_behaviour:insert(?OPTION_ETS, {Key,Value}).
 
 put2(Key,Key2,Value)->
 	OldValue = get(Key,[{Key2,Value}]),
 	NewValue = lists:keyreplace(Key2, 1, OldValue, {Key2,Value}),
-	ets:insert(?OPTION_ETS, {Key,NewValue}).
+	ets_operater_behaviour:insert(?OPTION_ETS, {Key,NewValue}).
 
 reset()->
-	ets:delete_all_objects(?OPTION_ETS),
-	ets:delete_all_objects(?SERVER_NAME_ETS),
+	ets_operater_behaviour:delete_all_objects(?OPTION_ETS),
+	ets_operater_behaviour:delete_all_objects(?SERVER_NAME_ETS),
 	read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).
 
 get_server_name(ServerId)->
