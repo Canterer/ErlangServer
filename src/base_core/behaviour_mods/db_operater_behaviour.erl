@@ -50,9 +50,11 @@ start_module(Module, Opts)->
 	true = ets_operater_behaviour:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
 
 create_all_disc_table()->
+	base_logger_util:msg("~p:~p start!!!~n",[?MODULE,?FUNCTION_NAME]),
 	ets:foldl(fun({Module,_,_},_)->
 				Module:create_mnesia_table(disc)	  
-			end,[], ?DB_MOD_TABLE).
+			end,[], ?DB_MOD_TABLE),
+	base_logger_util:msg("~p:~p end!!!~n",[?MODULE,?FUNCTION_NAME]).
 
 delete_role_from_db(RoleId)->
 	ets:foldl(fun({Module,_,_},_)->
@@ -60,6 +62,7 @@ delete_role_from_db(RoleId)->
 			end,[], ?DB_MOD_TABLE).
 
 create_all_ram_table()->
+	base_logger_util:msg("~p:~p start!!!~n",[?MODULE,?FUNCTION_NAME]),
 	AllRamMod = ets:foldl(fun({Module,_,TablesInfo},AccMods)->
 					case lists:keymember(ram,2,TablesInfo) of
 						true->
@@ -68,7 +71,8 @@ create_all_ram_table()->
 							AccMods
 					end
 			end,[], ?DB_MOD_TABLE),
-	lists:foreach(fun(Mod)->Mod:create_mnesia_table(ram) end,AllRamMod).
+	lists:foreach(fun(Mod)->Mod:create_mnesia_table(ram) end,AllRamMod),
+	base_logger_util:msg("~p:~p end!!!~n",[?MODULE,?FUNCTION_NAME]).
 
 get_all_ram_table()->
 	ets:foldl(fun({_,_,TablesInfo},AccTables)->

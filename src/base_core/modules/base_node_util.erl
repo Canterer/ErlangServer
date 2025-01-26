@@ -9,9 +9,20 @@
 %%
 -export([get_all_nodes/0,get_nodes_without_hidden/0]).
 -export([get_node_host/1,get_node_sname/1,get_node_sname_str/1]).
--export([get_allowable_nodes/1,get_node_procs/1,check_node_allowable/2]).
+-export([
+	get_allowable_nodes/1,
+	get_node_procs/1,
+	check_node_allowable/2
+]).
 -export([get_argument/1]).
--export([get_timernode/0,get_linenode/0,get_dbnode/0,check_match_map_and_line/2]).
+-export([
+	get_timernode/0,
+	get_linenode/0,
+	get_dbnode/0,
+	get_mapnodes/0,
+	get_gatenodes/0,
+	check_match_map_and_line/2
+]).
 %%
 %% API Functions
 %%
@@ -106,20 +117,32 @@ get_filter_nodes(Key)->
 		end, AliveNodes).
 
 % 统一接口
-% 仅存在一个timer节点
+% 仅存在一个timer节点(必需) 失败时异常 
 get_timernode()->
 	[Node|_] = get_filter_nodes(timer),
 	Node.
 
-% 仅存在一个line节点
+% 仅存在一个line节点 失败时返回为node 可等待
 get_linenode()->
-	[Node|_] = get_filter_nodes(line),
-	Node.
+	case get_filter_nodes(line) of
+		[]-> nonode;
+		[Node|_]-> Node
+	end.
 
-% 仅存在一个db节点
+% 仅存在一个db节点 失败时返回为node 可等待
 get_dbnode()->
-	[Node|_] = get_filter_nodes(db),
-	Node.
+	case get_filter_nodes(db) of
+		[]-> nonode;
+		[Node|_]-> Node
+	end.
+
+% 可存在多个map节点 
+get_mapnodes()->
+	get_filter_nodes(map).
+
+% 可存在多个gate节点 
+get_gatenodes()->
+	get_filter_nodes(gate).
 
 % LineId 与 Map节点名字一一对应  Map1节点名对应LineId为1
 check_match_map_and_line(MapNode,LineId)->

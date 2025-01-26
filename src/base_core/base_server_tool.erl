@@ -33,7 +33,9 @@ run()->
 	% db节点
 	check_db_run(),
 	% map节点
-	check_map_run().
+	check_map_run(),
+	% gate节点
+	check_gate_run().
 %%
 %% Local Functions
 %%
@@ -59,6 +61,12 @@ check_db_run()->
 check_map_run()->
 	case base_node_util:check_node_allowable(map, node()) of
 		true-> base_map_app:start();
+		_-> ignor
+	end.
+
+check_gate_run()->
+	case base_node_util:check_node_allowable(gate, node()) of
+		true-> base_gate_app:start();
 		_-> ignor
 	end.
 %%------------------------------------------------------------------------------------------

@@ -6,6 +6,10 @@
 -define(OPTION_ETS,option_value_ets).
 -define(SERVER_NAME_ETS,option_servers_name).
 -define(BASE_NODES_OPTION_FILE,"../src/base_core/option/base_nodes_config.option").
+-define(BASE_DB_OPTION_FILE,"../src/base_core/option/base_db_config.option").
+-define(BASE_LINE_OPTION_FILE,"../src/base_core/option/base_line_config.option").
+-define(BASE_MAP_OPTION_FILE,"../src/base_core/option/base_map_config.option").
+-define(BASE_GATE_OPTION_FILE,"../src/base_core/option/base_gate_config.option").
 
 
 %%
@@ -108,7 +112,11 @@ put2(Key,Key2,Value)->
 reset()->
 	ets_operater_behaviour:delete_all_objects(?OPTION_ETS),
 	ets_operater_behaviour:delete_all_objects(?SERVER_NAME_ETS),
-	read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS).
+	read_from_file(?BASE_NODES_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_DB_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_LINE_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_MAP_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_GATE_OPTION_FILE,?OPTION_ETS).
 
 get_server_name(ServerId)->
 	try

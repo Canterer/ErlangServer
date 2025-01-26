@@ -32,7 +32,7 @@ init()->
 %%
 read_rpc(Table)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode->case base_rpc_util:asyn_call(DbNode, ?MODULE, read, [Table]) of
 					 {badrpc,Reason}-> base_logger_util:msg("read_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("read_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -43,7 +43,7 @@ read_rpc(Table)->
 
 read_rpc(Table,Key)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> 
 				case base_rpc_util:asyn_call(DbNode, ?MODULE, read, [Table,Key]) of
 					 {badrpc,Reason}-> base_logger_util:msg("read_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
@@ -55,7 +55,7 @@ read_rpc(Table,Key)->
 
 read_index_rpc(Table,SecondaryKey,Pos)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, read_index, [Table,SecondaryKey,Pos]) of
 					 {badrpc,Reason}-> base_logger_util:msg("read_index_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("read_index_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -66,7 +66,7 @@ read_index_rpc(Table,SecondaryKey,Pos)->
 
 run_transaction_rpc(Trascation)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, run_transaction, [Trascation]) of
 					 {badrpc,Reason}-> base_logger_util:msg("run_transaction_rpc error ~p ~n",[Reason]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("run_transaction_rpc error ~p ~n",[Reason]),{failed,Reason};
@@ -77,7 +77,7 @@ run_transaction_rpc(Trascation)->
 
 index_match_object_rpc(Pattern,Pos)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, index_match_object, [Pattern,Pos]) of
 					 {badrpc,Reason}-> base_logger_util:msg("index_match_object_rpc error ~p Pattern ~p ~n",[Reason,Pattern]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("index_match_object_rpc error ~p Pattern ~p ~n",[Reason,Pattern]),{failed,Reason};
@@ -128,7 +128,7 @@ run_transaction(Transaction)->
 
 delete_rpc(Table,Key)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, delete, [Table,Key]) of
 					 {badrpc,Reason}-> base_logger_util:msg("delete_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("delete_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -145,7 +145,7 @@ delete(Table,Key)->
 
 delete_rpc(Table,TableKey,FieldIndex,FieldKey)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, delete, [Table,TableKey,FieldIndex,FieldKey]) of
 					 {badrpc,Reason}-> base_logger_util:msg("delete_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("delete_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -181,7 +181,7 @@ delete(Table,TableKey,FieldIndex,FieldKey)->
 
 delete_object_rpc(Object)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, delete_object, [Object]) of
 					 {badrpc,Reason}-> base_logger_util:msg("delete_object error ~p Object ~p ~n",[Reason,Object]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("delete_object error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};
@@ -198,7 +198,7 @@ delete_object(Object)->
 
 delete_index_rpc(Table,SecondaryKey,Pos)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> 
 			case base_rpc_util:asyn_call(DbNode, ?MODULE, delete_index, [Table,SecondaryKey,Pos]) of
 				 {badrpc,Reason}-> base_logger_util:msg("delete_index_rpc error ~p~n",[Reason]),{failed,badrpc,Reason};
@@ -219,7 +219,7 @@ delete_index(Table,SecondaryKey,Pos)->
 
 write_rpc(Object)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, write, [Object]) of
 					 {badrpc,Reason}-> base_logger_util:msg("write_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("write_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};
@@ -230,7 +230,7 @@ write_rpc(Object)->
 	
 write_rpc(Table,TableKey,FieldIndex,Value)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, write, [Table,TableKey,FieldIndex,Value]) of
 					 {badrpc,Reason}-> base_logger_util:msg("write_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("write_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -241,7 +241,7 @@ write_rpc(Table,TableKey,FieldIndex,Value)->
 
 write_rpc(Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, write, [Table,TableKey,FieldIndex,FieldKey,FieldTupleValue]) of
 					 {badrpc,Reason}-> base_logger_util:msg("write_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("write_rpc error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
@@ -308,7 +308,7 @@ write(Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 	
 async_write_rpc(Object)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, async_write, [Object]) of
 					 {badrpc,Reason}-> base_logger_util:msg("async_write_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("async_write_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};
@@ -328,7 +328,7 @@ async_write(Object)->
 
 clear_table_rpc(Object)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, clear_table, [Object]) of
 					 {badrpc,Reason}-> base_logger_util:msg("clear_table_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,badrpc,Reason};
 					 {failed,Reason}-> base_logger_util:msg("clear_table_rpc error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};

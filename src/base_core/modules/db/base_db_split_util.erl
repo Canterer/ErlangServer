@@ -45,7 +45,7 @@ get_table_names(OriginalTable)->
 
 get_table_names_rpc(OriginalTable)->
 	case base_node_util:get_dbnode() of
-		undefined-> {nonode};
+		nonode-> {nonode};
 		DbNode-> case base_rpc_util:asyn_call(DbNode, ?MODULE, get_table_names, [OriginalTable]) of
 					 {badrpc,Reason}-> {failed,badrpc,Reason};
 					 {failed,Reason}-> {failed,Reason};

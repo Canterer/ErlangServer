@@ -18,5 +18,5 @@
 			{flush_interval,300000},%%引用文件 base_db_dal_dmp_server
 			{ets_swap_seconds,300}	%%引用文件 base_dp_dmp_util
 		]
-	},
+	}
 ].

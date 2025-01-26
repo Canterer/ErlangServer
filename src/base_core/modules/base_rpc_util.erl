@@ -7,13 +7,16 @@
 %%
 %% Exported Functions
 %%
--export([asyn_call/4,cast/2,cast/3,mult_cast/3]).
+-export([asyn_call/4,asyn_call/5,cast/2,cast/3,mult_cast/3]).
 
 %%
 %% API Functions
 %%
 asyn_call(Node, NamedProc, Func, Args)->
 	rpc:call(Node, NamedProc, Func, Args).
+
+asyn_call(Node, NamedProc, Func, Args, Timeout)->
+	rpc:call(Node, NamedProc, Func, Args, Timeout).
 
 cast(NamedProc,Msg)->
 	try

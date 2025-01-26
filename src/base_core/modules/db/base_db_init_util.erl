@@ -16,7 +16,9 @@
 %% db_init_master、db_init_line_master分别用于管理disc数据、ram数据
 %%
 db_init_master()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
 	db_operater_behaviour:start(),
+	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
 	case mnesia:system_info(is_running) of
 		yes ->	mnesia:stop();
 		no -> o;

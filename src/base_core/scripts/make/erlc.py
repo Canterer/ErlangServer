@@ -115,7 +115,7 @@ class erl_object(object):
 		erl_object.proc_erl(self,src)
 
 	def proc_erl(self,src):
-		# print("proc src:",src)
+		print("proc src:",src)
 		fd = open(src,'r',encoding='utf-8')
 		lines = fd.readlines()
 		fd.close()

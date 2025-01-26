@@ -10,11 +10,11 @@
 %%
 %% API Functions
 %%
-msg(Format, Data) ->
-	error_logger:info_msg(Format, Data).
-
-msg(Format) ->
+msg(Format)->
 	error_logger:info_msg(Format).
+
+msg(Format, Data)->
+	error_logger:info_msg(Format, Data).
 
 msg_filter(Id,Format,Data)->
 	if Id== 2030096->
@@ -22,6 +22,12 @@ msg_filter(Id,Format,Data)->
 	   true->
 		   ok
 	end.
+
+error_msg(Format)->
+	error_logger:error_msg(Format).
+
+error_msg(Format, Data)->
+	error_logger:error_msg(Format, Data).
 %%
 %% Local Functions
 %%

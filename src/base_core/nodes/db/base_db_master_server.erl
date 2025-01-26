@@ -66,9 +66,12 @@ init([]) ->
 	put(db_prepare_finish,false),
 	base_timer_server:start_at_process(),
 
-	
+	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
 	base_timer_util:send_after(?CHECK_SPLIT_TABLE_FIRSTINTERVAL, {check_split}),
+	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
+	% init_disc_tables
 	base_db_ini_util:db_init_master(),
+	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
 	% 定时检查备份
 	send_check_dump_message(),
 
@@ -78,7 +81,7 @@ init([]) ->
 	base_db_split_util:check_split_master_tables(),
 
 	put(dbfile_dump,{idle,base_timer_server:get_correct_now()}),
-	% base_db_dal_util:init(),	
+	base_db_dal_util:init(),	
 	put(db_prepare_finish,true),
 	{ok, #state{}}.
 
@@ -125,10 +128,11 @@ handle_info({check_backup},State)->
 		_->
 			%%check_today_dump(Dir),
 			check_db_dump(Dir),
-		   send_check_dump_message()
+			send_check_dump_message()
 	end,
 	{noreply,State};
 handle_info({check_split},State)->
+	base_logger_util:msg("~p:~p({check_split},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	ServerList = base_env_ets:get(serverids, [0]),
 	Result = lists:foldl(fun(ServerId,Acc)->
 								 case Acc of
@@ -173,10 +177,10 @@ handle_info({backupdata,FromProc}, State)->
 	if
 		BackupFlag->		
 			BackDir = base_env_ets:get2(dbback, output,[]),
-			BackPath = BackDir ++ "zybackup_db",
-			data_gen:backup_ext(BackPath),
+			BackPath = BackDir ++ "zssbackup_db",
+			base_db_data_gen_util:backup_ext(BackPath),
 			base_rpc_util:cast(FromProc,{backup_db_ok}),
-			base_logger_util:msg("data_gen backup db finish!!!");
+			base_logger_util:msg("base_db_data_gen_util backup db finish!!!");
 		true->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata,FromProc})
 	end,
@@ -204,10 +208,10 @@ handle_info({backupdata}, State)->
 	if
 		BackupFlag->		
 			BackDir = base_env_ets:get2(dbback, output,[]),
-			BackPath = BackDir ++ "zybackup_db",
-			data_gen:backup_ext(BackPath),
+			BackPath = BackDir ++ "zssbackup_db",
+			base_db_data_gen_util:backup_ext(BackPath),
 			server_control:write_flag_file(),
-			base_logger_util:msg("data_gen backup db finish!!!");
+			base_logger_util:msg("base_db_data_gen_util backup db finish!!!");
 		true->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata})
 	end,
@@ -216,11 +220,10 @@ handle_info({backupdata}, State)->
 handle_info({recoverydata,FromProc},State)->
 	base_logger_util:msg("recoverydata start~n"),
 	BackDir = base_env_ets:get2(dbback, output,[]),
-	BackPath = BackDir ++ "zybackup_db",
-	data_gen:recovery_ext(BackPath),
-	data_gen:start(),
-	data_gen:import_config("game"),
-	base_logger_util:msg("data_gen recovery db finish!!!"),
+	BackPath = BackDir ++ "zssbackup_db",
+	base_db_data_gen_util:recovery_ext(BackPath),
+	base_db_data_gen_util:import_config("game"),
+	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
 	base_rpc_util:cast(FromProc,{recoverydata_ok}),
 	{noreply,State};
 
@@ -228,37 +231,36 @@ handle_info({recoverydata,FromProc},State)->
 handle_info({recoverydata},State)->
 	base_db_tools:wait_for_all_db_tables(),
 	BackDir = base_env_ets:get2(dbback, output,[]),
-	BackPath = BackDir ++ "zybackup_db",
-	data_gen:recovery_ext(BackPath),
-	data_gen:start(),
-	data_gen:import_config("game"),
+	BackPath = BackDir ++ "zssbackup_db",
+	base_db_data_gen_util:recovery_ext(BackPath),
+	base_db_data_gen_util:import_config("game"),
 	server_control:write_flag_file(),
-	base_logger_util:msg("data_gen recovery db finish!!!"),
+	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
 	{noreply,State};
 
 handle_info({gen_data},State)->
-	%%data_gen:start(),
+	%%base_db_data_gen_util:start(),
 	base_db_tools:wait_for_all_db_tables(),
-	data_gen:import_config("game"),
+	base_db_data_gen_util:import_config("game"),
 	%%ServerId = base_env_ets:get(serverid,1),
 	%%giftcard_op:import("../config/gift_card-"++integer_to_list(ServerId)++"01.config"),
 	server_control:write_flag_file(),
-	base_logger_util:msg("data_gen gen db finish!!!"),
+	base_logger_util:msg("base_db_data_gen_util gen db finish!!!"),
 	{noreply,State};
 
 handle_info({create_giftcard},State)->
-	%%create giftcard and import to db
-	base_db_tools:wait_for_all_db_tables(),
-	giftcard_op:auto_gen_and_import(),
-	server_control:write_flag_file(),
+	% %%create giftcard and import to db
+	% base_db_tools:wait_for_all_db_tables(),
+	% giftcard_op:auto_gen_and_import(),
+	% server_control:write_flag_file(),
 	base_logger_util:msg("create_giftcard gen db finish!!!"),
 	{noreply,State};
 
 handle_info({format_data,Param},State)->
-	base_db_tools:wait_for_all_db_tables(),
-	data_change:update_db_data(Param),
-	server_control:write_flag_file(),
-	base_logger_util:msg("format_data ~p finish!!!~n",[Param]),
+	% base_db_tools:wait_for_all_db_tables(),
+	% data_change:update_db_data(Param),
+	% server_control:write_flag_file(),
+	% base_logger_util:msg("format_data ~p finish!!!~n",[Param]),
 	{noreply,State};
 
 handle_info(Info, State) ->
@@ -302,7 +304,7 @@ dum_now(Dir)->
 		[]-> ignor;
 		_-> case filelib:ensure_dir(Dir) of
 			   ok->File = get_out_file(Dir),
-				   data_gen:backup(File);
+				   base_db_data_gen_util:backup(File);
 			   _-> base_logger_util:msg("back database faild create dir [~p] failed!",[Dir])
 		   end
 	end.
@@ -322,9 +324,9 @@ check_today_dump(Dir)->
 			   true-> false
 			end
 	end,
-	TodayFileHeader = "zyback_" ++ util:make_int_str4(Y) ++ "_" 
-								++ util:make_int_str2(M) ++ "_" 
-								++ util:make_int_str2(D) ++ "_",
+	TodayFileHeader = "zssback_" ++ base_temp_util:make_int_str4(Y) ++ "_" 
+								++ base_temp_util:make_int_str2(M) ++ "_" 
+								++ base_temp_util:make_int_str2(D) ++ "_",
 	CheckNeedDump = case Res of
 						true -> case file:list_dir(Dir) of
 									{ok,FileNames}->
@@ -358,7 +360,7 @@ db_dump_now(Dir,LastTime)->
 			   ok->
 					put(dbfile_dump,{backup,LastTime}),
 				   	File = get_out_file(Dir),
-				   	data_gen:backup_ext(File),
+				   	base_db_data_gen_util:backup_ext(File),
 					put(dbfile_dump,{idle,base_timer_server:get_correct_now()});
 			   _-> base_logger_util:msg("back database faild create dir [~p] failed!",[Dir])
 		   end
@@ -387,12 +389,12 @@ check_db_dump(Dir)->
 get_out_file(OutDir)->
 	Now = base_timer_server:get_correct_now(),
 	{{Y,M,D},{H,Min,S}} = calendar:now_to_local_time(Now),
-	File = string:join(["zyback",
-							util:make_int_str4(Y),	
-							util:make_int_str2(M),
-							util:make_int_str2(D),
+	File = string:join(["zssback",
+							base_temp_util:make_int_str4(Y),	
+							base_temp_util:make_int_str2(M),
+							base_temp_util:make_int_str2(D),
 							%%util:make_int_str4(S+Min*60+H*3600)
-							util:make_int_str6(H*10000+Min*100+S) 
+							base_temp_util:make_int_str6(H*10000+Min*100+S) 
 							],
 							"_"),
 	OutDir ++ File.

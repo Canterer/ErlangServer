@@ -1,0 +1,29 @@
+{application, base_gate_app,
+[
+	{description,"base gate application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_gate_app,
+			base_tcp_client_sup,
+			base_tcp_client_fsm,
+			base_tcp_listener_sup,
+			base_tcp_listener_server,
+			base_tcp_acceptor_sup,
+			base_tcp_acceptor_server
+		]
+	},
+	{registered,
+		[
+			base_tcp_client_sup,
+			base_tcp_client_fsm,
+			base_tcp_listener_sup,
+			base_tcp_listener_server,
+			base_tcp_acceptor_sup,
+			base_tcp_acceptor_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_gate_app,[]}}
+]
+}.

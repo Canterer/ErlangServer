@@ -35,10 +35,10 @@ wait_line_db()->
 
 wait_line_db_loop()->
 	case base_node_util:get_linenode() of
-		[]->
+		none->
 			timer:sleep(1000),
 			wait_line_db_loop();
-		[Node|_]->
+		Node->
 			case  base_db_line_master_server:is_db_prepread(Node) of
 				true->
 					mnesia:start();
@@ -63,7 +63,7 @@ config_ram_tables_type(RamTableList)->
 	case RamTableList of
 		[]-> ignor;
 		_-> case base_node_util:get_dbnode() of
-				undefined-> nodbnode;
+				nonode-> nodbnode;
 				_DbNode->
 					config_ram_db_node(RamTableList),
 					CorrectTables = base_db_tools:correct_need_config_tables(RamTableList),
@@ -74,7 +74,7 @@ config_ram_tables_type(RamTableList)->
 
 config_ram_db_node(TablesList)->
 	case base_node_util:get_dbnode() of
-		undefined -> base_logger_util:msg("DB Node havn't startd!\n");
+		nonode -> base_logger_util:msg("DB Node havn't startd!\n");
 		DbNode->
 			mnesia:start(),
 			case check_db_connected() of

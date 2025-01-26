@@ -92,13 +92,13 @@ init([]) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({wait_ets_init}, _From, State) ->
-	base_env_ets:fresh(),
+	% env_ets:fresh(),
 	base_db_tools:wait_ets_init(),
 	Reply = ok,
 	{reply, Reply, State};
 
 handle_call({wait_ets_init_fliter,{EtsFliter}}, _From, State) ->
-	%%base_env_ets:fresh(),
+	% env_ets:fresh(),
 	base_db_tools:wait_ets_init_fliter(EtsFliter),
 	Reply = ok,
 	{reply, Reply, State};

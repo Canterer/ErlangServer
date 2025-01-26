@@ -85,7 +85,8 @@ handle_cast(Msg, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info( {check_global_proc},State)->
-	 do_wait(),
+	base_logger_util:msg("~p:~p({check_global_proc},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
+	do_wait(),
 	{noreply,State};
 
 handle_info({stop}, State) ->
