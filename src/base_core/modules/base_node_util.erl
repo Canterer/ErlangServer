@@ -100,6 +100,7 @@ get_node_procs(Node)->
 
 check_node_allowable(Key, Node) ->
 	% lists:member(get_node_sname(Node), get_allowable_nodes(Key)).
+	base_logger_util:msg("~p:~p(Key:~p, Node:~p) allowable_nodes:~p checkResult:~p~n",[?MODULE,?FUNCTION_NAME,Key,Node,get_allowable_nodes(Key),check_list(fun(AllowNode) -> get_node_sname_str(Node) =:= atom_to_list(AllowNode) end, get_allowable_nodes(Key)) > 0]),
 	NodeNameStr = get_node_sname_str(Node),
 	check_list(
 		fun(AllowNode) ->
@@ -115,6 +116,7 @@ get_filter_nodes(Key)->
 			SNodeName = get_node_sname(AliveNode),
 			lists:member(SNodeName, SNodes)
 		end, AliveNodes).
+
 
 % 统一接口
 % 仅存在一个timer节点(必需) 失败时异常 

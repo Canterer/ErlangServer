@@ -7,7 +7,14 @@
 %%
 %% Exported Functions
 %%
--export([init/0,load_map_file/2,load_map_ext_file/2]).
+-export([
+	init/0,
+	load_map_file/2,
+	load_map_ext_file/2,
+	make_db_name/1,
+	make_map_ext_name/1,
+	make_db_proc/1
+]).
 
 %%
 %% API Functions

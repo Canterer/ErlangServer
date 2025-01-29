@@ -35,6 +35,7 @@ ping(Node)->
 	ping_loop(Node).
 
 ping_loop(Node)->
+	base_logger_util:msg("~p:~p(Node:~p)~n",[?MODULE,?FUNCTION_NAME,Node]),
 	case net_adm:ping(Node) of
 		pong -> ok;
 		_->

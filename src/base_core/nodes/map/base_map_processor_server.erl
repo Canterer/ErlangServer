@@ -100,10 +100,10 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 	base_logger_util:msg("~p:~p([MapProcName:~p, {{LineId:~p,MapId:~p}, Tag:~p}])~n",[?MODULE,?FUNCTION_NAME,MapProcName,LineId,MapId,Tag]),
 	process_flag(trap_exit, true),
 	AOIdb = ets_operater_behaviour:new(MapProcName, [set, public, named_table]),
-	NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
-	ets_operater_behaviour:new(NpcInfoDB, [set,public,named_table]),
-	put(npcinfo_db,NpcInfoDB),	
-	npc_sup:start_link(MapId,MapProcName,NpcInfoDB),
+	% NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
+	% ets_operater_behaviour:new(NpcInfoDB, [set,public,named_table]),
+	% put(npcinfo_db,NpcInfoDB),	
+	% npc_sup:start_link(MapId,MapProcName,NpcInfoDB),
 	case Tag of
 			map->
 				Creation = [],
@@ -131,49 +131,53 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 				end
 	end,
 	StartNpcTag = 
-	case map_info_db:get_map_info(MapId) of
+	case base_map_info_db:get_map_info(MapId) of
 		[]->
 			true;
 		MapInfo->
-			case map_info_db:get_is_instance(MapInfo) of
+			case base_map_info_db:get_is_instance(MapInfo) of
 				1->
 					LineId =:= -1;
 				0->
 					true
 			end
 	end,
-	if
-		StartNpcTag->
-			NpcManagerProc = npc_manager:make_npc_manager_proc(MapProcName),
-			NpcInfos = npc_db:get_creature_spawns_info(MapId) ++
-							%%special line monster for map	   
-							npc_db:get_creature_spawns_info({LineId,MapId}),
+	base_logger_util:msg("~p:line:~p StartNpcTag:~p~n",[?MODULE,?LINE,StartNpcTag]),
+	% if
+	% 	StartNpcTag->
+	% 		NpcManagerProc = npc_manager:make_npc_manager_proc(MapProcName),
+	% 		NpcInfos = npc_db:get_creature_spawns_info(MapId) ++
+	% 						%%special line monster for map	   
+	% 						npc_db:get_creature_spawns_info({LineId,MapId}),
 			
-			lists:foreach(fun(NpcInfo)->
-					  NpcId = npc_db:get_spawn_id(NpcInfo),
-					  case npc_db:get_born_with_map(NpcInfo) of
-						  1->
-					 		npc_manager:add_npc_by_option(NpcManagerProc,NpcId,LineId,MapId,NpcInfo,CreatorTag);
-						  0->
-							  nothing
-					 end
-				  end,NpcInfos);
-		true->
-			nothing	
-	end,
-	MapDb = mapdb_processor:make_db_name(MapId),
+	% 		lists:foreach(fun(NpcInfo)->
+	% 				  NpcId = npc_db:get_spawn_id(NpcInfo),
+	% 				  case npc_db:get_born_with_map(NpcInfo) of
+	% 					  1->
+	% 				 		npc_manager:add_npc_by_option(NpcManagerProc,NpcId,LineId,MapId,NpcInfo,CreatorTag);
+	% 					  0->
+	% 						  nothing
+	% 				 end
+	% 			  end,NpcInfos);
+	% 	true->
+	% 		nothing	
+	% end,
+	MapDb = base_map_db_util:make_db_name(MapId),
+	base_logger_util:msg("~p:line:~p MapDb:~p~n",[?MODULE,?LINE,MapDb]),
 	case ets:info(MapDb) of
 		undefined->
+			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 			ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
-			case map_info_db:get_map_info(MapId) of
+			case base_map_info_db:get_map_info(MapId) of
 				[]->
 					nothing;
 				MapInfo_->
-					MapDataId = map_info_db:get_serverdataname(MapInfo_),
-					base_map_db:load_map_ext_file(MapDataId,MapDb),
-					base_map_db:load_map_file(MapDataId,MapDb)
+					MapDataId = base_map_info_db:get_serverdataname(MapInfo_),
+					base_map_db_util:load_map_ext_file(MapDataId,MapDb),
+					base_map_db_util:load_map_file(MapDataId,MapDb)
 			end;
 		_->
+			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 			nothing
 	end,
 	if
@@ -191,13 +195,14 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 			DurationTime = 0,
 			put(instanceid,[])
 	end,
-	put(map_start_time,timer_center:get_correct_now()),
+	put(map_start_time,base_timer_server:get_correct_now()),
 	if
 		DurationTime =/= 0->
 			erlang:send_after(DurationTime,self(),{on_destroy});
 		true->
 			nothing
 	end,
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	{ok, #state{mapinfo={LineId,MapId}, aoidb=AOIdb, mapproc=MapProcName}}.
 
 %%lefttime
@@ -208,7 +213,7 @@ handle_call(get_instance_details,_From,State) ->
 			{0,0};
 		_->
 			StartTime = get(map_start_time),
-			trunc(timer:now_diff(timer_center:get_correct_now(),StartTime)/1000000)
+			trunc(timer:now_diff(base_timer_server:get_correct_now(),StartTime)/1000000)
 	end,
 	{reply, Reply,State};
 %% --------------------------------------------------------------------

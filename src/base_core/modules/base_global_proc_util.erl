@@ -15,6 +15,7 @@ wait_global_proc_register()->
 	%%wait_loop().
 
 wait_loop()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case  base_global_proc_checker_server:is_ready() of
 		true->
 			nothing;
@@ -25,12 +26,14 @@ wait_loop()->
 
 
 send(ModuleName,Msg)->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_global_proc_ets:get_global_proc_node(ModuleName) of
 		[]->
 			base_logger_util:msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),
 			error;
 			%%global:send(ModuleName,Msg);
 		Node->
+			base_logger_util:msg("~p:~p(ModuleName:~p,Msg:~p) Node:~p~n",[?MODULE,?FUNCTION_NAME,ModuleName,Msg,Node]),
 			base_rpc_util:cast(Node,ModuleName, Msg)
 	end.
 

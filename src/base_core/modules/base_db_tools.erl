@@ -34,6 +34,7 @@ wait_line_db()->
 	wait_line_db_loop().
 
 wait_line_db_loop()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_node_util:get_linenode() of
 		none->
 			timer:sleep(1000),
@@ -278,6 +279,7 @@ add_disc_tables(_TableList = [Table | T], NewNode) ->
 wait_for_tables_loop(_IsRemote,0,_TabList)->
 	base_logger_util:msg("wait_for_tables out of times~n");
 wait_for_tables_loop(IsRemote,N,TabList)->
+	base_logger_util:msg("~p:~p(IsRemote:~p,N:~p,TabList:~p)~n",[?MODULE,?FUNCTION_NAME,IsRemote,N,TabList]),
 	F = if IsRemote =:= local -> 
 			   fun()-> wait_for_tables_norpc(TabList, ?DB_WAIT_TABLE_TIMEOUT) end;
 		   true->
@@ -338,11 +340,11 @@ wait_ets_create()->
 	CreateMods = get_ets_table_mods(node()),
 	config_ets_create(CreateMods).
 config_ets_create(all)->
-	base_mod_util:behaviour_apply(ets_operater_behaviour,create,[]);
+	base_mod_util:behaviour_apply(ets_operater_behaviour,create_ets,[]);
 config_ets_create(CreateMods)->
 	lists:foreach(fun(M)->
 						try
-							M:create()
+							M:create_ets()
 						catch
 							_:_->base_logger_util:msg("create ets ~p except! check the app configs\n",[M])
 						end				  
@@ -354,11 +356,11 @@ config_ets_create(CreateMods)->
 	end.
 
 config_ets_init(all)->
-	base_mod_util:behaviour_apply(ets_operater_behaviour,init,[]);
+	base_mod_util:behaviour_apply(ets_operater_behaviour,init_ets,[]);
 config_ets_init(InitMods)->
 	lists:foreach(fun(M)->
 						try
-							M:init()
+							M:init_ets()
 						catch
 							E:R->base_logger_util:msg("init ets ~p except(~p:~p)! check the app configs\n",[M,E,R])
 						end				  
@@ -366,6 +368,7 @@ config_ets_init(InitMods)->
 	base_logger_util:msg("ets ~p are ok now!\n",[InitMods]).
 
 wait_for_tables_rpc(TableList,TimeOut)->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	DbNode = base_node_util:get_dbnode(),
 	case base_rpc_util:asyn_call(DbNode, mnesia, wait_for_tables, [TableList,TimeOut]) of
 		{badrpc,Reason}-> {error,Reason};
@@ -373,6 +376,7 @@ wait_for_tables_rpc(TableList,TimeOut)->
 	end.
 
 wait_for_tables_norpc(TableList,TimeOut)->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	mnesia:wait_for_tables(TableList,TimeOut).
 
 wait_for_all_db_tables_in_db_node()->
@@ -404,7 +408,9 @@ wait_tables_in_dbnode()->
 wait_for_local_ram_tables()->
 	case is_need_ram_table(node()) of
 		true->
-			wait_for_tables_loop(local,1000,db_operater_behaviour:get_all_ram_table());
+			% base_logger_util:msg("db_operater_behaviour:get_all_ram_table :~p~n",[db_operater_behaviour:get_all_ram_table()]),
+			% wait_for_tables_loop(local,1000,db_operater_behaviour:get_all_ram_table());
+			wait_for_tables_loop(local,1000,[]);
 		_->
 			nothing
 	end.
@@ -413,7 +419,11 @@ is_need_ram_table(Node)->
 	get_node_ram_tables(Node) =/=[].
 
 get_node_ram_tables(Node)->
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	ShareTypes = base_env_ets:get(nodes_ram_table,[]),
+	base_logger_util:msg("~p:line:~p Node:~p ShareTypes:~p~n",[?MODULE,?LINE,Node,ShareTypes]),
+	Res = lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes),
+	base_logger_util:msg("~p:line:~p Res:~p~n",[?MODULE,?LINE,Res]),
 	case lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes) of
 		[]->
 			[];

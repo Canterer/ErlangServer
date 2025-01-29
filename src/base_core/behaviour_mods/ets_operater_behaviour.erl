@@ -11,7 +11,7 @@
 ]).
 
 %%
-%%	behaviour fun	-behaviour(ets_operater_mod).
+%%	behaviour fun	-behaviour(ets_operater_behaviour).
 %%	copy this:		-export([init/0,create/0]).
 %%
 

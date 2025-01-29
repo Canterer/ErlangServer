@@ -13,12 +13,15 @@
 %% API Functions
 %%
 asyn_call(Node, NamedProc, Func, Args)->
+	base_logger_util:msg("~p:~p(Node:~p, NamedProc:~p, Func:~p, Args:~p)~n",[?MODULE,?FUNCTION_NAME,Node,NamedProc,Func,Args]),
 	rpc:call(Node, NamedProc, Func, Args).
 
 asyn_call(Node, NamedProc, Func, Args, Timeout)->
+	base_logger_util:msg("~p:~p(Node:~p, NamedProc:~p, Func:~p, Args:~p, Timeout:~p)~n",[?MODULE,?FUNCTION_NAME,Node,NamedProc,Func,Args,Timeout]),
 	rpc:call(Node, NamedProc, Func, Args, Timeout).
 
 cast(NamedProc,Msg)->
+	base_logger_util:msg("~p:~p(NamedProc:~p,Msg:~p)~n",[?MODULE,?FUNCTION_NAME,NamedProc,Msg]),
 	try
 		NamedProc!Msg
 	catch
@@ -28,6 +31,7 @@ cast(NamedProc,Msg)->
 	end.
 cast(Node,NamedProc,Msg)->
 	CurNode = node(),
+	base_logger_util:msg("~p:~p(Node:~p,NamedProc:~p,Msg:~p) CurNode:~p~n",[?MODULE,?FUNCTION_NAME,Node,NamedProc,Msg,CurNode]),
 	try
 		case Node of
 			CurNode -> NamedProc ! Msg;
@@ -42,6 +46,7 @@ cast(Node,NamedProc,Msg)->
 
 
 mult_cast(Nodes,NamedProc,Msg) ->
+	base_logger_util:msg("~p:~p(Nodes:~p,NamedProc:~p,Msg:~p) CurNode:~p~n",[?MODULE,?FUNCTION_NAME,Nodes,NamedProc,Msg]),
 	rpc:abcast(Nodes, NamedProc, Msg).
 	
 %%

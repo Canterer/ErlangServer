@@ -13,7 +13,6 @@
 	query_db_name/1,
 	query_map_stand/2,
 	get_map_data/1,
-	make_db_name/1,
 	query_born_pos/1,
 	query_safe_grid/2
 ]).
@@ -38,7 +37,7 @@ start_link(MapFile,MapId)->
 	gen_server:start_link(?MODULE ,[MapFile,MapId], []).
 
 whereis(MapId)->
-	MapDbProc = make_db_proc(MapId),
+	MapDbProc = base_map_db_util:make_db_proc(MapId),
 	case erlang:whereis(MapDbProc) of
 		undefined->undefined;
 		_Pid->MapDbProc
@@ -107,11 +106,11 @@ init([MapFile,MapId]) ->
 %%		{error,Reson}-> {stop,Reson};
 
 %%		{ok,L}-> 
-			MapDB = make_db_name(MapId),
+			MapDB = base_map_db_util:make_db_name(MapId),
 			ets_operater_behaviour:new(MapDB, [set,named_table]),	%% first new the database, and then register proc
 			base_logger_util:msg("base_map_db_util:load_map_file MapId ~p MapDB~p ~n",[MapId,MapDB]),
 			base_map_db_util:load_map_file(MapId,MapDB),
-			register(make_db_proc(MapId),self()),
+			register(base_map_db_util:make_db_proc(MapId),self()),
 			{true, Tree} = build_quadtree(MapFile),
 			ets_operater_behaviour:insert(MapDB, {map_data, Tree}),
 			{ok, #state{mapdb=MapDB}}.
@@ -175,16 +174,6 @@ code_change(OldVsn, State, Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-
-make_db_name(MapId)->
-	list_to_atom(lists:append([integer_to_list(MapId),"_db"])).
-
-make_map_ext_name(MapId)->
-	list_to_atom(lists:append([integer_to_list(MapId),"_ext_db"])).	
-
-make_db_proc(MapId)->
-	list_to_atom(lists:append([integer_to_list(MapId),"_proc"])).
-
 
 build_quadtree(_MapFile) ->
 	%%	{Rect, View} = file:consults(MapFile),

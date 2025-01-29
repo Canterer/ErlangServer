@@ -27,12 +27,15 @@ start_link()->
 %% ====================================================================
 
 start_map_processor(MapManagerNode,LineId,MapId,Tag)->
+	base_logger_util:msg("~p:~p(MapManagerNode:~p,LineId:~p,MapId:~p,Tag:~p)~n",[?MODULE,?FUNCTION_NAME,MapManagerNode,LineId,MapId,Tag]),
 	base_rpc_util:cast(MapManagerNode, ?GAME_MAP_MANAGER ,{start_map_process,LineId,MapId,Tag}).
 
 stop_map_processor(MapManagerNode,LineId,MapId)->
+	base_logger_util:msg("~p:~p(MapManagerNode:~p,LineId:~p,MapId:~p)~n",[?MODULE,?FUNCTION_NAME,MapManagerNode,LineId,MapId]),
 	base_rpc_util:cast(MapManagerNode, ?GAME_MAP_MANAGER , {stop_map_process,LineId,MapId}).
 
 start_instance(MapName,CreatInfo,MapId)->
+	base_logger_util:msg("~p:~p(MapName:~p,CreatInfo:~p,MapId:~p)~n",[?MODULE,?FUNCTION_NAME,MapName,CreatInfo,MapId]),
 	try
 		gen_server:call(?GAME_MAP_MANAGER,{start_instance,MapName,CreatInfo,MapId})
 	catch
@@ -43,6 +46,7 @@ start_instance(MapName,CreatInfo,MapId)->
 	end.
 
 stop_instance(MapManagerNode,MapName)->
+	base_logger_util:msg("~p:~p(MapManagerNode:~p,MapName:~p)~n",[?MODULE,?FUNCTION_NAME,MapManagerNode,MapName]),
 	base_rpc_util:cast(MapManagerNode, ?GAME_MAP_MANAGER , {stop_instance,MapName}).
 		
 %% --------------------------------------------------------------------
@@ -57,36 +61,42 @@ init([]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	%% start time to check 
 	send_check_message(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	%%load all map
 	% 从mnesia数据库中读取所有地图配置数据
 	AllMapInfo = base_map_info_db:get_all_maps_and_serverdata(),
+	base_logger_util:msg("~p:line:~p AllMapInfo:~p~n",[?MODULE,?LINE,AllMapInfo]),
 	lists:foreach(fun({MapId,MapDataId})->
 		MapDb = base_map_db_util:make_db_name(MapId),
+		base_logger_util:msg("~p:line:~p {MapId:~p,MapDataId:~p} MapDb:~p~n",[?MODULE,?LINE,MapId,MapDataId,MapDb]),
 		case ets:info(MapDb) of
 			undefined->
+				base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 				ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 				case MapDataId of
 					[]->
 						nothing;
 					_->
-						base_map_db:load_map_ext_file(MapDataId,MapDb),
-						base_map_db:load_map_file(MapDataId,MapDb)
+						base_map_db_util:load_map_ext_file(MapDataId,MapDb),
+						base_map_db_util:load_map_file(MapDataId,MapDb)
 				end;
 			_->
+				base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 				nothing
 		end end,AllMapInfo),
 %%	DefaultLoadMapIDs = [?DEFAULT_MAP|base_env_ets:get(preload_map,undefined)],
 %%	lists:foreach(fun(MapId)->
-%%		MapDb = base_map_db_processor_server:make_db_name(MapId),
+%%		MapDb = base_map_db_util:make_db_name(MapId),
 %%		case ets:info(MapDb) of
 %%			undefined->
 %%				ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
-%%				base_map_db:load_map_ext_file(MapId,MapDb),
-%%				base_map_db:load_map_file(MapId,MapDb);
+%%				base_map_db_util:load_map_ext_file(MapId,MapDb),
+%%				base_map_db_util:load_map_file(MapId,MapDb);
 %%			_->
 %%				nothing
 %%		end end,DefaultLoadMapIDs),
 	erlang:garbage_collect(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
@@ -100,6 +110,7 @@ init([]) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({start_instance,MapName,CreatInfo,MapId}, _From, State) ->
+	base_logger_util:msg("~p:~p({start_instance,MapName:~p,CreatInfo:~p,MapId:~p}, _From:~p, State:~p)~n",[?MODULE,?FUNCTION_NAME,MapName,CreatInfo,MapId,_From,State]),
 	case base_map_processor_sup:start_child(MapName,{-1,MapId},CreatInfo) of
 		{ok,Pid} ->
 			base_logger_util:msg("---start map ok \n"),
@@ -132,6 +143,7 @@ handle_cast(Msg, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({global_line_check}, State) ->
+	base_logger_util:msg("~p:~p({global_line_check}, State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	case base_line_manager_server:whereis_name() of
 		error->
 			base_logger_util:msg("lines manager can not found ,1 sencond check\n"),
@@ -145,8 +157,8 @@ handle_info({global_line_check}, State) ->
 	end,
 	{noreply, State};
 		
-handle_info({start_map_process,LineId,MapId,Tag}, State) ->		
-	base_logger_util:msg("receive the msg:start_map_process Line ~p Map ~p\n",[LineId,MapId]),
+handle_info({start_map_process,LineId,MapId,Tag}, State) ->	
+	base_logger_util:msg("~p:~p({start_map_process,LineId:~p,MapId:~p,Tag:~p}, State:~p)~n",[?MODULE,?FUNCTION_NAME,LineId,MapId,Tag,State]),	
 	MapName = make_map_process_name(LineId,MapId),			
 	case base_map_processor_sup:start_child(MapName,{LineId,MapId},Tag) of
 		{ok,Child} ->

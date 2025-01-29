@@ -13,7 +13,12 @@
 
 %% --------------------------------------------------------------------
 %% External exports
--export([start_link/0,rpc_add_self_to_db_node/2,rpc_add_self_to_dbslave_node/1,is_db_prepread/1]).
+-export([
+	start_link/0,
+	rpc_add_self_to_db_node/2,
+	rpc_add_self_to_dbslave_node/1,
+	is_db_prepread/1
+]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -66,23 +71,27 @@ init([]) ->
 	put(db_prepare_finish,false),
 	base_timer_server:start_at_process(),
 
-	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	base_timer_util:send_after(?CHECK_SPLIT_TABLE_FIRSTINTERVAL, {check_split}),
-	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	% init_disc_tables
-	base_db_ini_util:db_init_master(),
-	base_logger_util:msg("~p:~p~n",[?MODULE,?LINE]),
+	base_db_init_util:db_init_master(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	% 定时检查备份
 	send_check_dump_message(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 
 	% 初始化记录用的ets
 	base_db_split_util:create_ets(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	% 记录自定义类型disc_split的表 通过db_operater_behaviour搜集
 	base_db_split_util:check_split_master_tables(),
 
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	put(dbfile_dump,{idle,base_timer_server:get_correct_now()}),
 	base_db_dal_util:init(),	
 	put(db_prepare_finish,true),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
@@ -121,6 +130,7 @@ handle_cast(Msg, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info({check_backup},State)->
+	base_logger_util:msg("~p:~p({check_backup},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	%% get backup filename
 	Dir = base_env_ets:get2(dbback, output,[]),
 	case Dir of

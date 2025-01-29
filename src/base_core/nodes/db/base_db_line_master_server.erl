@@ -30,11 +30,12 @@
 %% Server functions
 %% ====================================================================
 is_db_prepread(Node)->
+	base_logger_util:msg("~p:~p(Node:~p)~n",[?MODULE,?FUNCTION_NAME,Node]),
 	try
 		gen_server:call({?MODULE,Node}, is_db_prepread)
 	catch
 		E:R->
-			base_logger_util:msg("get_db_master error no_proc ,wait ~n "),
+			base_logger_util:msg("base_db_line_master_server error no_proc ,wait ~n "),
 			false
 	end.
 
@@ -52,7 +53,9 @@ start_link()->
 init([]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(db_prepare_finish,false),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	base_db_init_util:db_init_line_master(),
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	put(db_prepare_finish,true),
 	base_logger_util:msg("line's ram db prepare finished!! ~n"),
 	{ok, #state{}}.

@@ -60,8 +60,9 @@ start(_Type, _StartArgs) ->
 	% 初始化当前节点的ets配置列表,并等待db节点数据库就绪
 	base_application_server:wait_ets_init(),
 	
-	start_lines_manager_sup(),
+	% base_line_processor_sup 需要在 base_line_manager_sup 之前初始化
 	start_line_processor_sup(),
+	start_lines_manager_sup(),
 	{ok, self()}.
 	
 start()->

@@ -15,7 +15,7 @@
 -export([get_owner_table/2,check_need_split/1,get_table_names_rpc/1,get_table_names/1]).
 
 -export([create_ets/0,init_ets/0,get_table_info/1]).
--behaviour(ets_operater_behavior).
+-behaviour(ets_operater_behaviour).
 -compile(export_all).
 %%
 %% API Functions
@@ -79,7 +79,7 @@ get_owner_table(TableName,Id)->
 	erlang:list_to_atom(NewTableString).
 
 check_need_split(HiValue)->
-	SplitInfos = db_operater_behavior:get_all_split_table_and_mod(),
+	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
 	lists:foldl(fun(TabLine,Acc)->
 						case Acc of
 							ignor-> ignor;
@@ -102,7 +102,7 @@ check_tablebase_match(TableBase,CurBase)->
 
 
 get_table_info(TableName)->
-	db_operater_behavior:get_split_table_and_mod(TableName).
+	db_operater_behaviour:get_split_table_and_mod(TableName).
 
 get_basetable(TableInfo)->
 	erlang:element(1, TableInfo).
@@ -112,7 +112,7 @@ get_table_mod(TableInfo)->
 
 get_splitted_info(CurTable)->
 	CurTableStr = atom_to_list(CurTable),
-	SplitInfos = db_operater_behavior:get_all_split_table_and_mod(),
+	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
 	case lists:filter(fun(SplitInfo)->
 						 TableBase = get_basetable(SplitInfo),
 						 TableBaseStr = atom_to_list(TableBase),
@@ -135,12 +135,12 @@ create_split_table_by_name(Table)->
 		TableInfo->
 			CreateMod = get_table_mod(TableInfo),
 			BaseTable = get_basetable(TableInfo),
-			base_db_ini_util:create_split_table(CreateMod, BaseTable,Table),
+			base_db_init_util:create_split_table(CreateMod, BaseTable,Table),
 			ok
 	end.
 		
 check_split_table(TableBase)->
-	db_operater_behavior:get_split_table_and_mod(TableBase)=/=[].
+	db_operater_behaviour:get_split_table_and_mod(TableBase)=/=[].
 
 check_need_new_table(BaseTable,HiValue)->
 	Prefix = atom_to_list(BaseTable) ++ "_"++integer_to_list(HiValue)++"_",
@@ -176,7 +176,7 @@ check_need_new_table(BaseTable,HiValue)->
 							 case get_table_info(BaseTable) of
 								 []-> error;
 								 TableInfo->
-											 base_db_ini_util:create_split_table(get_table_mod(TableInfo),BaseTable,Table),
+											 base_db_init_util:create_split_table(get_table_mod(TableInfo),BaseTable,Table),
 											 ok
 							 end
 	end.
@@ -187,8 +187,11 @@ make_table_name(BaseTable,HiValue,LowValue)->
 	list_to_atom(TableString).
 
 check_split_master_tables()->
-	SplitInfos = db_operater_behavior:get_all_split_table_and_mod(),
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
+	base_logger_util:msg("~p:~p SplitInfos:~p~n",[?MODULE,?FUNCTION_NAME,SplitInfos]),
 	TableBases = lists:map(fun(X)-> get_basetable(X) end, SplitInfos),
+	base_logger_util:msg("~p:~p TableBases:~p~n",[?MODULE,?FUNCTION_NAME,TableBases]),
 	lists:map(fun(TableBase)->
 					  Tables = get_splitted_tables(TableBase),
 					  lists:foreach(fun(Table)->

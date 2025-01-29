@@ -45,7 +45,7 @@ init([]) ->
 	{ok,{{one_for_one,10,10}, []}}.
 
 start_child(MapProcName,MapId_line,Tag)->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:msg("~p:~p(MapProcName:~p,MapId_line:~p,Tag:~p)~n",[?MODULE,?FUNCTION_NAME,MapProcName,MapId_line,Tag]),
 	try
 		AChild = {MapProcName,{base_map_processor_server,start_link,[MapProcName,{MapId_line,Tag}]},
 				  		  		transient,2000,worker,[base_map_processor_server]},

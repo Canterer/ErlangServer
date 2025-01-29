@@ -63,8 +63,8 @@ db节点
 	base_db_line_master_server通过base_db_init_util:db_init_line_master()初始化
 
 	两者都依赖db_operater_behaviour:start()收集数据表
-	base_db_ini_util:db_init_master()
-	base_db_ini_util:db_init_line_master()
+	base_db_init_util:db_init_master()
+	base_db_init_util:db_init_line_master()
 	base_db_tools:wait_line_db()
 	以上上个接口会触发db_operater_behaviour的start方法，触发相关的mod:start()，并将自身记录进DB_MOD_TABLE中
 
@@ -99,20 +99,20 @@ map节点
 	将相关数据记录在MAP_PROC_DB中。
 
 	第二步：
-	遍历所有的MapInfo，为初次base_map_db:load_map_file(MapDataId，MapDb)
+	遍历所有的MapInfo，为初次base_map_db_util:load_map_file(MapDataId，MapDb)
 	其会将maps/map_xxxx文件中的内容加载进MapId_db表中
 
 	每个map节点与一个line_processor相关联，可开启多个map_processor。通过LineId可获取到其关联的多个MapId
 	配置中lines_info 记录了每一个line上对应的map节点名以及其关联的多个MapId。	
 	
-	每个base_map_processor_server初始化后，通过map_db_pprocessor:make_db_name(MapId)。
+	每个base_map_processor_server初始化后，通过base_map_db_util:make_db_name(MapId)。
 	
 	map节点负责开启role_app
 
 base_map_info_db
 	初始化时通过db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid)通过数据库读取至表
-base_map_db
-	base_map_processor_server初始化时使用base_map_db:load_map_file从文件中读取内容写入ets中
+base_map_db_util
+	base_map_processor_server初始化时使用base_map_db_util:load_map_file从文件中读取内容写入ets中
 	
 	
 xxx_db.erl 用于管理数据

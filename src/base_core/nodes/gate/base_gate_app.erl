@@ -76,13 +76,14 @@ start()->
 
 start_base_tcp_listener_sup() ->	
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	%%SName = node_util:get_node_sname(node()),
-	SName = base_node_util:get_match_snode(gate,node()),
-	Port = base_env_util:get2(gateport, SName, 0),
+	SName = base_node_util:get_node_sname(node()),
+	base_logger_util:msg("~p:line:~p(node:~p SName:~p)~n",[?MODULE,?LINE,node(),SName]),
+	Port = base_env_ets:get2(gateport, SName, 0),
+	base_logger_util:msg("~p:line:~p Port:~p~n",[?MODULE,?LINE,Port]),
 	case Port of
 		0-> base_logger_util:msg("start gate error ,can not find listen port~n"),error;
 		Port->
-			AcceptorCount = base_env_util:get2(gate,acceptor_count,1),
+			AcceptorCount = base_env_ets:get2(gate,acceptor_count,1),
 			OnStartup = {?MODULE,tcp_listener_started,[]},
 			OnShutdown = {?MODULE,tcp_listener_stopped,[]},
 			AcceptCallback={?MODULE,start_client,[]},

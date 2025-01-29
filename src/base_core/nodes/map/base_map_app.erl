@@ -51,7 +51,7 @@ start(_Type, _StartArgs) ->
 			base_ping_util:wait_all_nodes_connect(),
 			base_db_tools:wait_line_db(),
 
-			base_global_util:wait_global_proc_register(),
+			base_global_proc_util:wait_global_proc_register(),
 			base_timer_server:start_at_app(),
 			base_db_sup:start_db_dmp_server(),
 			%%wait all db table

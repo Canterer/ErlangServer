@@ -28,7 +28,7 @@ start_link()->
 
 is_ready()->
 	try
-		gen_server:call(?SERVER, is_global_ready)
+		gen_server:call(?SERVER, is_global_proc_ready)
 	catch
 		_:_->false
 	end.
@@ -140,15 +140,16 @@ do_wait()->
 
 
 wait_stop()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(global_proc_ready,true),
-	self() ! {stop},
-	base_logger_util:msg("global_wait_proc finished ~n").
+	self() ! {stop}.
 
 is_all_node_waite_finish(MyWaitList)->
 	StillNotWaitedList = lists:filter(
 		fun(ModuleName)-> 
 			not base_global_proc_ets:is_global_proc_registed(ModuleName) 
 		end, MyWaitList),
+	base_logger_util:msg("~p:~p MyWaitList:~p StillNotWaitedList:~p~n",[?MODULE,?FUNCTION_NAME,MyWaitList,StillNotWaitedList]),
 	if
 		StillNotWaitedList=:=[]->
 			true;			%%wait finish

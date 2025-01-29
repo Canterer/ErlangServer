@@ -274,7 +274,7 @@ connecting(Event,StateData)->
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 connected({start_auth,ServerId,UserAuth}, StateData) ->
-	case lists:member(ServerId,env:get(serverids,[])) of
+	case lists:member(ServerId,base_env_ets:get(serverids,[])) of
 		true->
 			put(serverid,ServerId),
 			auth_processor:auth(node(),self(),ServerId,UserAuth);
@@ -413,7 +413,7 @@ rolelisting({role_create_request,RoleName,Gender,ClassType}, StateData)->
 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
 		{ok,RoleId}->
 			autoname_op:create_role(RoleName,RoleId),
-			case env:get2(baidu_post,app_secret,"") of
+			case base_env_ets:get2(baidu_post,app_secret,"") of
 				""->
 					nothing;
 				_->
@@ -888,11 +888,11 @@ send_recv_message_queue(Pid)	->
 	end.			
 	
 async_get_line_info_by_mapid(MapId)->
-	case map_info_db:get_map_info(MapId) of
+	case base_map_info_db:get_map_info(MapId) of
 		[]->
 			lines_manager:query_line_status(node(),self() ,MapId);
 		MapInfo->
-			case ?CHECK_INSTANCE_MAP(map_info_db:get_is_instance(MapInfo)) of
+			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(MapInfo)) of
 				true->
 					%%发给客户端当前线路,如果是副本地图,只提供线1供登录,登录之后再决定再转到副本地图所在
 					LineInfos = [{1,0}],

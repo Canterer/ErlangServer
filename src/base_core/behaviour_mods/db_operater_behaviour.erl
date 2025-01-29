@@ -34,8 +34,8 @@ start() ->
 		[public, set, named_table, {keypos, 1}]),
 	?DB_SPLIT_TABLE = ets_operater_behaviour:new(?DB_SPLIT_TABLE,
 		[public, set, named_table, {keypos, 1}]),
-	base_mod_util:behaviour_apply(db_operater_behavior,start,[]),
-	base_logger_util:msg("db_operater_behavior start end ~n"),
+	base_mod_util:behaviour_apply(db_operater_behaviour,start,[]),
+	base_logger_util:msg("db_operater_behaviour start end ~n"),
 	ok.
 
 start_module(Module, Opts)->
@@ -71,6 +71,7 @@ create_all_ram_table()->
 							AccMods
 					end
 			end,[], ?DB_MOD_TABLE),
+	base_logger_util:msg("~p:~p AllRamMod:~p !!!~n",[?MODULE,?FUNCTION_NAME,AllRamMod]),
 	lists:foreach(fun(Mod)->Mod:create_mnesia_table(ram) end,AllRamMod),
 	base_logger_util:msg("~p:~p end!!!~n",[?MODULE,?FUNCTION_NAME]).
 
@@ -93,6 +94,7 @@ get_split_table_and_mod(BaseTab)->
 	end.
 	
 get_all_split_table_and_mod()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	ets:tab2list(?DB_SPLIT_TABLE).
 
 get_backup_filter_tables()->

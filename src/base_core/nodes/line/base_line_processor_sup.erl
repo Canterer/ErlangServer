@@ -53,7 +53,7 @@ init([]) ->
 %% Internal functions
 %%====================================================================
 add_line({LineName, From}) ->
-	base_logger_util:msg("~p:~p({LineName:~p, From:~p)~n",[?MODULE,?FUNCTION_NAME,LineName,LineName,From]),
+	base_logger_util:msg("~p:~p({LineName:~p, From:~p)~n",[?MODULE,?FUNCTION_NAME,LineName,From]),
 	supervisor:start_child(?SERVER, {LineName, {base_line_processor_server, start_link, [{LineName, From}]},
 					 permanent, 2000, worker, [base_line_processor_server]}).
 

@@ -1,11 +1,11 @@
 -module(login_pb).
 -include("login_pb.hrl").
 -compile(export_all).
--export([create/0,init/0]).
+-export([create_ets/0,init_ets/0]).
 
 -behaviour(ets_operater_behaviour).
 
-create()->
+create_ets()->
 	ets_operater_behaviour:new(proto_msg_id_record_map,[set,named_table]).
 
 get_record_name(ID)->
@@ -15,7 +15,7 @@ get_record_name(ID)->
 			Rec
 	end.
 
-init()->
+init_ets()->
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{5,'player_role_list_s2c'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{6,'role_line_query_c2s'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{7,'role_line_query_ok_s2c'}),

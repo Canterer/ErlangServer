@@ -96,12 +96,12 @@ regist_map_manager(Args) ->
 % 	base_global_proc_util:send(?MODULE, {regist_chatmanager, Args}).
 
 wait_lines_manager_loop()->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case wait_lines_manager() of
 		true->
 			true;
 		_->
 			timer:sleep(1000),
-			base_logger_util:msg("wait_lines_manager_loop ~n"),
 			wait_lines_manager_loop()		
 	end.	
 
@@ -253,7 +253,7 @@ handle_call(Request, From, State) ->
 		end
 	catch 
 		E:R->
-			base_logger_util:msg("lines manager handle_call error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+			base_logger_util:msg("base_line_manager_server handle_call error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 			error
 	end,
 	{reply, Reply, State}.
@@ -290,18 +290,19 @@ handle_info(Info, State) ->
 			{add_line_server, LineName} ->
 				case line_is_exist(LineName) of
 					false ->
-						base_base_line_processor_server_sup:add_line({LineName, ?SERVER});
+						base_line_processor_sup:add_line({LineName, ?SERVER});
 					true ->
-						base_logger_util:msg("~p is exist~n", [LineName])
+						base_logger_util:msg("add_line_server LineName:~p is exist~n", [LineName])
 				end;
 			{regist_line_server, LineName} ->
 				ets_operater_behaviour:insert(?ETS_LINE_PROC_DB, {LineName});
 	
 			{delete_line_server, LineName} ->
-				base_base_line_processor_server_sup:delete_line(LineName),
+				base_line_processor_sup:delete_line(LineName),
 				ets_operater_behaviour:delete(?ETS_LINE_PROC_DB,LineName);
 	
 			{regist_map_manager, {Node, Name}} ->
+				base_logger_util:msg("~p:~p{regist_map_manager, {Node:~p, Name:~p}}~n",[?MODULE,?FUNCTION_NAME,Node,Name]),
 				%% insert the map_manager's name into map_manager db, formate of
 				%% information: {Node, map_managerName}
 				ets_operater_behaviour:insert(?ETS_MAP_MANAGER_DB, {Node, Name}),
@@ -325,7 +326,7 @@ handle_info(Info, State) ->
 		end
 	catch 
 		E:R->
-			base_logger_util:msg("lines manager handle_info error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()])
+			base_logger_util:msg("base_line_manager_server handle_info error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()])
 	end,		
 	{noreply, State}.
 
@@ -358,6 +359,7 @@ start_line_server() ->
 %% Description: Load static map data.
 %% @spec load_map() -> void().
 load_map(MapNode) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	Lines = base_env_ets:get(lines, []),
 	MapConfigFlag = base_env_ets:get(mapconfig_flag, []),
 	lists:foreach(fun(LineId) ->
@@ -369,6 +371,7 @@ start_map_processor(LineId, MapNode)->
 	start_map_processor(MapConfigFlag, LineId, MapNode).
 	
 start_map_processor(?MAPCONFIG_FROM_DATA, LineId, MapNode)->
+	base_logger_util:msg("~p:~p(MAPCONFIG_FROM_DATA, LineId:~p, MapNode:~p)~n",[?MODULE,?FUNCTION_NAME,LineId,MapNode]),
 	% CheckLoad = 
 	% 	case server_travels_util:is_share_map_node(MapNode) of
 	% 		true->
@@ -379,8 +382,10 @@ start_map_processor(?MAPCONFIG_FROM_DATA, LineId, MapNode)->
 	CheckLoad = base_node_util:check_match_map_and_line(MapNode,LineId),
 	if
 		CheckLoad->
+			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 			%%get all map config from ets
 			AllMaps = base_map_info_db:get_maps_bylinetag(LineId),
+			base_logger_util:msg("~p:line:~p AllMaps:~p~n",[?MODULE,?LINE,AllMaps]),
 			lists:foreach(fun(MapId)->
 					base_map_manager_server:start_map_processor(MapNode, LineId, MapId, map)					  
 				end, AllMaps);
@@ -390,6 +395,7 @@ start_map_processor(?MAPCONFIG_FROM_DATA, LineId, MapNode)->
 	
 
 start_map_processor(?MAPCONFIG_FROM_OPTION, LineId, MapNode) ->
+	base_logger_util:msg("~p:~p(MAPCONFIG_FROM_OPTION, LineId:~p, MapNode:~p)~n",[?MODULE,?FUNCTION_NAME,LineId,MapNode]),
 	SNode = base_node_util:get_node_sname(MapNode),
 	% SNode = base_node_util:get_match_snode(map,MapNode),
 	Host = base_node_util:get_node_host(MapNode),

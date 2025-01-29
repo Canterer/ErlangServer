@@ -4,7 +4,7 @@
 -compile(export_all).
 
 -export([start/0,create_mnesia_table/1,create_mnesia_split_table/2,delete_role_from_db/1,tables_info/0]).
--export([init/0,create/0]).
+-export([init_ets/0,create_ets/0]).
 -behaviour(db_operater_behaviour).
 -behaviour(ets_operater_behaviour).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -25,10 +25,10 @@ tables_info()->
 delete_role_from_db(_)->
 	nothing.
 
-create()->	
+create_ets()->	
 	ets_operater_behaviour:new(?MAP_INFO_ETS, [set,named_table]).
 
-init()->
+init_ets()->
 	% 从数据库读取 
 	db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid).
 
@@ -72,7 +72,9 @@ get_pvptag(MapInfo)->
 	element(#map_info.pvptag,MapInfo).
 
 get_maps_bylinetag(LineTag)->
+	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	ets:foldl(fun({_,MapInfo},Acc)->
+						base_logger_util:msg("~p:line:~p MapInfo:~p Acc:~p LineTag:~p~n",[?MODULE,?LINE,MapInfo,Acc,LineTag]),
 						case get_linetag(MapInfo) of
 						  []->
 							  [get_mapid(MapInfo)|Acc];
