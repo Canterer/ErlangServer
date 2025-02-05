@@ -1,33 +1,52 @@
+%% Description: TODO: Add description to base_map_processor_server
 -module(base_map_processor_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
--include("common_define.hrl").
-%% --------------------------------------------------------------------
 %% External exports
--export([start_link/2]).
+%% --------------------------------------------------------------------
+-export([
+	start_link/2,
+	join_grid/3,
+	leave_grid/3,
+	get_instance_details/2,
+	join_instance/3,
+	leave_instance/2,
+	leave_instance/3,
+	destroy_instance/2,
+	destroy_instance/3,
+	get_instance_id/1
+]).
 
--compile(export_all).
-
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
--include("data_struct.hrl").
--include("instance_define.hrl").
--include("npc_define.hrl").
-
-%%mapinfo: {LineId,MapId}
--record(state, {mapinfo, aoidb, mapproc}).
-
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
 -define(ETS_POS_GRID,1).
 -define(ETS_POS_UNITS,2).
 -define(ETS_POS_ROLES,3).
 -define(ETS_POS_STATE,4).
-%% ====================================================================
-%% External functions
-%% ====================================================================
+
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
+%%mapinfo: {LineId,MapId}
+-record(state, {mapinfo, aoidb, mapproc}).
+
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
+-include("common_define.hrl").
+-include("data_struct.hrl").
+-include("instance_define.hrl").
+-include("npc_define.hrl").
+
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
 start_link(MapProcName,{MapId_line,Tag})->
 	base_gen_server:start_link({local,MapProcName},?MODULE,[MapProcName, {MapId_line,Tag}],[]).
 
@@ -88,16 +107,11 @@ get_instance_id(MapProcName)->
 			base_logger_util:msg("get_instance_id MapProcName~p error ~p:~p ~n",[MapProcName,E,R]),
 			[]
 	end.
+
 %% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init([MapProcName, {{LineId,MapId}, Tag}])->
-	base_logger_util:msg("~p:~p([MapProcName:~p, {{LineId:~p,MapId:~p}, Tag:~p}])~n",[?MODULE,?FUNCTION_NAME,MapProcName,LineId,MapId,Tag]),
+do_init([MapProcName, {{LineId,MapId}, Tag}]) ->
 	process_flag(trap_exit, true),
 	AOIdb = ets_operater_behaviour:new(MapProcName, [set, public, named_table]),
 	% NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
@@ -142,7 +156,7 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 					true
 			end
 	end,
-	base_logger_util:msg("~p:line:~p StartNpcTag:~p~n",[?MODULE,?LINE,StartNpcTag]),
+	?ZS_LOG("StartNpcTag:~p",[StartNpcTag]),
 	% if
 	% 	StartNpcTag->
 	% 		NpcManagerProc = npc_manager:make_npc_manager_proc(MapProcName),
@@ -163,10 +177,10 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 	% 		nothing	
 	% end,
 	MapDb = base_map_db_util:make_db_name(MapId),
-	base_logger_util:msg("~p:line:~p MapDb:~p~n",[?MODULE,?LINE,MapDb]),
+	?ZS_LOG("MapDb:~p",[MapDb]),
 	case ets:info(MapDb) of
 		undefined->
-			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+			?ZS_LOG(),
 			ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 			case base_map_info_db:get_map_info(MapId) of
 				[]->
@@ -177,7 +191,7 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 					base_map_db_util:load_map_file(MapDataId,MapDb)
 			end;
 		_->
-			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+			?ZS_LOG(),
 			nothing
 	end,
 	if
@@ -202,74 +216,9 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 		true->
 			nothing
 	end,
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	{ok, #state{mapinfo={LineId,MapId}, aoidb=AOIdb, mapproc=MapProcName}}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}		  |
-%%		  {reply, Reply, State, Timeout} |
-%%		  {noreply, State}			   |
-%%		  {noreply, State, Timeout}	  |
-%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
-	do_handle_call(Request, From, State).
-
-
-%% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
-	{noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_info(Info, State) ->
-	do_handle_info(Info, State).
-
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(Reason,#state{mapproc=MapProcName}=ProcState) ->
-	case  get(instanceid) of
-		[]->
-			nothing;
-		InstanceId->
-			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
-				[]->
-					nothing;
-				_->
-					instance_pos_db:unreg_instance_pos_to_mnesia(MapProcName),
-					instanceid_generator:safe_turnback_proc(MapProcName)
-			end
-	end,
-	ok.
-
-%% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-%% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
-	{ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
 
 %%lefttime
 do_handle_call(get_instance_details,_From,State) ->
@@ -285,7 +234,6 @@ do_handle_call(get_instance_details,_From,State) ->
 do_handle_call({get_instance_id}, _From,ProcState) ->
 	Reply = get(instanceid),
 	{reply, Reply,ProcState};
-
 do_handle_call({role_come,RoleId}, _From,ProcState) ->	
 	case  get(instanceid) of
 		[]->
@@ -310,7 +258,6 @@ do_handle_call({role_come,RoleId}, _From,ProcState) ->
 			end
 	end,
 	{reply, Reply,ProcState};
-
 do_handle_call({role_leave,RoleId}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
@@ -344,7 +291,6 @@ do_handle_call({role_leave,RoleId}, _From,ProcState) ->
 			end
 	end,
 	{reply, Reply, ProcState};
-
 %%if last one is offline ,not delete the instance
 do_handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 	case  get(instanceid) of
@@ -378,8 +324,7 @@ do_handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 					end
 			end
 	end,
-	{reply, Reply,ProcState};
-  
+	{reply, Reply,ProcState}; 
 do_handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
 	case creature_op:what_creature(CreatureId) of
 		role->
@@ -409,7 +354,6 @@ do_handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=Pr
 	end,	
   	Reply = ok,
 	{reply, Reply,ProcState}; 
-
 do_handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
   	case ets:lookup(MapProcName, Grid) of
 		[] ->
@@ -424,10 +368,12 @@ do_handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=P
 	end,
 	Reply = ok,
 	{reply, Reply, ProcState};
-  
-do_handle_call(Request, From, State) ->
+do_handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
+
+do_handle_cast(_Msg, State) ->
+	{noreply, State}.
 
 do_handle_info({on_destroy,WaitTime},ProcState)->
 	erlang:send_after(WaitTime,self(),{on_destroy}),
@@ -445,7 +391,6 @@ do_handle_info({on_destroy,WaitTime},ProcState)->
 			end
 	end,
 	{noreply,ProcState};
-
 do_handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
@@ -469,7 +414,6 @@ do_handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 			end
 	end,
 	{noreply,ProcState};
-
 do_handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
@@ -481,10 +425,30 @@ do_handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 			instanceid_generator:safe_turnback_proc(MapProcName)
 	end,
 	{stop,normal,ProcState};
-
-do_handle_info(Info, State) ->
+do_handle_info(_Info, State) ->
 	{noreply, State}.
 
+do_terminate(_Reason,#state{mapproc=MapProcName}=ProcState) ->
+	case  get(instanceid) of
+		[]->
+			nothing;
+		InstanceId->
+			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
+				[]->
+					nothing;
+				_->
+					instance_pos_db:unreg_instance_pos_to_mnesia(MapProcName),
+					instanceid_generator:safe_turnback_proc(MapProcName)
+			end
+	end,
+	ok.
+
+do_code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
+
+%% --------------------------------------------------------------------
+%%% Not export functions
+%% --------------------------------------------------------------------
 send_kick_out(Proc,MapProcName)->
 	try
 		Proc ! {kick_from_instance,MapProcName}

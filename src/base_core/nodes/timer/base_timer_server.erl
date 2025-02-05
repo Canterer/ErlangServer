@@ -86,7 +86,7 @@ do_handle_cast(_Msg, State) ->
 do_handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, State) ->
+do_terminate(_Reason, _State) ->
 	ok.
 
 do_code_change(_OldVsn, State, _Extra) ->

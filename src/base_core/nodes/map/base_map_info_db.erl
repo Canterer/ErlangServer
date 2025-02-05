@@ -1,10 +1,37 @@
 -module(base_map_info_db).
 -include("mnesia_table_def.hrl").
+-include("base_define_shared.hrl").
 -define(MAP_INFO_ETS,map_info_ets).
--compile(export_all).
 
--export([start/0,create_mnesia_table/1,create_mnesia_split_table/2,delete_role_from_db/1,tables_info/0]).
--export([init_ets/0,create_ets/0]).
+-export([
+	start/0,
+	create_mnesia_table/1,
+	create_mnesia_split_table/2,
+	delete_role_from_db/1,
+	tables_info/0
+]).
+-export([
+	init_ets/0,
+	create_ets/0
+]).
+
+-export([
+	get_map_info/1,
+	get_mapid/1,
+	get_is_instance/1,
+	get_map_tag/1,
+	get_restrict_items/1,
+	get_map_name/1,
+	get_script/1,
+	get_can_flyshoes/1,
+	get_linetag/1,
+	get_serverdataname/1,
+	get_pvptag/1,
+	get_maps_bylinetag/1,
+	get_all_maps_and_serverdata/0,
+	get_lonely_maps/0
+]).
+
 -behaviour(db_operater_behaviour).
 -behaviour(ets_operater_behaviour).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -72,9 +99,9 @@ get_pvptag(MapInfo)->
 	element(#map_info.pvptag,MapInfo).
 
 get_maps_bylinetag(LineTag)->
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	ets:foldl(fun({_,MapInfo},Acc)->
-						base_logger_util:msg("~p:line:~p MapInfo:~p Acc:~p LineTag:~p~n",[?MODULE,?LINE,MapInfo,Acc,LineTag]),
+						?ZS_LOG("MapInfo:~p Acc:~p LineTag:~p",[MapInfo,Acc,LineTag]),
 						case get_linetag(MapInfo) of
 						  []->
 							  [get_mapid(MapInfo)|Acc];

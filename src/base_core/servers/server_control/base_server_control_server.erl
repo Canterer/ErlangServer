@@ -1,36 +1,49 @@
-%% Description: TODO: Add description to server_control
+%% Description: TODO: Add description to xserver_control
 -module(base_server_control_server).
+
 -behaviour(gen_server).
+%% --------------------------------------------------------------------
+%% External exports
+%% --------------------------------------------------------------------
+-export([
+	start_link/0,
+	hotshutdown/0,hotshutdown/1,hotshutdown/2,
+	openthedoor/0,closethedoor/0,open_gmdoor/0,
+	cancel_shutdowncmd/0,
+	backup_db/0,
+	gen_data/0,
+	clear_goals_data/0,
+	write_flag_file/0,
+	clear_flag_file/0,
+	recovery_db/0,
+	update_code/0,
+	update_data/0,
+	update_option/0,
+	format_data/1
+]).
+
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
 -record(state, {}).
-%%
+
+%% --------------------------------------------------------------------
 %% Include files
-%%
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
 
-%%
-%% Exported Functions
-%%
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([start_link/0]).
--export([hotshutdown/1,hotshutdown/2]).
--export([openthedoor/0,closethedoor/0,open_gmdoor/0]).
--export([cancel_shutdowncmd/0]).
--export([hotshutdown/0]).
--export([backup_db/0]).
--export([gen_data/0]).
--export([clear_goals_data/0]).
--export([write_flag_file/0]).
--export([clear_flag_file/0]).
--export([recovery_db/0]).
--export([update_code/0]).
--export([update_data/0]).
--export([update_option/0]).
--export([format_data/1]).
-
-%%
-%% API Functions
-%%
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?MODULE}, ?MODULE, [], []).
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 hotshutdown()->
 	clear_flag_file(),
@@ -39,6 +52,24 @@ hotshutdown()->
 	%%LineNode = lists:last(base_node_util:get_linenodes()),
 	base_rpc_util:cast(CenterNode,?MODULE,{hotshutdown_start,600}),
 	c:q().
+
+hotshutdown(Time_s)->
+	%%io:format("hotshutdown ~p ~n",[Time_s]),
+	% LineNode = lists:last(base_node_util:get_linenodes()),
+	LineNode = base_node_util:get_linenode(),
+	base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s}).
+
+hotshutdown(Time_s,Reason)->
+	%%io:format("hotshutdown ~p ~p ~n",[Time_s,Reason]),
+	% LineNode = lists:last(base_node_util:get_linenodes()),
+	LineNode = base_node_util:get_linenode(),
+	if
+		Reason =:= [] ->
+			base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s});
+		true->
+			%%io:format("hotshutdown ~p ~p ~n",[Time_s,Reason]),
+			base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s,Reason})
+	end.
 
 backup_db()->
 	clear_flag_file(),
@@ -94,6 +125,18 @@ create_giftcard()->
 	base_rpc_util:cast({base_db_master_server,DbNode},{create_giftcard}),
 	c:q().
 
+write_flag_file()->
+	File = "update_server_flag",
+	case file:open(File, [write]) of
+		{ok,F}->
+			file:close(F);
+		_->
+			base_logger_util:msg("can not open file ~p ~n",[File])
+	end.
+
+clear_flag_file()->
+	File = "update_server_flag",
+	file:delete(File).
 
 update_code()->
 	[CenterNode|_] = base_node_util:get_argument('-line'),
@@ -112,25 +155,7 @@ update_option()->
 	base_ping_util:ping(CenterNode),
 	base_rpc_util:cast(CenterNode,?MODULE,{update_option}),
 	c:q().	
-	
-hotshutdown(Time_s)->
-	%%io:format("hotshutdown ~p ~n",[Time_s]),
-	% LineNode = lists:last(base_node_util:get_linenodes()),
-	LineNode = base_node_util:get_linenode(),
-	base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s}).
 
-hotshutdown(Time_s,Reason)->
-	%%io:format("hotshutdown ~p ~p ~n",[Time_s,Reason]),
-	% LineNode = lists:last(base_node_util:get_linenodes()),
-	LineNode = base_node_util:get_linenode(),
-	if
-		Reason =:= [] ->
-			base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s});
-		true->
-			%%io:format("hotshutdown ~p ~p ~n",[Time_s,Reason]),
-			base_rpc_util:cast(LineNode,?MODULE,{hotshutdown_start,Time_s,Reason})
-	end.
-	
 openthedoor()->
 	GateNodeList = base_node_util:get_gatenodes(),
 	lists:foreach(
@@ -171,52 +196,26 @@ format_data(Param)->
 	%%base_ping_util:ping(DbNode),
 	base_rpc_util:cast({dbmaster,DbNode},{format_data,Param}),
 	c:q().
-%% ====================================================================
-%% Server functions
-%% ====================================================================
 
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
-init([]) ->
-	base_logger_base_node_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	put(last_shutdowncmd_id,0),		
+%% --------------------------------------------------------------------
+%%% Internal functions
+%% --------------------------------------------------------------------
+do_init(Args) ->
+	put(last_shutdowncmd_id,0),
 	put(shutdowncmd_flag,false),
 	{ok, #state{}}.
 
-
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
-
-handle_call(Request, From, State) ->
+do_handle_call({query_time}, _From, State) ->
+   Reply = os:timestamp(),
+   {reply, Reply, State};
+do_handle_call(_Request, _From, State) ->
 	Reply = ok,
-	{reply, Reply, State}.	
+	{reply, Reply, State}.
 
-
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-handle_cast(Msg, State) ->
+do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-handle_info({hotshutdown_start,Time_s}, State) ->
-%%	io:format("handle_info  hotshutdown_start ~p ~n",[Time_s]),
+do_handle_info({hotshutdown_start,Time_s}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
 			io:format("please cancel last cmd first ~n");
@@ -228,9 +227,7 @@ handle_info({hotshutdown_start,Time_s}, State) ->
 			hotshutdown_server(CmdId,Time_s)
 	end,
 	{noreply, State};
-
-handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
-	base_logger_util:msg("handle_info manage_hotshutdown_start~n"),
+do_handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
 			base_logger_util:msg("please cancel last cmd first ~n");
@@ -242,9 +239,7 @@ handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
 			manage_hotshutdown_server(CmdId,Time_s,FromProc)
 	end,
 	{noreply,State};
-
-handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
-	%%io:format("handle_info hotshutdown_start ~p ~p ~n",[Time_s,ShutDownReason]),
+do_handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
 			io:format("please cancel last cmd first ~n");
@@ -256,55 +251,36 @@ handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
 			hotshutdown_server(CmdId,Time_s)
 	end,
 	{noreply, State};
-
-handle_info({hotshutdown, {CmdID,Time_s}}, State) ->
+do_handle_info({hotshutdown, {CmdID,Time_s}}, State) ->
 	hotshutdown_server(CmdID,Time_s),
 	{noreply, State};
-
-handle_info({manage_hotshutdown,{CmdID,Time_s,FromProc}},State)->
-	base_logger_util:msg("{manage_hotshutdown,{CmdID,Time_s,FromProc,FromNode~n"),
+do_handle_info({manage_hotshutdown,{CmdID,Time_s,FromProc}},State)->
 	manage_hotshutdown_server(CmdID,Time_s,FromProc),
 	{noreply,State};
-
-
-handle_info({cancelshutdowncmd},State)->
+do_handle_info({cancelshutdowncmd},State)->
 	cancel_lastshutdowncmd(),
 	{noreply, State};
-
-handle_info({update_code},State)->
+do_handle_info({update_code},State)->
 	handle_update_code(),
 	{noreply, State};
-
-handle_info({update_data},State)->
+do_handle_info({update_data},State)->
 	handle_update_data(),
 	{noreply, State};
-
-handle_info({update_option},State)->
+do_handle_info({update_option},State)->
 	handle_update_option(),
 	{noreply, State};
-
-handle_info(Info, State) ->
-	%%io:format("~p handle info  ~p ~n",[?MODULE,Info]),
+do_handle_info(_Info, State) ->
 	{noreply, State}.
 
+do_terminate(_Reason, _State) ->
+	ok.
 
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-terminate(_Reason, State) ->
-	 ok.
-
-
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-code_change(OldVsn, State, Extra) ->
+do_code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
-
-%%
-%% Local Functions
-%%
+%% --------------------------------------------------------------------
+%%% Not export functions
+%% --------------------------------------------------------------------
 %%hot shutdown server at Time_s sec. later
 hotshutdown_server(CmdID,Time_s)->
 	case (CmdID =:= get(last_shutdowncmd_id)) and (get(shutdowncmd_flag)) of
@@ -476,18 +452,3 @@ handle_update_data()->
 handle_update_option()->
 	todo.
 	% version_up:up_option().
-	
-
-write_flag_file()->
-	File = "update_server_flag",
-	case file:open(File, [write]) of
-		{ok,F}->
-			file:close(F);
-		_->
-			base_logger_util:msg("can not open file ~p ~n",[File])
-	end.
-
-clear_flag_file()->
-	File = "update_server_flag",
-	file:delete(File).
-		

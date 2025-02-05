@@ -1,11 +1,10 @@
-%% Description: TODO: Add description to xxx server
+%% Description: TODO: Add description to base_xxx_server
 -module(base_xxx_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
-% -compile(export_all).
 -export([
 	start_link/0,
 	func/0
@@ -14,8 +13,6 @@
 %% --------------------------------------------------------------------
 %% Macros
 %% --------------------------------------------------------------------
-% define description	
--define(XXXXX,xxx).
 
 %% --------------------------------------------------------------------
 %% Records
@@ -33,12 +30,8 @@
 %%% put(key, value)、get(key)在进程字典中存储和检索键值对
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
-%% --------------------------------------------------------------------
 start_link()->
 	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
-
-func()->
-	ok.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
@@ -56,7 +49,7 @@ do_handle_cast(_Msg, State) ->
 do_handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, State) ->
+do_terminate(_Reason, _State) ->
 	ok.
 
 do_code_change(_OldVsn, State, _Extra) ->
@@ -65,5 +58,3 @@ do_code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 %%% Not export functions
 %% --------------------------------------------------------------------
-not_export_func()->
-	ok.

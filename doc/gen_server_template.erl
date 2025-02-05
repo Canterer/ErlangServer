@@ -45,7 +45,7 @@ do_handle_cast(_Msg, State) ->
 do_handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, State) ->
+do_terminate(_Reason, _State) ->
 	ok.
 
 do_code_change(_OldVsn, State, _Extra) ->
@@ -69,9 +69,9 @@ do_code_change(_OldVsn, State, _Extra) ->
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 init(Args) ->
-	?OTP_FUNC_START("~p:~p(Args=~p)~n",[?MODULE,?FUNCTION_NAME,Args]),
+	?OTP_FUNC_START("Args=~p",[Args]),
 	Returns = do_init(Args),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 %% --------------------------------------------------------------------
@@ -85,9 +85,9 @@ init(Args) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call(Request, From, State) ->
-	?OTP_FUNC_START("~p:~p(Request=~p, From=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Request,From,State]),
+	?OTP_FUNC_START("Request=~p, From=~p, State=~p",[Request,From,State]),
 	Returns = do_handle_call(Request, From, State),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 %% --------------------------------------------------------------------
@@ -98,9 +98,9 @@ handle_call(Request, From, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-	?OTP_FUNC_START("~p:~p(Msg=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Msg,State]),
+	?OTP_FUNC_START("Msg=~p, State=~p",[Msg,State]),
 	Returns = do_handle_cast(Msg, State),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 %% --------------------------------------------------------------------
@@ -111,9 +111,9 @@ handle_cast(Msg, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info(Info, State) ->
-	?OTP_FUNC_START("~p:~p(Info=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Info,State]),
+	?OTP_FUNC_START("Info=~p, State=~p",[Info,State]),
 	Returns = do_handle_info(Info, State),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 %% --------------------------------------------------------------------
@@ -122,9 +122,9 @@ handle_info(Info, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
-	?OTP_FUNC_START("~p:~p(Reason=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Reason,State]),
+	?OTP_FUNC_START("Reason=~p, State=~p",[Reason,State]),
 	Returns = do_terminate(Reason, State),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 %% --------------------------------------------------------------------
@@ -133,7 +133,7 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-	?OTP_FUNC_START("~p:~p(OldVsn=~p, State=~p, Extra=~p)~n",[?MODULE,?FUNCTION_NAME,OldVsn,State,Extra]),
+	?OTP_FUNC_START("OldVsn=~p, State=~p, Extra=~p",[OldVsn,State,Extra]),
 	Returns = do_code_change(OldVsn, State, Extra),
-	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.

@@ -6,6 +6,7 @@
 %% Include files
 %% --------------------------------------------------------------------
 -include("reloader.hrl").
+-include("base_define_shared.hrl").
 
 %% --------------------------------------------------------------------
 %% Behavioural exports
@@ -77,9 +78,9 @@ start()->
 start_base_tcp_listener_sup() ->	
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	SName = base_node_util:get_node_sname(node()),
-	base_logger_util:msg("~p:line:~p(node:~p SName:~p)~n",[?MODULE,?LINE,node(),SName]),
+	?ZS_LOG("node:~p SName:~p",[node(),SName]),
 	Port = base_env_ets:get2(gateport, SName, 0),
-	base_logger_util:msg("~p:line:~p Port:~p~n",[?MODULE,?LINE,Port]),
+	?ZS_LOG("Port:~p",[Port]),
 	case Port of
 		0-> base_logger_util:msg("start gate error ,can not find listen port~n"),error;
 		Port->

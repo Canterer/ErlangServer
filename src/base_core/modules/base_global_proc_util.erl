@@ -3,19 +3,26 @@
 %%
 %% Include files
 %%
-
+-include("base_define_shared.hrl").
 %%
 %% Exported Functions
 %%
--export([]).
--compile(export_all).
+-export([
+	send/2,
+	call/2,
+	call/3
+]).
+
+-export([
+	wait_global_proc_register/0
+]).
 
 wait_global_proc_register()->
 	base_global_proc_sup:start_checker().
 	%%wait_loop().
 
 wait_loop()->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	case  base_global_proc_checker_server:is_ready() of
 		true->
 			nothing;
@@ -26,7 +33,7 @@ wait_loop()->
 
 
 send(ModuleName,Msg)->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	case base_global_proc_ets:get_global_proc_node(ModuleName) of
 		[]->
 			base_logger_util:msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),

@@ -1,5 +1,7 @@
 -module(ets_operater_behaviour).
 
+-include("base_define_shared.hrl").
+
 -export([behaviour_info/1]).
 -export([
 	new/2,
@@ -25,25 +27,37 @@ behaviour_info(_Other) ->
 
 
 new(Name, Options)->
-	base_logger_util:msg("~p:~p(Name:~p, Options:~p)~n",[?MODULE,?FUNCTION_NAME,Name,Options]),
-	ets:new(Name, Options).
+	?ETS_OPERATER_START("~p:~p(Name:~p, Options:~p)~n",[?MODULE,?FUNCTION_NAME,Name,Options]),
+	Returns = ets:new(Name, Options),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 insert(Tab, ObjectOrObjects)->
-	base_logger_util:msg("~p:~p(Tab:~p, ObjectOrObjects:~w)~n",[?MODULE,?FUNCTION_NAME,Tab,ObjectOrObjects]),
-	ets:insert(Tab, ObjectOrObjects).
+	?ETS_OPERATER_START("~p:~p(Tab:~p, ObjectOrObjects:~w)~n",[?MODULE,?FUNCTION_NAME,Tab,ObjectOrObjects]),
+	Returns = ets:insert(Tab, ObjectOrObjects),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 update_element(Tab, Key, ElementSpec)->
-	base_logger_util:msg("~p:~p(Tab:~p, Key:~p, ElementSpec:~p)~n",[?MODULE,?FUNCTION_NAME,Tab,Key,ElementSpec]),
-	ets:update_element(Tab, Key, ElementSpec).
+	?ETS_OPERATER_START("~p:~p(Tab:~p, Key:~p, ElementSpec:~p)~n",[?MODULE,?FUNCTION_NAME,Tab,Key,ElementSpec]),
+	Returns = ets:update_element(Tab, Key, ElementSpec),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 delete(Tab)->
-	base_logger_util:msg("~p:~p(Tab:~p)~n",[?MODULE,?FUNCTION_NAME,Tab]),
-	ets:delete(Tab).
+	?ETS_OPERATER_START("~p:~p(Tab:~p)~n",[?MODULE,?FUNCTION_NAME,Tab]),
+	Returns = ets:delete(Tab),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 delete_object(Tab, Object)->
-	base_logger_util:msg("~p:~p(Tab:~p, Object:~p)~n",[?MODULE,?FUNCTION_NAME,Tab,Object]),
-	ets:delete_object(Tab, Object).
+	?ETS_OPERATER_START("~p:~p(Tab:~p, Object:~p)~n",[?MODULE,?FUNCTION_NAME,Tab,Object]),
+	Returns = ets:delete_object(Tab, Object),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 delete_all_objects(Tab)->
-	base_logger_util:msg("~p:~p(Tab:~p)~n",[?MODULE,?FUNCTION_NAME,Tab]),
-	ets:delete_all_objects(Tab).
+	?ETS_OPERATER_START("~p:~p(Tab:~p)~n",[?MODULE,?FUNCTION_NAME,Tab]),
+	Returns = ets:delete_all_objects(Tab),
+	?ETS_OPERATER_END("~p:~p Results=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.

@@ -1,22 +1,37 @@
+%% Description: TODO: Add description to base_tcp_acceptor_server
 -module(base_tcp_acceptor_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
-
-%% --------------------------------------------------------------------
 %% External exports
--export([start_link/3,get_proc_name/1,disable_connect/1,enable_connect/1]).
+%% --------------------------------------------------------------------
+-export([
+	start_link/3,
+	get_proc_name/1,
+	disable_connect/1,
+	enable_connect/1
+]).
 
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
 
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
 -record(state, {callback, sock, ref,disable_connect}).
 
-%% ====================================================================
-%% External functions
-%% ====================================================================
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
+
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
 start_link(Callback, LSock,AcceptorIndex) ->
     base_gen_server:start_link(?MODULE, {Callback, LSock,AcceptorIndex}, []).
 
@@ -33,69 +48,35 @@ enable_connect(NamedProc)->
 		Pid-> base_gen_server:call(Pid, {enable_connect})
 	end.
 
-%% ====================================================================
-%% Server functions
-%% ====================================================================
 get_proc_name(AcceptorIndex)->
 	list_to_atom("acceptor_"++integer_to_list(AcceptorIndex)).
 
 %% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}          |
-%%          {ok, State, Timeout} |
-%%          ignore               |
-%%          {stop, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init({Callback, LSock,AcceptorIndex}) ->
+do_init({Callback, LSock,AcceptorIndex}) ->
 	base_logger_util:msg("~p:~p({Callback:~p, LSock:~p, AcceptorIndex:~p})~n",[?MODULE,?FUNCTION_NAME,Callback,LSock,AcceptorIndex]),
 	%%make acceptor name
 	erlang:register(get_proc_name(AcceptorIndex), self()),
     base_gen_server:cast(self(), accept),
     {ok, #state{callback=Callback, sock=LSock,disable_connect=false}}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_call({disable_connect}, _From, State) ->
+do_handle_call({disable_connect}, _From, State) ->
     Reply = State,
     {reply, Reply, State#state{disable_connect=true}};
-handle_call({enable_connect}, _From, State) ->
+do_handle_call({enable_connect}, _From, State) ->
     Reply = State,
     {reply, Reply, State#state{disable_connect=false}};
-		
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+do_handle_call(_Request, _From, State) ->
+	Reply = ok,
+	{reply, Reply, State}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_cast(accept, State) ->
+do_handle_cast(accept, State) ->
     accept(State);
+do_handle_cast(_Msg, State) ->
+	{noreply, State}.
 
-handle_cast(_Msg, State) ->
-    {noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_info({inet_async, LSock, Ref, {ok, Sock}},
+do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
             State = #state{callback={M,F,A}, sock=LSock, ref=Ref,disable_connect=Disable}) ->
 	{ok, Mod} = inet_db:lookup_socket(LSock),
 	inet_db:register_socket(Sock, Mod),
@@ -120,36 +101,23 @@ handle_info({inet_async, LSock, Ref, {ok, Sock}},
 				base_logger_util:error_msg("unable to accept TCP connection: ~p~n",[EXP])
 	end,
 	accept(State);
-
-handle_info({inet_async, LSock, Ref, {error, closed}},
+do_handle_info({inet_async, LSock, Ref, {error, closed}},
             State=#state{sock=LSock, ref=Ref}) ->
     %% It would be wrong to attempt to restart the acceptor when we
     %% know this will fail.
     {stop, normal, State};
+do_handle_info(_Info, State) ->
+	{noreply, State}.
 
-handle_info(_Info, State) ->
-    {noreply, State}.
+do_terminate(_Reason, _State) ->
+	ok.
 
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(_Reason, _State) ->
-    ok.
+do_code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
 
 %% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
+%%% Not export functions
 %% --------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
-%%--------------------------------------------------------------------
 throw_on_error(E, Thunk) ->
     case Thunk() of
         {error, Reason} -> throw({E, Reason});

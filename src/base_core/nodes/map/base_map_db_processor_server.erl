@@ -1,12 +1,10 @@
+%% Description: TODO: Add description to base_map_db_processor_server
 -module(base_map_db_processor_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
--include("map_define.hrl").
-%% --------------------------------------------------------------------
 %% External exports
+%% --------------------------------------------------------------------
 -export([
 	start_link/2,
 	whereis/1,
@@ -17,22 +15,29 @@
 	query_safe_grid/2
 ]).
 
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
--record(state, {mapdb}).
-
--compile(export_all).
-
-%% TODO: ä¸´æ—¶ä»£ç éœ€è¦æ›´æ”¹
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
 -define(View, 15).
 -define(MapRect, {{0,0}, {50, 50}}).
 
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
+-record(state, {mapdb}).
 
-%% ====================================================================
-%% External functions
-%% ====================================================================
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
+-include("map_define.hrl").
 
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
 start_link(MapFile,MapId)->
 	base_gen_server:start_link(?MODULE ,[MapFile,MapId], []).
 
@@ -57,7 +62,6 @@ query_safe_grid(MapDb,{GridX,GridY})->
 		[{_,Value}]->
 			Value
 	end.
-	
 	
 query_born_pos(MapDb)->
 	case ets:lookup(MapDb, born_pos) of
@@ -89,19 +93,10 @@ get_map_data(Map_id) ->
 	[{_,Data}] = ets:lookup(MapDbName, map_data),
 	Data.
 
-%% ====================================================================
-%% Server functions
-%% ====================================================================
-
 %% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init([MapFile,MapId]) ->
+do_init([MapFile,MapId]) ->
 %%	case {ok,{{0,0},true}} of % file:consult(MapFile)
 %%		{error,Reson}-> {stop,Reson};
 
@@ -116,66 +111,27 @@ init([MapFile,MapId]) ->
 			{ok, #state{mapdb=MapDB}}.
 %%	end.
 
-
-%% --------------------------------------------------------------------
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}		  |
-%%		  {reply, Reply, State, Timeout} |
-%%		  {noreply, State}			   |
-%%		  {noreply, State, Timeout}	  |
-%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_call(Msg, {From, Tag}, State) ->
-	do_handle_call(Msg, {From, Tag}, State).
-
-%% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
-	{noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_info(Info, State) ->
-	{noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(Reason, State) ->
-	ok.
-
-%% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-%% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
-	{ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
-do_handle_call(Request, From, State) ->
+do_handle_call(Request, {From, Tag}, State) ->
 	case Request of
 		{query_db_name}-> {reply, {ok,State#state.mapdb}, State};
 		_ -> {reply, ok, State}
 	end.
 
+do_handle_cast(_Msg, State) ->
+	{noreply, State}.
 
+do_handle_info(_Info, State) ->
+	{noreply, State}.
+
+do_terminate(_Reason, _State) ->
+	ok.
+
+do_code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
+
+%% --------------------------------------------------------------------
+%%% Not export functions
+%% --------------------------------------------------------------------
 build_quadtree(_MapFile) ->
 	%%	{Rect, View} = file:consults(MapFile),
 	quadtree:build(?MapRect, ?View).

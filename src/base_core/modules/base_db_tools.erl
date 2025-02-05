@@ -25,6 +25,7 @@
 %% API Functions
 %%
 -define(DB_WAIT_TABLE_TIMEOUT,600000).
+-include("base_define_shared.hrl").
 
 %% ====================================================================
 %% External functions
@@ -34,7 +35,7 @@ wait_line_db()->
 	wait_line_db_loop().
 
 wait_line_db_loop()->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	case base_node_util:get_linenode() of
 		none->
 			timer:sleep(1000),
@@ -368,7 +369,7 @@ config_ets_init(InitMods)->
 	base_logger_util:msg("ets ~p are ok now!\n",[InitMods]).
 
 wait_for_tables_rpc(TableList,TimeOut)->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	DbNode = base_node_util:get_dbnode(),
 	case base_rpc_util:asyn_call(DbNode, mnesia, wait_for_tables, [TableList,TimeOut]) of
 		{badrpc,Reason}-> {error,Reason};
@@ -376,7 +377,7 @@ wait_for_tables_rpc(TableList,TimeOut)->
 	end.
 
 wait_for_tables_norpc(TableList,TimeOut)->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	mnesia:wait_for_tables(TableList,TimeOut).
 
 wait_for_all_db_tables_in_db_node()->
@@ -418,11 +419,12 @@ is_need_ram_table(Node)->
 	get_node_ram_tables(Node) =/=[].
 
 get_node_ram_tables(Node)->
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	ShareTypes = base_env_ets:get(nodes_ram_table,[]),
-	base_logger_util:msg("~p:line:~p Node:~p ShareTypes:~p~n",[?MODULE,?LINE,Node,ShareTypes]),
+	?ZS_LOG("Node:~p ShareTypes:~p",[Node,ShareTypes]),
 	Res = lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes),
-	base_logger_util:msg("~p:line:~p Res:~p~n",[?MODULE,?LINE,Res]),
+	base_logger_util:msg("#####db_operater_behaviour:get_all_ram_table :~p~n",[Res]),
+	?ZS_LOG("Res:~p",Res),
 	case lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes) of
 		[]->
 			[];

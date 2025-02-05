@@ -7,6 +7,7 @@
 
 -include("mnesia_table_def.hrl").
 -include("common_define.hrl").
+-include("base_define_shared.hrl").
 -define(SPLIT_TABLE_NAME_ETS,tablename_by_splitted_ets).
 -define(SPLIT_TABLE_MAX_NUM,500000).
 %%
@@ -187,7 +188,7 @@ make_table_name(BaseTable,HiValue,LowValue)->
 	list_to_atom(TableString).
 
 check_split_master_tables()->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
 	base_logger_util:msg("~p:~p SplitInfos:~p~n",[?MODULE,?FUNCTION_NAME,SplitInfos]),
 	TableBases = lists:map(fun(X)-> get_basetable(X) end, SplitInfos),

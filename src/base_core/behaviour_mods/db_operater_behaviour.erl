@@ -11,6 +11,7 @@
 -export([behaviour_info/1]).
 -export([delete_role_from_db/1]).
 
+-include("base_define_shared.hrl").
 %%
 %%	behaviour fun
 %%	copy this:		[start/0,create_mnesia_table/1,create_mnesia_split_table/2,delete_role_from_db/1]
@@ -30,12 +31,13 @@ behaviour_info(_Other) ->
 
 %% @doc start gen_mod
 start() ->
+	?DB_OPERATER_START(),
 	?DB_MOD_TABLE = ets_operater_behaviour:new(?DB_MOD_TABLE,
 		[public, set, named_table, {keypos, 1}]),
 	?DB_SPLIT_TABLE = ets_operater_behaviour:new(?DB_SPLIT_TABLE,
 		[public, set, named_table, {keypos, 1}]),
 	base_mod_util:behaviour_apply(db_operater_behaviour,start,[]),
-	base_logger_util:msg("db_operater_behaviour start end ~n"),
+	?DB_OPERATER_END(),
 	ok.
 
 start_module(Module, Opts)->
@@ -50,19 +52,21 @@ start_module(Module, Opts)->
 	true = ets_operater_behaviour:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
 
 create_all_disc_table()->
-	base_logger_util:msg("~p:~p start!!!~n",[?MODULE,?FUNCTION_NAME]),
+	?DB_OPERATER_START(),
 	ets:foldl(fun({Module,_,_},_)->
 				Module:create_mnesia_table(disc)	  
 			end,[], ?DB_MOD_TABLE),
-	base_logger_util:msg("~p:~p end!!!~n",[?MODULE,?FUNCTION_NAME]).
+	?DB_OPERATER_END().
 
 delete_role_from_db(RoleId)->
+	?DB_OPERATER_START("RoleId:~p",[RoleId]),
 	ets:foldl(fun({Module,_,_},_)->
 				Module:delete_role_from_db(RoleId)	  
-			end,[], ?DB_MOD_TABLE).
+			end,[], ?DB_MOD_TABLE),
+	?DB_OPERATER_END().
 
 create_all_ram_table()->
-	base_logger_util:msg("~p:~p start!!!~n",[?MODULE,?FUNCTION_NAME]),
+	?DB_OPERATER_START(),
 	AllRamMod = ets:foldl(fun({Module,_,TablesInfo},AccMods)->
 					case lists:keymember(ram,2,TablesInfo) of
 						true->
@@ -71,9 +75,9 @@ create_all_ram_table()->
 							AccMods
 					end
 			end,[], ?DB_MOD_TABLE),
-	base_logger_util:msg("~p:~p AllRamMod:~p !!!~n",[?MODULE,?FUNCTION_NAME,AllRamMod]),
+	?ZS_LOG("AllRamMod:~p !!!",[AllRamMod]),
 	lists:foreach(fun(Mod)->Mod:create_mnesia_table(ram) end,AllRamMod),
-	base_logger_util:msg("~p:~p end!!!~n",[?MODULE,?FUNCTION_NAME]).
+	?DB_OPERATER_END().
 
 get_all_ram_table()->
 	ets:foldl(fun({_,_,TablesInfo},AccTables)->
@@ -94,7 +98,7 @@ get_split_table_and_mod(BaseTab)->
 	end.
 	
 get_all_split_table_and_mod()->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	?ZS_LOG(),
 	ets:tab2list(?DB_SPLIT_TABLE).
 
 get_backup_filter_tables()->
@@ -121,7 +125,7 @@ is_backup_filter_table(_)->
 %% EtsKeyPosOrPoses : [KeyPos]/[KeyPos1,KeyPos2,...]/KeyPos
 
 init_ets(SourceDb,Ets,EtsKeyPosOrPoses) ->
-	base_logger_util:msg("~p:~p(SourceDb:~p,Ets:~p,EtsKeyPosOrPoses:~p)~n",[?MODULE,?FUNCTION_NAME,SourceDb,Ets,EtsKeyPosOrPoses]),
+	?DB_OPERATER_START("SourceDb:~p,Ets:~p,EtsKeyPosOrPoses:~p",[SourceDb,Ets,EtsKeyPosOrPoses]),
 	ets_operater_behaviour:delete_all_objects(Ets),
 	case base_db_dal_util:read_rpc(SourceDb) of
 		{ok,TermList} ->
@@ -131,7 +135,8 @@ init_ets(SourceDb,Ets,EtsKeyPosOrPoses) ->
 					TermList);
 		Error->
 			base_logger_util:msg("init_ets ~p failed from db ~p ~p ~p ~n",[Ets,SourceDb,Error])
-	end.
+	end,
+	?DB_OPERATER_END().
 
 add_term_to_ets(Term,Ets,KeyPoses)when is_list(KeyPoses)->
 	Keyes = lists:map(fun(PosTmp)-> erlang:element(PosTmp,Term) end, KeyPoses),

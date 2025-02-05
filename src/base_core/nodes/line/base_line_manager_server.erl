@@ -1,17 +1,10 @@
+%% Description: TODO: Add description to base_line_manager_server
 -module(base_line_manager_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
--include("base_line_def.hrl").
-%% --------------------------------------------------------------------
-%% Macros
-%% --------------------------------------------------------------------
--define(SERVER, ?MODULE).
-
-%% --------------------------------------------------------------------
 %% External exports
+%% --------------------------------------------------------------------
 -export([start_link/0]).
 
 %% gen_lines_manager interface
@@ -35,27 +28,30 @@
 	get_role_num_by_mapId/0,
 	open_dynamic_line/1
 ]).
-
-
-%% gen_server callbacks
--export([
-	init/1, 
-	handle_call/3, 
-	handle_cast/2, 
-	handle_info/2, 
-	terminate/2, 
-	code_change/3
-]).
-
 %%add for chat
 % -export([regist_chatmanager/1,get_chat_name/0]).
 
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
 -record(state, {}).
 
-%% ====================================================================
-%% External functions
-%% ====================================================================
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
+-include("base_line_def.hrl").
 
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
 start_link()->
 	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
@@ -104,15 +100,7 @@ wait_lines_manager_loop()->
 			timer:sleep(1000),
 			wait_lines_manager_loop()		
 	end.	
-
-wait_lines_manager()->
-	try
-		base_global_proc_util:call(?MODULE,wait_lines_manager)
-	catch
-		E:R->
-			base_logger_util:msg("wait_lines_manager whereis_name() ~p ~p ~n",[E,R]),
-			error
-	end.	
+	
 %% Description: check the line manager whether exists.
 %% @spec whereis_name() -> Pid()|undefined.
 whereis_name() ->
@@ -191,32 +179,15 @@ get_chat_name()->
 get_role_num_by_mapId()->
 	base_global_proc_util:call(?MODULE, {get_role_num_by_mapId}).
 
-	
-%% ====================================================================
-%% Server functions
-%% ====================================================================
-
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
-init([]) ->
+%% --------------------------------------------------------------------
+%%% Internal functions
+%% --------------------------------------------------------------------
+do_init(_Args) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	start_line_server(),
 	{ok, #state{}}.
 
-
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}		  |
-%%		  {reply, Reply, State, Timeout} |
-%%		  {noreply, State}			   |
-%%		  {noreply, State, Timeout}	  |
-%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%		  {stop, Reason, State}			(terminate/2 is called)
-handle_call(Request, From, State) ->
+do_handle_call(Request, _From, State) ->
 	Reply = 
 	try
 		case Request of
@@ -258,22 +229,10 @@ handle_call(Request, From, State) ->
 	end,
 	{reply, Reply, State}.
 
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-handle_cast(Msg, State) ->
+do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-
-handle_info(Info, State) ->
+do_handle_info(Info, State) ->
 	try
 		case Info of
 			%% regist line proc need 2 step,
@@ -330,24 +289,15 @@ handle_info(Info, State) ->
 	end,		
 	{noreply, State}.
 
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-terminate(_Reason, State) ->
+do_terminate(_Reason, _State) ->
 	ok.
 
-
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-code_change(OldVsn, State, Extra) ->
+do_code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
-
-%% ====================================================================
-%%% Internal functions
-%% ====================================================================
-
+%% --------------------------------------------------------------------
+%%% Not export functions
+%% --------------------------------------------------------------------
 %% Description: start the line server.
 %% @spec initial_line_server() -> void().
 start_line_server() ->
@@ -382,10 +332,10 @@ start_map_processor(?MAPCONFIG_FROM_DATA, LineId, MapNode)->
 	CheckLoad = base_node_util:check_match_map_and_line(MapNode,LineId),
 	if
 		CheckLoad->
-			base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+			?ZS_LOG(),
 			%%get all map config from ets
 			AllMaps = base_map_info_db:get_maps_bylinetag(LineId),
-			base_logger_util:msg("~p:line:~p AllMaps:~p~n",[?MODULE,?LINE,AllMaps]),
+			?ZS_LOG("AllMaps:~p",[AllMaps]),
 			lists:foreach(fun(MapId)->
 					base_map_manager_server:start_map_processor(MapNode, LineId, MapId, map)					  
 				end, AllMaps);
@@ -412,6 +362,15 @@ start_map_processor(?MAPCONFIG_FROM_OPTION, LineId, MapNode) ->
 start_map_processor(MapConfigFlag, LineId, MapNode)->
 	base_logger_util:msg("~p start_map_processor mapconfigflag ~p ~n",[?MODULE,MapConfigFlag]).
 	
+
+wait_lines_manager()->
+	try
+		base_global_proc_util:call(?MODULE,wait_lines_manager)
+	catch
+		E:R->
+			base_logger_util:msg("wait_lines_manager whereis_name() ~p ~p ~n",[E,R]),
+			error
+	end.
 
 check_map_manager_node(Node) ->
 	case ets:lookup(?ETS_MAP_MANAGER_DB, Node) of

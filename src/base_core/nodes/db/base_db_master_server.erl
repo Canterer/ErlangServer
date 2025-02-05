@@ -1,8 +1,19 @@
+%% Description: TODO: Add description to base_db_master_server
 -module(base_db_master_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
+%% External exports
+%% --------------------------------------------------------------------
+-export([
+	start_link/0,
+	rpc_add_self_to_db_node/2,
+	rpc_add_self_to_dbslave_node/1,
+	is_db_prepread/1
+]).
+
+%% --------------------------------------------------------------------
+%% Macros
 %% --------------------------------------------------------------------
 -define(CHECK_SPLIT_TABLE_FIRSTINTERVAL,1000).
 -define(CHECK_SPLIT_TABLE_INTERVAL,1000*60*10).
@@ -12,30 +23,23 @@
 -define(DAL_WRITE_CHECK_INTERVAL,10*1000).
 
 %% --------------------------------------------------------------------
-%% External exports
--export([
-	start_link/0,
-	rpc_add_self_to_db_node/2,
-	rpc_add_self_to_dbslave_node/1,
-	is_db_prepread/1
-]).
-
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
-%% --------------------------------------------------------------------
-%% Macros
-%% --------------------------------------------------------------------
--define(SERVER, ?MODULE).
-
-%% --------------------------------------------------------------------
 %% Records
 %% --------------------------------------------------------------------
 -record(state, {}).
 
-%% ====================================================================
-%% External functions
-%% ====================================================================
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
+
+%% --------------------------------------------------------------------
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
+start_link()->
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 rpc_add_self_to_db_node(Node,TabList)->
 	base_rpc_util:cast(Node, ?SERVER, {add_db_ram_node, [node(),TabList]}).
@@ -52,79 +56,48 @@ is_db_prepread(Node)->
 			false
 	end.
 
-%% ====================================================================
-%% Server functions
-%% ====================================================================
-start_link()->
-	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
-
 %% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init([]) ->
+do_init(_Args) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(db_prepare_finish,false),
 	base_timer_server:start_at_process(),
 
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	base_timer_util:send_after(?CHECK_SPLIT_TABLE_FIRSTINTERVAL, {check_split}),
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	% init_disc_tables
 	base_db_init_util:db_init_master(),
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	% 定时检查备份
 	send_check_dump_message(),
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 
 	% 初始化记录用的ets
 	base_db_split_util:create_ets(),
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	% 记录自定义类型disc_split的表 通过db_operater_behaviour搜集
 	base_db_split_util:check_split_master_tables(),
 
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	put(dbfile_dump,{idle,base_timer_server:get_correct_now()}),
 	base_db_dal_util:init(),	
 	put(db_prepare_finish,true),
-	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
+	?ZS_LOG(),
 	{ok, #state{}}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}		  |
-%%		  {reply, Reply, State, Timeout} |
-%%		  {noreply, State}			   |
-%%		  {noreply, State, Timeout}	  |
-%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
-	do_handle_call(Request, From, State).
+do_handle_call(is_db_prepread, From, State) ->
+	Reply = get(db_prepare_finish),
+	{reply, Reply, State};
+do_handle_call(_Request, _From, State) ->
+	Reply = ok,
+	{reply, Reply, State}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
+do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-%% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_info({check_backup},State)->
+do_handle_info({check_backup},State)->
 	base_logger_util:msg("~p:~p({check_backup},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	%% get backup filename
 	Dir = base_env_ets:get2(dbback, output,[]),
@@ -136,7 +109,7 @@ handle_info({check_backup},State)->
 			send_check_dump_message()
 	end,
 	{noreply,State};
-handle_info({check_split},State)->
+do_handle_info({check_split},State)->
 	base_logger_util:msg("~p:~p({check_split},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	ServerList = base_env_ets:get(serverids, [0]),
 	Result = lists:foldl(fun(ServerId,Acc)->
@@ -152,15 +125,13 @@ handle_info({check_split},State)->
 		ignor->erlang:send_after(?CHECK_SPLIT_TABLE_FIRSTINTERVAL, self(), {check_split})
 	end,
 	{noreply,State};
-handle_info({add_db_ram_node, [NewNode,TabList]}, State)->
+do_handle_info({add_db_ram_node, [NewNode,TabList]}, State)->
 	base_db_tools:add_db_ram_node(NewNode,TabList),
 	{noreply,State};
-
-handle_info({add_dbslave_node, [NewNode]}, State)->
+do_handle_info({add_dbslave_node, [NewNode]}, State)->
 	base_db_tools:add_dbslave_node(NewNode),
 	{noreply,State};
-
-handle_info({backupdata,FromProc}, State)->
+do_handle_info({backupdata,FromProc}, State)->
 	base_logger_util:msg("backupdata begin~n"),
 	case base_db_dal_util:read_rpc(role_pos) of
 		{ok,L}->
@@ -190,9 +161,7 @@ handle_info({backupdata,FromProc}, State)->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata,FromProc})
 	end,
 	{noreply,State};
-
-
-handle_info({backupdata}, State)->
+do_handle_info({backupdata}, State)->
 	case base_db_dal_util:read_rpc(role_pos) of
 		{ok,L}->
 			OnlineNum = length(L);
@@ -221,8 +190,7 @@ handle_info({backupdata}, State)->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata})
 	end,
 	{noreply,State};
-
-handle_info({recoverydata,FromProc},State)->
+do_handle_info({recoverydata,FromProc},State)->
 	base_logger_util:msg("recoverydata start~n"),
 	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zssbackup_db",
@@ -231,9 +199,7 @@ handle_info({recoverydata,FromProc},State)->
 	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
 	base_rpc_util:cast(FromProc,{recoverydata_ok}),
 	{noreply,State};
-
-
-handle_info({recoverydata},State)->
+do_handle_info({recoverydata},State)->
 	base_db_tools:wait_for_all_db_tables(),
 	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zssbackup_db",
@@ -242,8 +208,7 @@ handle_info({recoverydata},State)->
 	server_control:write_flag_file(),
 	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
 	{noreply,State};
-
-handle_info({gen_data},State)->
+do_handle_info({gen_data},State)->
 	%%base_db_data_gen_util:start(),
 	base_db_tools:wait_for_all_db_tables(),
 	base_db_data_gen_util:import_config("game"),
@@ -252,55 +217,32 @@ handle_info({gen_data},State)->
 	server_control:write_flag_file(),
 	base_logger_util:msg("base_db_data_gen_util gen db finish!!!"),
 	{noreply,State};
-
-handle_info({create_giftcard},State)->
+do_handle_info({create_giftcard},State)->
 	% %%create giftcard and import to db
 	% base_db_tools:wait_for_all_db_tables(),
 	% giftcard_op:auto_gen_and_import(),
 	% server_control:write_flag_file(),
 	base_logger_util:msg("create_giftcard gen db finish!!!"),
 	{noreply,State};
-
-handle_info({format_data,Param},State)->
+do_handle_info({format_data,Param},State)->
 	% base_db_tools:wait_for_all_db_tables(),
 	% data_change:update_db_data(Param),
 	% server_control:write_flag_file(),
 	% base_logger_util:msg("format_data ~p finish!!!~n",[Param]),
 	{noreply,State};
-
-handle_info(Info, State) ->
+do_handle_info(_Info, State) ->
 	{noreply, State}.
 
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(Reason, State) ->
+do_terminate(Reason, _State) ->
 	base_logger_util:msg("dbmaster terminate Reason ~p ~n",[Reason]),
 	ok.
 
-%% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-%% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
+do_code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
-%%% Internal functions
+%%% Not export functions
 %% --------------------------------------------------------------------
-do_handle_call(is_db_prepread, From, State) ->
-	Reply = get(db_prepare_finish),
-	{reply, Reply, State};
-
-do_handle_call(Request, From, State) ->
-	Reply = ok,
-	{reply, Reply, State}.
-
-
-
 send_check_dump_message()->
 	CheckInterval = base_env_ets:get2(dbback, checkinterval , []),
 	if is_integer(CheckInterval)->
