@@ -1,47 +1,24 @@
-%%% Description : data modify processor of DAL
--module(base_db_dmp_server).
-
--behaviour(gen_server).
+%% Description: 内含函数定义, include时需放在其他属性定义的最后
+-include("base_define_shared.hrl").
 %% --------------------------------------------------------------------
-%% Include files
+%% Internal exports
 %% --------------------------------------------------------------------
-%% double ets to save modify record 
--define(FLUSH_INTERVAL,1000*60*5).
-
-%% --------------------------------------------------------------------
-%% External exports
--export([start_link/0]).
-
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {last_ets}).
-
-%% ====================================================================
-%% External functions
-%% ====================================================================
-
-start_link()->
-	base_gen_server:start_link({local,?MODULE} ,?MODULE, [], []).
-%% ====================================================================
+%% --------------------------------------------------------------------
 %% Server functions
-%% ====================================================================
-
 %% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
+%% Func: init/1
+%% Returns: {ok,  {SupFlags,  [ChildSpec]}} |
+%%          ignore                          |
+%%          {error, Reason}
 %% --------------------------------------------------------------------
-init([]) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	base_timer_server:start_at_process(),
-	FlushInterval = base_env_ets:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
-	base_db_dmp_util:init(),
-	base_timer_util:send_after(FlushInterval, {flush_interval}),
-	{ok, #state{last_ets=base_db_dmp_util:get_noinuse_ets()}}.
+init(Args) ->
+	?OTP_FUNC_START("~p:~p(Args=~p)~n",[?MODULE,?FUNCTION_NAME,Args]),
+	Returns = do_init(Args),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -53,9 +30,11 @@ init([]) ->
 %%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-
 handle_call(Request, From, State) ->
-	do_handle_call(Request, From, State).
+	?OTP_FUNC_START("~p:~p(Request=~p, From=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Request,From,State]),
+	Returns = do_handle_call(Request, From, State),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -65,7 +44,10 @@ handle_call(Request, From, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-	{noreply, State}.
+	?OTP_FUNC_START("~p:~p(Msg=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Msg,State]),
+	Returns = do_handle_cast(Msg, State),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 %% --------------------------------------------------------------------
 %% Function: handle_info/2
@@ -75,7 +57,10 @@ handle_cast(Msg, State) ->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_info(Info, State) ->
-	do_handle_info(Info, State).
+	?OTP_FUNC_START("~p:~p(Info=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Info,State]),
+	Returns = do_handle_info(Info, State),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 %% --------------------------------------------------------------------
 %% Function: terminate/2
@@ -83,7 +68,10 @@ handle_info(Info, State) ->
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
 terminate(Reason, State) ->
-	ok.
+	?OTP_FUNC_START("~p:~p(Reason=~p, State=~p)~n",[?MODULE,?FUNCTION_NAME,Reason,State]),
+	Returns = do_terminate(Reason, State),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
 
 %% --------------------------------------------------------------------
 %% Func: code_change/3
@@ -91,25 +79,8 @@ terminate(Reason, State) ->
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
 code_change(OldVsn, State, Extra) ->
-	{ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
-
-do_handle_call(Request, From, State) ->
-	Reply = ok,
-	{reply, Reply, State}.
-
-do_handle_info({flush_interval},  #state{last_ets=LastEts} = State) ->
-	CurEts = base_db_dmp_util:get_noinuse_ets(),
-	if (LastEts =:= CurEts)->
-					 base_db_dmp_util:flush_not_using();
-				 true->
-		   			 nothing
-	end,
-	FlushInterval = base_env_ets:get2(dmp, flush_interval, ?FLUSH_INTERVAL),
-	base_timer_util:send_after(FlushInterval, {flush_interval}),
-	{noreply,#state{last_ets=CurEts}};
-do_handle_info(Info, State) ->
-	{noreply, State}.
+	?OTP_FUNC_START("~p:~p(OldVsn=~p, State=~p, Extra=~p)~n",[?MODULE,?FUNCTION_NAME,OldVsn,State,Extra]),
+	Returns = do_code_change(OldVsn, State, Extra),
+	?OTP_FUNC_END("~p:~p Returns=~p~n",[?MODULE,?FUNCTION_NAME,Returns]),
+	Returns.
+%% ---------------------

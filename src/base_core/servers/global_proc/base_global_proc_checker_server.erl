@@ -24,11 +24,11 @@
 %% External functions
 %% ====================================================================
 start_link()->
-	gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 is_ready()->
 	try
-		gen_server:call(?SERVER, is_global_proc_ready)
+		base_gen_server:call(?SERVER, is_global_proc_ready)
 	catch
 		_:_->false
 	end.

@@ -45,7 +45,7 @@ rpc_add_self_to_dbslave_node(Node)->
 
 is_db_prepread(Node)->
 	try
-		gen_server:call({?SERVER,Node}, is_db_prepread)
+		base_gen_server:call({?SERVER,Node}, is_db_prepread)
 	catch
 		E:R->
 			base_logger_util:msg("get_db_master error no_proc ,wait ~n "),
@@ -56,7 +56,7 @@ is_db_prepread(Node)->
 %% Server functions
 %% ====================================================================
 start_link()->
-	gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 %% --------------------------------------------------------------------
 %% Function: init/1
@@ -104,13 +104,8 @@ init([]) ->
 %%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(is_db_prepread, From, State) ->
-	Reply = get(db_prepare_finish),
-	{reply, Reply, State};
-
 handle_call(Request, From, State) ->
-	Reply = ok,
-	{reply, Reply, State}.
+	do_handle_call(Request, From, State).
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -296,6 +291,14 @@ code_change(OldVsn, State, Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
+do_handle_call(is_db_prepread, From, State) ->
+	Reply = get(db_prepare_finish),
+	{reply, Reply, State};
+
+do_handle_call(Request, From, State) ->
+	Reply = ok,
+	{reply, Reply, State}.
+
 
 
 send_check_dump_message()->

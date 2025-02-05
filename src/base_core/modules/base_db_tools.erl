@@ -408,9 +408,8 @@ wait_tables_in_dbnode()->
 wait_for_local_ram_tables()->
 	case is_need_ram_table(node()) of
 		true->
-			% base_logger_util:msg("db_operater_behaviour:get_all_ram_table :~p~n",[db_operater_behaviour:get_all_ram_table()]),
-			% wait_for_tables_loop(local,1000,db_operater_behaviour:get_all_ram_table());
-			wait_for_tables_loop(local,1000,[]);
+			base_logger_util:msg("db_operater_behaviour:get_all_ram_table :~p~n",[db_operater_behaviour:get_all_ram_table()]),
+			wait_for_tables_loop(local,1000,db_operater_behaviour:get_all_ram_table());
 		_->
 			nothing
 	end.

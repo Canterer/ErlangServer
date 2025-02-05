@@ -18,19 +18,19 @@
 %% External functions
 %% ====================================================================
 start_link(Callback, LSock,AcceptorIndex) ->
-    gen_server:start_link(?MODULE, {Callback, LSock,AcceptorIndex}, []).
+    base_gen_server:start_link(?MODULE, {Callback, LSock,AcceptorIndex}, []).
 
 
 disable_connect(NamedProc)->
 	case erlang:whereis(NamedProc) of
 		undefined-> ignor;
-		Pid-> gen_server:call(Pid, {disable_connect})
+		Pid-> base_gen_server:call(Pid, {disable_connect})
 	end.
 
 enable_connect(NamedProc)->
 	case erlang:whereis(NamedProc) of
 		undefined-> ignor;
-		Pid-> gen_server:call(Pid, {enable_connect})
+		Pid-> base_gen_server:call(Pid, {enable_connect})
 	end.
 
 %% ====================================================================
@@ -51,7 +51,7 @@ init({Callback, LSock,AcceptorIndex}) ->
 	base_logger_util:msg("~p:~p({Callback:~p, LSock:~p, AcceptorIndex:~p})~n",[?MODULE,?FUNCTION_NAME,Callback,LSock,AcceptorIndex]),
 	%%make acceptor name
 	erlang:register(get_proc_name(AcceptorIndex), self()),
-    gen_server:cast(self(), accept),
+    base_gen_server:cast(self(), accept),
     {ok, #state{callback=Callback, sock=LSock,disable_connect=false}}.
 
 %% --------------------------------------------------------------------

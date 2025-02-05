@@ -29,18 +29,18 @@
 %% External functions
 %% ====================================================================
 start_link(MapProcName,{MapId_line,Tag})->
-	gen_server:start_link({local,MapProcName},?MODULE,[MapProcName, {MapId_line,Tag}],[]).
+	base_gen_server:start_link({local,MapProcName},?MODULE,[MapProcName, {MapId_line,Tag}],[]).
 
 join_grid(MapProcName,Grid,CreatureId)->
-	gen_server:call(MapProcName,{join_grid,Grid,CreatureId},infinity).
+	base_gen_server:call(MapProcName,{join_grid,Grid,CreatureId},infinity).
 
 leave_grid(MapProcName,Grid,CreatureId)->
-	gen_server:call(MapProcName,{leave_grid,Grid,CreatureId}).
+	base_gen_server:call(MapProcName,{leave_grid,Grid,CreatureId}).
 
 %%lefttime
 get_instance_details(MapProcName,Node)->
 	try
-		gen_server:call({MapProcName,Node},get_instance_details)
+		base_gen_server:call({MapProcName,Node},get_instance_details)
 	catch
 		E:R->
 			base_logger_util:msg("get_instance_details error E ~p: R ~p",[E,R]),
@@ -49,7 +49,7 @@ get_instance_details(MapProcName,Node)->
 
 join_instance(RoleId,MapProcName,Node)->
 	try
-		gen_server:call({MapProcName,Node},{role_come,RoleId})
+		base_gen_server:call({MapProcName,Node},{role_come,RoleId})
 	catch
 		E:R->
 			base_logger_util:msg("join_instance error E ~p: R ~p",[E,R]),
@@ -58,7 +58,7 @@ join_instance(RoleId,MapProcName,Node)->
 	
 leave_instance(RoleId,MapProcName)->
 	try
-		gen_server:call(MapProcName,{role_leave,RoleId})
+		base_gen_server:call(MapProcName,{role_leave,RoleId})
 	catch
 		E:R->
 			base_logger_util:msg("leave_instance RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
@@ -67,7 +67,7 @@ leave_instance(RoleId,MapProcName)->
 	
 leave_instance(RoleId,MapProcName,offline)->
 	try
-		gen_server:call(MapProcName,{role_leave,RoleId,offline})
+		base_gen_server:call(MapProcName,{role_leave,RoleId,offline})
 	catch
 		E:R-> 
 			base_logger_util:msg("leave_instance offline RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
@@ -82,7 +82,7 @@ destroy_instance(Node,Proc,TimeMs)->
 
 get_instance_id(MapProcName)->
 	try
-		gen_server:call(MapProcName,{get_instance_id})
+		base_gen_server:call(MapProcName,{get_instance_id})
 	catch
 		E:R-> 
 			base_logger_util:msg("get_instance_id MapProcName~p error ~p:~p ~n",[MapProcName,E,R]),
@@ -205,17 +205,6 @@ init([MapProcName, {{LineId,MapId}, Tag}])->
 	base_logger_util:msg("~p:line:~p~n",[?MODULE,?LINE]),
 	{ok, #state{mapinfo={LineId,MapId}, aoidb=AOIdb, mapproc=MapProcName}}.
 
-%%lefttime
-handle_call(get_instance_details,_From,State) ->
-	Reply = 
-	case get(instanceid) of
-		[]->		%%not instance
-			{0,0};
-		_->
-			StartTime = get(map_start_time),
-			trunc(timer:now_diff(base_timer_server:get_correct_now(),StartTime)/1000000)
-	end,
-	{reply, Reply,State};
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
@@ -226,11 +215,78 @@ handle_call(get_instance_details,_From,State) ->
 %%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({get_instance_id}, _From,ProcState) ->
+handle_call(Request, From, State) ->
+	do_handle_call(Request, From, State).
+
+
+%% --------------------------------------------------------------------
+%% Function: handle_cast/2
+%% Description: Handling cast messages
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
+%% --------------------------------------------------------------------
+handle_cast(Msg, State) ->
+	{noreply, State}.
+
+%% --------------------------------------------------------------------
+%% Function: handle_info/2
+%% Description: Handling all non call/cast messages
+%% Returns: {noreply, State}		  |
+%%		  {noreply, State, Timeout} |
+%%		  {stop, Reason, State}			(terminate/2 is called)
+%% --------------------------------------------------------------------
+handle_info(Info, State) ->
+	do_handle_info(Info, State).
+
+%% --------------------------------------------------------------------
+%% Function: terminate/2
+%% Description: Shutdown the server
+%% Returns: any (ignored by gen_server)
+%% --------------------------------------------------------------------
+terminate(Reason,#state{mapproc=MapProcName}=ProcState) ->
+	case  get(instanceid) of
+		[]->
+			nothing;
+		InstanceId->
+			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
+				[]->
+					nothing;
+				_->
+					instance_pos_db:unreg_instance_pos_to_mnesia(MapProcName),
+					instanceid_generator:safe_turnback_proc(MapProcName)
+			end
+	end,
+	ok.
+
+%% --------------------------------------------------------------------
+%% Func: code_change/3
+%% Purpose: Convert process state when code is changed
+%% Returns: {ok, NewState}
+%% --------------------------------------------------------------------
+code_change(OldVsn, State, Extra) ->
+	{ok, State}.
+
+%% --------------------------------------------------------------------
+%%% Internal functions
+%% --------------------------------------------------------------------
+
+%%lefttime
+do_handle_call(get_instance_details,_From,State) ->
+	Reply = 
+	case get(instanceid) of
+		[]->		%%not instance
+			{0,0};
+		_->
+			StartTime = get(map_start_time),
+			trunc(timer:now_diff(base_timer_server:get_correct_now(),StartTime)/1000000)
+	end,
+	{reply, Reply,State};
+do_handle_call({get_instance_id}, _From,ProcState) ->
 	Reply = get(instanceid),
 	{reply, Reply,ProcState};
 
-handle_call({role_come,RoleId}, _From,ProcState) ->	
+do_handle_call({role_come,RoleId}, _From,ProcState) ->	
 	case  get(instanceid) of
 		[]->
 			Reply = error;
@@ -255,7 +311,7 @@ handle_call({role_come,RoleId}, _From,ProcState) ->
 	end,
 	{reply, Reply,ProcState};
 
-handle_call({role_leave,RoleId}, _From,ProcState) ->
+do_handle_call({role_leave,RoleId}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
 			Reply = error;
@@ -290,7 +346,7 @@ handle_call({role_leave,RoleId}, _From,ProcState) ->
 	{reply, Reply, ProcState};
 
 %%if last one is offline ,not delete the instance
-handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
+do_handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
 			Reply = error;
@@ -324,7 +380,7 @@ handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 	end,
 	{reply, Reply,ProcState};
   
-handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
+do_handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
 	case creature_op:what_creature(CreatureId) of
 		role->
 			case ets:lookup(MapProcName, Grid) of
@@ -354,7 +410,7 @@ handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcS
   	Reply = ok,
 	{reply, Reply,ProcState}; 
 
-handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
+do_handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
   	case ets:lookup(MapProcName, Grid) of
 		[] ->
 			nothing;			
@@ -369,29 +425,11 @@ handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=Proc
 	Reply = ok,
 	{reply, Reply, ProcState};
   
-handle_call(Request, From, State) ->
+do_handle_call(Request, From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-
-%% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
-	{noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-handle_info({on_destroy,WaitTime},ProcState)->
+do_handle_info({on_destroy,WaitTime},ProcState)->
 	erlang:send_after(WaitTime,self(),{on_destroy}),
 	case  get(instanceid) of
 		[]->
@@ -408,7 +446,7 @@ handle_info({on_destroy,WaitTime},ProcState)->
 	end,
 	{noreply,ProcState};
 
-handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
+do_handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
 			nothing;
@@ -432,7 +470,7 @@ handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 	end,
 	{noreply,ProcState};
 
-handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
+do_handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
 			nothing;
@@ -444,40 +482,9 @@ handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 	end,
 	{stop,normal,ProcState};
 
-handle_info(Info, State) ->
+do_handle_info(Info, State) ->
 	{noreply, State}.
 
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(Reason,#state{mapproc=MapProcName}=ProcState) ->
-	case  get(instanceid) of
-		[]->
-			nothing;
-		InstanceId->
-			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
-				[]->
-					nothing;
-				_->
-					instance_pos_db:unreg_instance_pos_to_mnesia(MapProcName),
-					instanceid_generator:safe_turnback_proc(MapProcName)
-			end
-	end,
-	ok.
-
-%% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-%% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
-	{ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
 send_kick_out(Proc,MapProcName)->
 	try
 		Proc ! {kick_from_instance,MapProcName}

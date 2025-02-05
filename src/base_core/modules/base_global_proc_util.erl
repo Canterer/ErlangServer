@@ -45,8 +45,8 @@ call(ModuleName,Msg,TimeOut)->
 		[]->
 			base_logger_util:msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),
 			error;
-			%%gen_server:call({global,ModuleName},Msg,TimeOut);
+			%%base_gen_server:call({global,ModuleName},Msg,TimeOut);
 		Node->
-			gen_server:call({ModuleName,Node}, Msg, TimeOut)
+			base_gen_server:call({ModuleName,Node}, Msg, TimeOut)
 	end.
 

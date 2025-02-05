@@ -34,7 +34,7 @@
 %% ====================================================================
 
 start_link(MapFile,MapId)->
-	gen_server:start_link(?MODULE ,[MapFile,MapId], []).
+	base_gen_server:start_link(?MODULE ,[MapFile,MapId], []).
 
 whereis(MapId)->
 	MapDbProc = base_map_db_util:make_db_proc(MapId),
@@ -44,7 +44,7 @@ whereis(MapId)->
 	end.
 
 query_db_name(MapDbProc)->
-	Reply = gen_server:call(MapDbProc, {query_db_name}),
+	Reply = base_gen_server:call(MapDbProc, {query_db_name}),
 	case Reply of
 		{ok,DbName}->DbName;
 		_->undefined
@@ -127,13 +127,8 @@ init([MapFile,MapId]) ->
 %%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
-	case Request of
-		{query_db_name}-> {reply, {ok,State#state.mapdb}, State};
-		_ -> {reply, ok, State}
-	end.
-
-
+handle_call(Msg, {From, Tag}, State) ->
+	do_handle_call(Msg, {From, Tag}, State).
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -174,6 +169,12 @@ code_change(OldVsn, State, Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
+do_handle_call(Request, From, State) ->
+	case Request of
+		{query_db_name}-> {reply, {ok,State#state.mapdb}, State};
+		_ -> {reply, ok, State}
+	end.
+
 
 build_quadtree(_MapFile) ->
 	%%	{Rect, View} = file:consults(MapFile),

@@ -57,7 +57,7 @@
 %% ====================================================================
 
 start_link()->
-	gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 %% Dynamic adding line server
 %% LineId: The line server' name, such as 'Line#1'
@@ -139,7 +139,7 @@ regist_map_processor(Args) ->
 
 regist_map_processor(Node,Args)->
 	try
-		gen_server:call({?MODULE,Node}, {regist_map_processor, Args})
+		base_gen_server:call({?MODULE,Node}, {regist_map_processor, Args})
 	catch
 		E:R->
 			base_logger_util:msg("regist_map_processor Node ~p Info ~p E ~p R ~p ~n ",[Node,Args,E,R]),

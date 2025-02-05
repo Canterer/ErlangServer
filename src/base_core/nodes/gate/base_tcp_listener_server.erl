@@ -39,7 +39,7 @@
 %% ====================================================================
 start_link(Port, AcceptorCount ,
 		   OnStartup, OnShutdown) ->
-	gen_server:start_link({local, ?MODULE}, ?MODULE, 
+	base_gen_server:start_link({local, ?MODULE}, ?MODULE, 
 						  {Port, AcceptorCount  ,
 						   OnStartup, OnShutdown}, []).
 
@@ -47,7 +47,7 @@ start_link(Port, AcceptorCount ,
 %% Server functions
 %% ====================================================================
 query_port()->
-	gen_server:call(?MODULE, {query_port} ,infinity).
+	base_gen_server:call(?MODULE, {query_port} ,infinity).
 
 
 %% --------------------------------------------------------------------

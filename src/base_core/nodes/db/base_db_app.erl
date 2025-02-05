@@ -42,7 +42,7 @@ start()->
 	base_application_server:start(?MODULE).
 
 import()->
- 	% data_gen:import_config("game"),
+ 	base_db_data_gen_util:import_config("game"),
 	mnesia:stop(),
 	erlang:halt().
 

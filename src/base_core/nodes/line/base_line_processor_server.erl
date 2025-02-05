@@ -34,7 +34,7 @@
 %% ====================================================================
 %%	TODO:this proc not need again!!!!!!!
 start_link({LineName, NamedProc})->
-	gen_server:start_link({local, LineName}, ?MODULE, {LineName, NamedProc}, []).
+	base_gen_server:start_link({local, LineName}, ?MODULE, {LineName, NamedProc}, []).
 
 % ====================================================================
 %% Server functions

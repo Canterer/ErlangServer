@@ -44,7 +44,7 @@ start(Application,Type)->
 
 force_start()->
 	case erlang:whereis(?MODULE) of
-		?ERLNULL->	gen_server:start_link({local,?MODULE},?MODULE, [], []);
+		?ERLNULL->	base_gen_server:start_link({local,?MODULE},?MODULE, [], []);
 		_->ignor
 	end.
 
@@ -53,13 +53,13 @@ force_start()->
 %% Server functions
 %% ====================================================================
 wait_ets_init()->
-	gen_server:call(?MODULE, {wait_ets_init},infinity).
+	base_gen_server:call(?MODULE, {wait_ets_init},infinity).
 
 wait_ets_init_fliter(EtsFliter)->
-	gen_server:call(?MODULE, {wait_ets_init_fliter,{EtsFliter}},infinity).
+	base_gen_server:call(?MODULE, {wait_ets_init_fliter,{EtsFliter}},infinity).
 
 sp_call(M,F,A)->
-	gen_server:call(?MODULE, {sp_call,M,F,A},infinity).
+	base_gen_server:call(?MODULE, {sp_call,M,F,A},infinity).
 
 
 %% --------------------------------------------------------------------
@@ -155,3 +155,4 @@ code_change(OldVsn, State, Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
+

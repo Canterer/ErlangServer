@@ -1,126 +1,62 @@
+%% Description: TODO: Add description to base_timer_server
 -module(base_timer_server).
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
-%% Include files
+%% External exports
 %% --------------------------------------------------------------------
+% -compile(export_all).
+-export([
+	start_link/0,
+	query_time/0,
+	start_at_app/0,
+	start_at_process/0,
+	get_correct_now/0,
+	get_time_of_day/0
+]).
 
-% deviation 偏离
--export([get_correct_now/0,start_at_process/0,start_at_app/0,get_time_of_day/0]).	
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
+% deviation 偏离	
 -define(DEVIATION_SECONDS,'$deviation_seconds$').
 -define(SERVER_START_TIME,'$server_start_time$').
 -define(DEVIATION_SECONDS_ETS,'$ets_deviation_seconds$').
-
-
 -define(CENTER_FLASH_TIMEOUT, (60*1000*10)).
 
-%% --------------------------------------------------------------------
-%% External exports
--export([start_link/0,query_time/0]).
-
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
--record(state, {tref}).
-
-%% ====================================================================
-%% External functions
-%% ====================================================================
-start_link()->
-	gen_server:start_link({local,?MODULE}, ?MODULE ,[], []).
-
-%% ====================================================================
-%% Server functions
-%% ====================================================================
-
-query_time()->
-	gen_server:call(?MODULE, {query_time}).
-	
-%% --------------------------------------------------------------------
-%% Function: init/1
-%% Description: Initiates the server
-%% Returns: {ok, State}		  |
-%%		  {ok, State, Timeout} |
-%%		  ignore			   |
-%%		  {stop, Reason}
-%% --------------------------------------------------------------------
-init([]) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	{ok, #state{}}.
 
 %% --------------------------------------------------------------------
-%% Function: handle_call/3
-%% Description: Handling call messages
-%% Returns: {reply, Reply, State}		  |
-%%		  {reply, Reply, State, Timeout} |
-%%		  {noreply, State}			   |
-%%		  {noreply, State, Timeout}	  |
-%%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%		  {stop, Reason, State}			(terminate/2 is called)
+%% Records
 %% --------------------------------------------------------------------
-handle_call({query_time}, _From, State) ->
-   Reply = os:timestamp(),
-   {reply, Reply, State};
-handle_call(_Request, _From, State) ->
-	Reply = ok,
-	{reply, Reply, State}.
+-record(state, {}).
 
 %% --------------------------------------------------------------------
-%% Function: handle_cast/2
-%% Description: Handling cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
+%% Include files
 %% --------------------------------------------------------------------
-handle_cast(_Msg, State) ->
-	{noreply, State}.
-
+-include("base_gen_server_shared.hrl").
 
 %% --------------------------------------------------------------------
-%% Function: handle_info/2
-%% Description: Handling all non call/cast messages
-%% Returns: {noreply, State}		  |
-%%		  {noreply, State, Timeout} |
-%%		  {stop, Reason, State}			(terminate/2 is called)
-%% --------------------------------------------------------------------
-
-handle_info(Info, State) ->
-	{noreply, State}.
-
-%% --------------------------------------------------------------------
-%% Function: terminate/2
-%% Description: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%% --------------------------------------------------------------------
-terminate(_Reason, State) ->
-	ok.
-
-%% --------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Convert process state when code is changed
-%% Returns: {ok, NewState}
-%% --------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
-
-%% --------------------------------------------------------------------
-%%% Internal functions
-%% --------------------------------------------------------------------
-
+%%% External functions
 %% --------------------------------------------------------------------
 %%% put(key, value)、get(key)在进程字典中存储和检索键值对
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+start_link()->
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+
+query_time()->
+	base_gen_server:call(?MODULE, {query_time}).
+
+start_at_app()->
+	Now = query_time_rpc(500),
+	put_deviation_seconds(Now).
 
 start_at_process()->
 	Deviation = get_ets_deviation_seconds(),
 	Time = get_ets_server_start_time(),
 	put(?DEVIATION_SECONDS,Deviation),
 	put(?SERVER_START_TIME,Time).
-
-start_at_app()->
-	Now = query_time_rpc(500),
-	put_deviation_seconds(Now).
 	
 get_correct_now()->
 	{A,B,C} = os:timestamp(),
@@ -131,6 +67,34 @@ get_time_of_day()->
 	{A2,B2,_} = get_server_start_time(),
 	{A - A2,B - B2,C}.
 
+%% --------------------------------------------------------------------
+%%% Internal functions
+%% --------------------------------------------------------------------
+do_init(Args) ->
+	{ok, #state{}}.
+
+do_handle_call({query_time}, _From, State) ->
+   Reply = os:timestamp(),
+   {reply, Reply, State};
+do_handle_call(_Request, _From, State) ->
+	Reply = ok,
+	{reply, Reply, State}.
+
+do_handle_cast(_Msg, State) ->
+	{noreply, State}.
+
+do_handle_info(_Info, State) ->
+	{noreply, State}.
+
+do_terminate(_Reason, State) ->
+	ok.
+
+do_code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
+
+%% --------------------------------------------------------------------
+%%% not export functions
+%% --------------------------------------------------------------------
 get_deviation_seconds()->
 	case get(?DEVIATION_SECONDS) of
 		undefined-> 0;
@@ -174,4 +138,3 @@ query_time_rpc(N)->
 				Deviation->	Deviation
 			end
 	end.
-	

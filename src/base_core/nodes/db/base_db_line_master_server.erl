@@ -32,7 +32,7 @@
 is_db_prepread(Node)->
 	base_logger_util:msg("~p:~p(Node:~p)~n",[?MODULE,?FUNCTION_NAME,Node]),
 	try
-		gen_server:call({?MODULE,Node}, is_db_prepread)
+		base_gen_server:call({?MODULE,Node}, is_db_prepread)
 	catch
 		E:R->
 			base_logger_util:msg("base_db_line_master_server error no_proc ,wait ~n "),
@@ -40,7 +40,7 @@ is_db_prepread(Node)->
 	end.
 
 start_link()->
-	gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 %% --------------------------------------------------------------------
 %% Function: init/1
@@ -70,9 +70,8 @@ init([]) ->
 %%		  {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(is_db_prepread, From, State) ->
-	Reply = get(db_prepare_finish),
-	{reply, Reply, State}.
+handle_call(Request, From, State) ->
+	do_handle_call(Request, From, State).
 
 %% --------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -113,3 +112,6 @@ code_change(OldVsn, State, Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
+do_handle_call(is_db_prepread, From, State) ->
+	Reply = get(db_prepare_finish),
+	{reply, Reply, State}.
