@@ -1,0 +1,23 @@
+{application, base_role_app,
+[
+	{description,"base role application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_role_app,
+			base_role_sup,
+			base_role_manager,
+			base_role_processor
+		]
+	},
+	{registered,
+		[
+			base_role_sup,
+			base_role_manager,
+			base_role_processor
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_role_app,[]}}
+]
+}.
