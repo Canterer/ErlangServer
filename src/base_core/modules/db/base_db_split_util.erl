@@ -13,20 +13,32 @@
 %%
 %% Exported Functions
 %%
+-compile(export_all).
 -export([get_owner_table/2,check_need_split/1,get_table_names_rpc/1,get_table_names/1]).
 
--export([create_ets/0,init_ets/0,get_table_info/1]).
--behaviour(ets_operater_behaviour).
--compile(export_all).
+-export([get_table_info/1]).
+
+%% --------------------------------------------------------------------
+%% behaviour include shared code
+%% --------------------------------------------------------------------
+% -include("base_ets_operater_shared.hrl").
+-define(ETS_OPERATER_BEHAVIOUR,true).
+-include("base_all_behaviour_shared.hrl").
+%% --------------------------------------------------------------------
+%%% behaviour functions begine
+%% --------------------------------------------------------------------
+do_create_ets()->
+	ets_operater_behaviour:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
+
+do_init_ets()->
+	nothing.
+%% --------------------------------------------------------------------
+%%% behaviour functions end
+%% --------------------------------------------------------------------
+
 %%
 %% API Functions
 %%
-create_ets()->
-	ets_operater_behaviour:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
-
-init_ets()->
-	nothing.
-	
 add_table_names(OriginalTable,SplittedTable)->
 	case ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
 		[]->ets_operater_behaviour:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable]});

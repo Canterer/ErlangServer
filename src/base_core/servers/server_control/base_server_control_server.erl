@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to xserver_control
 -module(base_server_control_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

@@ -23,7 +23,7 @@ behaviour_info(callbacks) ->
 	{create_mnesia_table,1},				%% create table not split 				%% args: ram/disc
 	{create_mnesia_split_table,2},			%% create split table					%% args:[BaseTable,TrueTabName]
 	{delete_role_from_db,1},				%% delete on role for persistent table  %% args:[roleid]
-	{tables_info,0}							%% {DB,Type} Type:disc_split/disc/ram/proto
+	{tables_info,0}							%% returns = [{DB,Type},...] Type:disc_split/disc/ram/proto
 	];
 behaviour_info(_Other) ->
 	undefined.

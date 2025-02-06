@@ -1,19 +1,4 @@
 -module(base_map_info_db).
--include("mnesia_table_def.hrl").
--include("base_define_shared.hrl").
--define(MAP_INFO_ETS,map_info_ets).
-
--export([
-	start/0,
-	create_mnesia_table/1,
-	create_mnesia_split_table/2,
-	delete_role_from_db/1,
-	tables_info/0
-]).
--export([
-	init_ets/0,
-	create_ets/0
-]).
 
 -export([
 	get_map_info/1,
@@ -32,36 +17,47 @@
 	get_lonely_maps/0
 ]).
 
--behaviour(db_operater_behaviour).
--behaviour(ets_operater_behaviour).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 				behaviour functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-start()->
-	db_operater_behaviour:start_module(?MODULE,[]).
+-define(MAP_INFO_ETS,map_info_ets).
 
-create_mnesia_table(disc)->
-	base_db_tools:create_table_disc(map_info, record_info(fields,map_info), [], set).
-
-create_mnesia_split_table(_,_)->
-	nothing.
-
-tables_info()->
-	[{map_info,proto}].
-
-delete_role_from_db(_)->
-	nothing.
-
-create_ets()->	
+-include("mnesia_table_def.hrl").
+-include("base_define_shared.hrl").
+%% --------------------------------------------------------------------
+%% behaviour include shared code
+%% --------------------------------------------------------------------
+% -include("base_ets_operater_shared.hrl").
+% -include("base_db_operater_shared.hrl").
+-define(ETS_OPERATER_BEHAVIOUR,true).
+-define(DB_OPERATER_BEHAVIOUR,true).
+-include("base_all_behaviour_shared.hrl").
+%% --------------------------------------------------------------------
+%%% behaviour functions begine
+%% --------------------------------------------------------------------
+do_create_ets()->	
 	ets_operater_behaviour:new(?MAP_INFO_ETS, [set,named_table]).
 
-init_ets()->
+do_init_ets()->
 	% 从数据库读取 
 	db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-%% 				behaviour functions end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+do_start()->
+	db_operater_behaviour:start_module(?MODULE,[]).
+
+do_create_mnesia_table(disc)->
+	base_db_tools:create_table_disc(map_info, record_info(fields,map_info), [], set).
+
+do_create_mnesia_split_table(_,_)->
+	nothing.
+
+do_tables_info()->
+	[{map_info,proto}].
+
+do_delete_role_from_db(_)->
+	nothing.
+
+%% --------------------------------------------------------------------
+%%% behaviour functions end
+%% --------------------------------------------------------------------
+
 get_map_info(MapId)->
 	case ets:lookup(?MAP_INFO_ETS,MapId) of
 		[]-> [];

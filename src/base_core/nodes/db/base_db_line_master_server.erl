@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_db_line_master_server
 -module(base_db_line_master_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

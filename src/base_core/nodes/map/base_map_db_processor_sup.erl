@@ -1,64 +1,47 @@
+%% Description: TODO: Add description to base_map_db_processor_sup
 -module(base_map_db_processor_sup).
-
--behaviour(supervisor).
-%% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
--export([start_link/0,start_map_db_processor/2]).
-
-%% --------------------------------------------------------------------
-%% Internal exports
-%% --------------------------------------------------------------------
 -export([
-	init/1
+	start_link/0,
+	start_map_db_processor/2
 ]).
 
 %% --------------------------------------------------------------------
 %% Macros
 %% --------------------------------------------------------------------
--define(SERVER, ?MODULE).
 
 %% --------------------------------------------------------------------
 %% Records
 %% --------------------------------------------------------------------
 
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_sup_shared.hrl").
+
 %% ====================================================================
 %% External functions
 %% ====================================================================
-
 start_link()->
-	supervisor:start_link({local,?MODULE}, ?MODULE, []).
-
+	supervisor:start_link({local, ?SERVER},?MODULE, []).
 
 start_map_db_processor(MapFile,MapId)->
-	
 	MapDbProcTag = make_tag(MapId),
-	
 	ChildSpec = {MapDbProcTag,{base_map_db_processor_server,start_link,[MapFile,MapId]},
 			  				permanent,2000,worker,[base_map_db_processor_server]},
 	supervisor:start_child(?MODULE, ChildSpec).
 
-
-%% ====================================================================
-%% Server functions
-%% ====================================================================
 %% --------------------------------------------------------------------
-%% Func: init/1
-%% Returns: {ok,  {SupFlags,  [ChildSpec]}} |
-%%		  ignore						  |
-%%		  {error, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init([]) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+do_init([]) ->
 	{ok,{{one_for_one,10,10}, []}}.
 
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
-
+%% --------------------------------------------------------------------
+%%% not export functions
+%% --------------------------------------------------------------------
 make_tag(MapId)->
 	list_to_atom(lists:append([integer_to_list(MapId),"_db"])).

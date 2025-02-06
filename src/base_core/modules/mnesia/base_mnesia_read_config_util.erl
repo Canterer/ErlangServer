@@ -160,7 +160,7 @@ explain_auto_name(Data,Num5)->
 					Value_name_tuplelsit2=erlang:list_to_tuple(lists:reverse(Value_name_termlistq2)),
 					[Num1,First_Name_value,{[Value_name_tuplelsit1],[Value_name_tuplelsit2]}]
 			end;
-		ture->
+		true->
 			nothing
 	end.
 

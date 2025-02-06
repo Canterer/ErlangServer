@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_global_proc_checker_server
 -module(base_global_proc_checker_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

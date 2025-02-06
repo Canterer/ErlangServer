@@ -1,9 +1,5 @@
+%% Description: TODO: Add description to base_tcp_client_sup
 -module(base_tcp_client_sup).
-
--behaviour(supervisor).
-%% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
 %% External exports
@@ -14,11 +10,6 @@
 ]).
 
 %% --------------------------------------------------------------------
-%% Internal exports
-%% --------------------------------------------------------------------
--export([init/1]).
-
-%% --------------------------------------------------------------------
 %% Macros
 %% --------------------------------------------------------------------
 
@@ -26,35 +17,34 @@
 %% Records
 %% --------------------------------------------------------------------
 
-get_client_count()->
-	%% count_children函数在新版的OTP库中存在
-	%%supervisor:count_children(?MODULE).
-	not_implement.
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_sup_shared.hrl").
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
 start_link([OnReceiveData,OnClientClose])->
-	supervisor:start_link({local, ?MODULE},?MODULE, [OnReceiveData,OnClientClose]).
+	supervisor:start_link({local, ?SERVER},?MODULE, [OnReceiveData,OnClientClose]).
 
-%% ====================================================================
-%% Server functions
-%% ====================================================================
+get_client_count()->
+	%% count_children函数在新版的OTP库中存在
+	%%supervisor:count_children(?MODULE).
+	not_implement.
+
 %% --------------------------------------------------------------------
-%% Func: init/1
-%% Returns: {ok,  {SupFlags,  [ChildSpec]}} |
-%%          ignore                          |
-%%          {error, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init([OnReceiveData,OnClientClose]) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+do_init([OnReceiveData,OnClientClose]) ->
 	{ok,{{simple_one_for_one,5, 60}, 
-	     [{base_tcp_client_fsm, 				%% target process noname
-	       {base_tcp_client_fsm,start_link,[OnReceiveData,OnClientClose]},
-	       temporary, 				%% target process is temporary
-	       brutal_kill,worker,[]}]}}.
+		[
+			{base_tcp_client_fsm, 				%% target process noname
+			{base_tcp_client_fsm,start_link,[OnReceiveData,OnClientClose]},
+			temporary, 				%% target process is temporary
+			brutal_kill,worker,[]}
+		]}}.
 
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
-
+%% --------------------------------------------------------------------
+%%% not export functions
+%% --------------------------------------------------------------------

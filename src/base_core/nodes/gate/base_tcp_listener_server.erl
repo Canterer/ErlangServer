@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_tcp_listener_server
 -module(base_tcp_listener_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

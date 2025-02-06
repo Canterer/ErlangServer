@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_map_processor_server
 -module(base_map_processor_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

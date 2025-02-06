@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_map_manager_server
 -module(base_map_manager_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

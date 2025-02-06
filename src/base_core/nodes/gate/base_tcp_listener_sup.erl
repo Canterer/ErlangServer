@@ -1,19 +1,13 @@
+%% Description: TODO: Add description to base_tcp_listener_sup
 -module(base_tcp_listener_sup).
-
--behaviour(supervisor).
-%% --------------------------------------------------------------------
-%% Include files
-%% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
--export([start_link/4,start_link/5]).
-
-%% --------------------------------------------------------------------
-%% Internal exports
-%% --------------------------------------------------------------------
--export([init/1]).
+-export([
+	start_link/4,
+	start_link/5
+]).
 
 %% --------------------------------------------------------------------
 %% Macros
@@ -22,6 +16,11 @@
 %% --------------------------------------------------------------------
 %% Records
 %% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-include("base_gen_sup_shared.hrl").
 
 %% ====================================================================
 %% External functions
@@ -33,24 +32,14 @@ start_link(Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount) ->
     supervisor:start_link({local,?MODULE},?MODULE, {Port, OnStartup, OnShutdown,
 									AcceptCallback, AcceptorCount}).
 
-
-
-%% ====================================================================
-%% Server functions
-%% ====================================================================
 %% --------------------------------------------------------------------
-%% Func: init/1
-%% Returns: {ok,  {SupFlags,  [ChildSpec]}} |
-%%          ignore                          |
-%%          {error, Reason}
+%%% Internal functions
 %% --------------------------------------------------------------------
-init({ Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount}) ->
+do_init({ Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount}) ->
     %% This is gross. The base_tcp_listener_server needs to know about the
     %% tcp_acceptor_sup, and the only way I can think of accomplishing
     %% that without jumping through hoops is to register the
     %% tcp_acceptor_sup.
-	
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	{ok, {{one_for_all, 10, 10},
           [{tcp_acceptor_sup, 
 				{tcp_acceptor_sup, start_link,
@@ -61,7 +50,6 @@ init({ Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount}) ->
 			    transient, 100, worker, [base_tcp_listener_server]}		
 		  ]}}.
 
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
-
+%% --------------------------------------------------------------------
+%%% not export functions
+%% --------------------------------------------------------------------

@@ -1,12 +1,13 @@
 -module(login_pb).
 -include("login_pb.hrl").
 -compile(export_all).
--export([create_ets/0,init_ets/0]).
 
--behaviour(ets_operater_behaviour).
-
-create_ets()->
-	ets_operater_behaviour:new(proto_msg_id_record_map,[set,named_table]).
+%% --------------------------------------------------------------------
+%% behaviour include shared code
+%% --------------------------------------------------------------------
+% -include("base_ets_operater_shared.hrl").
+-define(ETS_OPERATER_BEHAVIOUR,true).
+-include("base_all_behaviour_shared.hrl").
 
 get_record_name(ID)->
 	case ets:lookup(proto_msg_id_record_map,ID) of
@@ -15,7 +16,15 @@ get_record_name(ID)->
 			Rec
 	end.
 
-init_ets()->
+%% --------------------------------------------------------------------
+%%% behaviour functions begine
+%% --------------------------------------------------------------------
+do_create_ets()->
+	ets_operater_behaviour:new(proto_msg_id_record_map,[set,named_table]).
+
+
+
+do_init_ets()->
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{5,'player_role_list_s2c'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{6,'role_line_query_c2s'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{7,'role_line_query_ok_s2c'}),

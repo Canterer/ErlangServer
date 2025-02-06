@@ -1,7 +1,6 @@
 %% Description: data modify processor of DAL
 -module(base_db_dmp_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

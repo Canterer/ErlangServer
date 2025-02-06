@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_timer_server
 -module(base_timer_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

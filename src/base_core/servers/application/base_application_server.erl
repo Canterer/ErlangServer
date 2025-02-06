@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_application_server
 -module(base_application_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------

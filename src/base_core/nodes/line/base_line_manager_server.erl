@@ -1,7 +1,6 @@
 %% Description: TODO: Add description to base_line_manager_server
 -module(base_line_manager_server).
 
--behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
