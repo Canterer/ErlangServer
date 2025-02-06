@@ -210,7 +210,7 @@ connecting({socket_ready,CliSocket},StateData)->
 						base_logger_util:msg("client port policy-file-request failed,game proc ~n"),
 						case gen_tcp:recv(CliSocket,erlang:byte_size(?CROSS_DOMAIN_FLAG)-4,10000) of
 							{ok,_}->
-								gen_tcp:send(CliSocket,crossdomain:make_normal_cross_file()),
+								gen_tcp:send(CliSocket,base_crossdomain_server:make_normal_cross_file()),
 								true;
 							{error,closed}->
 								stop;
@@ -910,7 +910,7 @@ start_game_after_line_fixed(LineId)->
 	LoginIp = gate_op:trans_addr_to_list(get(clientaddr)),
 	Gender = get(gender),
 	NickName = get(nickname),
-	Is_yellow_vip = get(is_yellow_vip),
+	% Is_yellow_vip = get(is_yellow_vip),
 	Is_yellow_year_vip = get(is_yellow_year_vip),
 	Yellow_vip_level = get(yellow_vip_level),
 	Pf = get(pf),

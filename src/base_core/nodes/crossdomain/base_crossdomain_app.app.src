@@ -1,0 +1,18 @@
+{application, base_crossdomain_app,
+[
+	{description,"base crossdomain application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_crossdomain_app,
+			base_crossdomain_sup,
+			base_crossdomain_server
+		]
+	},
+	{registered,
+		[base_crossdomain_server,base_crossdomain_sup]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_crossdomain_app,[]}}
+]
+}.

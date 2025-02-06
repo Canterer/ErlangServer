@@ -10,7 +10,7 @@
 -define(BASE_LINE_OPTION_FILE,"../src/base_core/option/base_line_config.option").
 -define(BASE_MAP_OPTION_FILE,"../src/base_core/option/base_map_config.option").
 -define(BASE_GATE_OPTION_FILE,"../src/base_core/option/base_gate_config.option").
-
+-define(BASE_CROSSDOMAIN_OPTION_FILE,"../src/base_core/option/base_crossdomain_config.option").
 
 %%
 %% Exported Functions
@@ -116,7 +116,10 @@ reset()->
 	read_from_file(?BASE_DB_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_LINE_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_MAP_OPTION_FILE,?OPTION_ETS),
-	read_from_file(?BASE_GATE_OPTION_FILE,?OPTION_ETS).
+	read_from_file(?BASE_GATE_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_CROSSDOMAIN_OPTION_FILE,?OPTION_ETS),
+	ok.
+
 
 get_server_name(ServerId)->
 	try

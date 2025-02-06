@@ -35,7 +35,10 @@ run()->
 	% map节点
 	check_map_run(),
 	% gate节点
-	check_gate_run().
+	check_gate_run(),
+	% crossdomain节点
+	check_crossdomain_run().
+
 %%
 %% Local Functions
 %%
@@ -67,6 +70,12 @@ check_map_run()->
 check_gate_run()->
 	case base_node_util:check_node_allowable(gate, node()) of
 		true-> base_gate_app:start();
+		_-> ignor
+	end.
+
+check_crossdomain_run()->
+	case base_node_util:check_node_allowable(cross, node()) of
+		true-> base_crossdomain_app:start();
 		_-> ignor
 	end.
 %%------------------------------------------------------------------------------------------

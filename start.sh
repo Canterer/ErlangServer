@@ -5,4 +5,5 @@ ulimit -SHn 65535 && erl +P 100000 +K true   -mnesia dir '"../dbfile/"'  -detach
 ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name line@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name map1@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name map2@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
-ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name gate1@127.0.0.1 -s server_tool run --line line@127.0.0.1
+ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name gate1@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
+ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name cross@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
