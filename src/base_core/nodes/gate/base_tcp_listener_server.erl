@@ -60,7 +60,7 @@ query_port()->
 %%--------------------------------------------------------------------
 disable_connect()->
 	%%gen_server:send({local, ?SERVER}, {disable_connect}).
-%%	io:format("disable_connect ~p ~n",[?MODULE]),
+%%	base_logger_util:msg("disable_connect ~p ~n",[?MODULE]),
 	erlang:send_after(0,?SERVER,{disable_connect}).
 
 %%--------------------------------------------------------------------
@@ -85,10 +85,10 @@ do_init({Port,AcceptorCount,{M,F,A} = OnStartup, OnShutdown}) ->
 			 Fun = fun(AccIndex,Acc)->
 						   {ok, _APid} = supervisor:start_child(tcp_acceptor_sup, [Listen_socket,AccIndex]),
 						   
-						   AcceptorName = tcp_acceptor:get_proc_name(AccIndex),
+						   AcceptorName = base_tcp_acceptor_server:get_proc_name(AccIndex),
 %%@@ 						   ?OPEN_GATE_DOOR,
 %%@@ 						   erlang:send_after(?OPEN_GATE_TIME,?MODULE,{enable_connect}),
-                           erlang:send_after(0,?SERVER,{enable_connect}),
+                           erlang:send_after(0,?SERVER,{3}),
 						   [AcceptorName|Acc]
 				   end,
              AccProcs = lists:foldl(Fun,[],SeqList),
@@ -119,16 +119,16 @@ do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
 do_handle_info({disable_connect}, State = #state{acceptors=AccProcs}) ->
-%%	io:format("handle_info disable_connect ~p ~n",[?MODULE]),
+%%	base_logger_util:msg("handle_info disable_connect ~p ~n",[?MODULE]),
 	lists:foreach(fun(AcceptorName)->
-						  R = tcp_acceptor:disable_connect(AcceptorName),
-						  io:format("Acceptor Stat:~p~n",[R])
+						  R = base_tcp_acceptor_server:disable_connect(AcceptorName),
+						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
     {noreply, State};
 do_handle_info({enable_connect},State = #state{acceptors=AccProcs})->
 	lists:foreach(fun(AcceptorName)->
-						  R = tcp_acceptor:enable_connect(AcceptorName),
-						  io:format("Acceptor Stat:~p~n",[R])
+						  R = base_tcp_acceptor_server:enable_connect(AcceptorName),
+						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
 	{noreply, State};
 do_handle_info(_Info, State) ->

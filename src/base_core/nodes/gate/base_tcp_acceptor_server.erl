@@ -54,7 +54,7 @@ get_proc_name(AcceptorIndex)->
 %%% Internal functions
 %% --------------------------------------------------------------------
 do_init({Callback, LSock,AcceptorIndex}) ->
-	base_logger_util:msg("~p:~p({Callback:~p, LSock:~p, AcceptorIndex:~p})~n",[?MODULE,?FUNCTION_NAME,Callback,LSock,AcceptorIndex]),
+	?ZS_LOG("{Callback:~p, LSock:~p, AcceptorIndex:~p}",[Callback,LSock,AcceptorIndex]),
 	%%make acceptor name
 	erlang:register(get_proc_name(AcceptorIndex), self()),
     base_gen_server:cast(self(), accept),

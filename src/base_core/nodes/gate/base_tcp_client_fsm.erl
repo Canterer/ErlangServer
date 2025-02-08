@@ -261,12 +261,10 @@ connecting({socket_ready,CliSocket},StateData)->
 						{next_state, connected, StateData}
 				end							
 	end;
-
 connecting({socket_disable,CliSocket},StateData)->
 	self()!{kick_client,"socket is disable "},
 	put(clientsock, CliSocket),
 	{stop, normal, StateData};
-
 connecting(Event,StateData)->
 	{next_state, connecting, StateData}.
 
@@ -283,7 +281,6 @@ connected({start_auth,ServerId,UserAuth}, StateData) ->
 			self()!{kick_client,"error serverid"}
 	end,	
 	{next_state, authing, StateData};
-
 %%connected({start_auth,Time,AuthResult}, StateData) ->
 %%	auth_processor:auth(node(),self(),Time,AuthResult),
 %%	{next_state, authing, StateData};
@@ -300,7 +297,6 @@ authing({auth_failed,ServerId,Reason}, StateData) ->
 	SendData = login_pb:encode_user_auth_fail_s2c(FailedMsg),
 	send_data(self(), SendData),
 	{next_state, connected,StateData};
-
 %% authing * auth_ok -> rolelisting
 %% 认证成功后直接发送分线服务器列表
 %%authing({auth_ok,{visitor,PlayerId},AccountName,IsAdult}, StateData) ->
@@ -309,7 +305,6 @@ authing({auth_failed,ServerId,Reason}, StateData) ->
 %%	put(account,AccountName),
 %%	put(adult,IsAdult),
 %%	{next_state,rolelisting,StateData};
-
 authing({auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
 	RoleList = gate_op:get_role_list(AccountName,get(serverid)),
 	SendData = login_pb:encode_player_role_list_s2c(#player_role_list_s2c{roles=RoleList}),
@@ -332,7 +327,6 @@ authing({auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
 	put(account,AccountName),
 	put(adult,IsAdult),
 	{next_state,rolelisting,StateData};
-
 authing({qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}, StateData) ->
 	RoleList = gate_op:get_role_list(AccountName,get(serverid)),
 	{NickName,Gender,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level} = Info,
@@ -372,7 +366,6 @@ authing({qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,Ope
 	put(openkey, OpenKey),
 	put(pfkey, PfKey),
 	{next_state,rolelisting,StateData};
-
 authing(Event, State) ->
 	{next_state, authing, State}.
 
@@ -426,24 +419,20 @@ rolelisting({role_create_request,RoleName,Gender,ClassType}, StateData)->
 					send_data(self(), SendData),
 					{next_state,rolelisting,StateData}
 	end;
-
 rolelisting({role_create_success,RoleInfo}, StateData)->
 	RoleList = get(role_list) ++ RoleInfo,
 	put(role_list, RoleList),
 	SendData = login_pb:encode_player_role_list_s2c(#player_role_list_s2c{roles=RoleList}),
 	send_data(self(),SendData),
 	{next_state,rolelisting,StateData};
-
 rolelisting({line_info_request,MapId},StateData)->
 	async_get_line_info_by_mapid(MapId),
 	{next_state,rolelisting,StateData};
-
 rolelisting({line_info_success,LineInfos},StateData)->
 	LineInfoByRecord = linesinfo_to_record(LineInfos),
 	SendData = login_pb:encode_role_line_query_ok_s2c(#role_line_query_ok_s2c{lines=LineInfoByRecord}),
 	send_data(self(),SendData),
 	{next_state,logining,StateData};
-
 rolelisting({reset_random_rolename}, StateData)->
 	%%auto_name
 	put(autoname,[]),
@@ -455,7 +444,6 @@ rolelisting({reset_random_rolename}, StateData)->
 			nothing
 	end,
 	{next_state, rolelisting, StateData};
-	
 rolelisting(Event, State) ->
 	{next_state, rolelisting, State}.
 
@@ -492,18 +480,14 @@ logining({role_into_map_request,RoleId,_LineId},StateData) ->
 			self()!{kick_client}
 	end,
 	{next_state,logining,StateData};
-
-
 logining({line_info_success,LineInfos}, StateData)->
 	{LineId,_OnlineRole}=line_util:get_min_count_of_lines(LineInfos),
 	put(lineid, LineId),
 %% 	start_game_after_line_fixed(LineId),
 	start_game_after_line_fixed(1),				%%枫少修改只有一线
 	{next_state,logining,StateData};
-
 logining({role_into_map_success}, StateData) ->
 	{next_state, gaming,StateData};
-	
 logining(Event, State) ->
 	{next_state, logining, State}.
 
@@ -515,7 +499,6 @@ logining(Event, State) ->
 %% env_prepared X preparing_into_map -> gaming 
 preparing_into_map({env_prepared,Info},StateData)->
 	{next_state,gaming,StateData};
-
 preparing_into_map(Event, State) ->
 	{next_state, preparing_into_map, State}.
 
@@ -528,19 +511,16 @@ preparing_into_map(Event, State) ->
 gaming({line_info_request,MapId}, StateData)->
 	async_get_line_info_by_mapid(MapId),
 	{next_state,gaming,StateData};
-
 gaming({line_info_success,LineInfos},StateData)->
 	LineInfoByRecord = linesinfo_to_record(LineInfos),
 	SendData = login_pb:encode_role_line_query_ok_s2c(#role_line_query_ok_s2c{lines=LineInfoByRecord}),
 	send_data(self(),SendData),
 	{next_state,gaming,StateData};
-	
 gaming({auth_failed,Reason}, StateData) ->
 	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
 	SendData = login_pb:encode_user_auth_fail_s2c(FailedMsg),
 	send_data(self(), SendData),
 	{next_state, connected,StateData};
-
 gaming({auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
 	put(playerid, AccountName),
 	put(account,AccountName),
@@ -548,7 +528,6 @@ gaming({auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
 	role_processor:finish_visitor(RolePid,AccountName),
 	self()! {needchangename},
 	{next_state,gaming,StateData};
-
 gaming(Event,StateData)->
 	{next_state,gaming,StateData}.
 
@@ -557,7 +536,6 @@ gaming(Event,StateData)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_event(stop, StatName , StateData)->
 	{stop, normal, StateData};
-
 handle_event(Event, StateName, StateData) ->
 	{next_state, StateName, StateData}.
 
@@ -582,7 +560,6 @@ handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, Stat
 		_-> nothing
 	end,
 	{reply, {ChatNode,ChatProc}, StateName, StateData};
-
 handle_sync_event(Event, From, StateName, StateData) ->
 	Reply = ok,
 	{reply, Reply, StateName, StateData}.
@@ -592,7 +569,6 @@ handle_info({mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 	put(mapid, MapId),
 	put(roleproc, RoleProc),
 	{next_state,StateName, StateData};
-
 handle_info({alive_check}, StateName, StateData) ->
 	case get(alive_time) of
 		undefined->
@@ -608,8 +584,6 @@ handle_info({alive_check}, StateName, StateData) ->
 			end
 	end,
 	{next_state, StateName, StateData};
-					
-
 %%
 %% game gate need to send data
 handle_info({send_to_client, Data}, StateName, StateData) ->
@@ -623,7 +597,6 @@ handle_info({send_to_client, Data}, StateName, StateData) ->
 	end,
 	erlang:port_command(get(clientsock), Data, [force]),
 	{next_state, StateName, StateData};
-
 handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData) ->
 	IpAddr = get(clientaddr),
 	case whiteip:match(IpAddr) of
@@ -648,7 +621,6 @@ handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData
 	end,
 	
 	{next_state, StateName, StateData};
-		
 handle_info({do_recv}, StateName, StateData) ->	
 	%%RolePid = rpc:call(get(mapnode), erlang, whereis, [get(roleproc)]),
 	RolePid  = {get(roleproc),get(mapnode)},
@@ -664,7 +636,6 @@ handle_info({do_recv}, StateName, StateData) ->
 			put(recv_timer_ref, RecvTimerRef)	
 	end,
 	{next_state, StateName, StateData};
-
 handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	put(alive_time,os:timestamp()),
 	{M,F,A} = get(on_receive_data),
@@ -681,52 +652,41 @@ handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 		
 	inet:setopts(Socket, [{active, once}]),
 	{next_state, StateName, StateData};
-
 handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 	do_clear_on_close(),
 	{stop, normal, StateData};
-
 handle_info({shutdown},StateName,StateData)->
 	do_clear_on_close(),
 	{stop, normal, StateData};
-
 %%no player logout
 handle_info({kick_client},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, maybe error client!\n"),
 	close_and_clear_no_logout(),
 	{stop,normal, StateData};	
-	
 handle_info({kick_client,KickInfo},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, Reason:~p!\n",[KickInfo]),
 	do_clear_on_close(),
 	{stop,normal, StateData};
-
 handle_info({needchangename},StateName,StateData)->
 	 SendData = login_pb:encode_visitor_rename_s2c(#visitor_rename_s2c{}),
 	 send_data(self(), SendData),
 	{next_state,StateName, StateData};
-
 handle_info({object_update_create,CreateData}, StateName, StateData) ->
 	packet_object_update:push_to_create_data(CreateData),
 	{next_state, StateName, StateData};
-	
 handle_info({object_update_delete,DelData}, StateName, StateData) ->
 	packet_object_update:push_to_delete_data(DelData),
 	{next_state, StateName, StateData};
-	
 handle_info({object_update_update,UpdateData}, StateName, StateData) ->
 	packet_object_update:push_to_update_data(UpdateData),
 	{next_state, StateName, StateData};
-
 handle_info({object_update_interval}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
 	erlang:send_after(?OBJECT_PACKET_UPDATE_INTERVAL,self(),{object_update_interval}),
 	{next_state, StateName, StateData};
-
 handle_info({send_pending_update}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
 	{next_state, StateName, StateData};
-	
 handle_info(_Info, StateName, StateData) ->
 	{next_state, StateName, StateData}.
 

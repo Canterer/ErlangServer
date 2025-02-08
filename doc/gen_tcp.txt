@@ -1,0 +1,87 @@
+知识点：
+gen_tcp:listen(Port, Opts)
+//Opts = [binary,{packet,0}, {reuseaddr, true},{keepalive, true}, {backlog, 256}, {active, false}]
+{ok, Listen_socket}
+	supervisor:start_child(tcp_acceptor_sup, [Listen_socket, AccIndex])
+	
+
+gen_server:cast(self(), accept)//? 给自己广播一个消息？
+
+prim_inet:async_accept(LSock, -1).//prim_inet提供一个底层的接口来处理网络编程， 异步的接受连接请求。
+//注意异步接受连接  异步完成回调为handle_info({inet_async, ListenSock, Ref, {ok, ClientSock}, State).
+//gen_tcp:accept和gen_tcp:recv都是阻塞的、prim_inet:async_accept异步的
+{ok, Mod} = inet_db:lookup_socket(ListenS)//Mod 为 inet_tcp或inet6_tcp
+inet_db:register_socket(ClientS, Mod)//关联对应的客户端Socket 使用的网络设置  以上两步针对异步或阻塞连接是必须的
+
+supervisor:start_child(tcp_acceptor_sup, [Listen_socket,AccIndex])
+
+关键代码片段：
+handle_info({inet_async, LSock, Ref, {ok, Sock}} 此处为网络异动
+{ok, Mod} = inet_db:lookup_socket(LSock)
+inet_db:register_socket(Sock, Mod),
+{Address, Port} = inet_op(fun() -> inet:sockname(LSock) end),
+{PeerAddress, PeerPort} = inet_op(fun() -> inet:peername(Sock) end),
+{ok, ChildPid} = supervisor:start_child(base_tcp_client_sup, []),
+gen_tcp:controlling_process(Sock, ChildPid),
+case Disable of
+	true ->
+		base_tcp_client_fsm:socket_disable(node(), ChildPid, Sock);
+	false->
+		base_tcp_client_fsm:socket_ready(node(), ChildPid, Sock);
+
+主要流程：
+base_tcp_listener_sup:start_link()
+四个参数：
+	listener监听开始回调
+	listener监听结束回调
+	接收连接时回调
+	接受连接的个数限制
+	
+	其监控树根据连接个数限制，创建子监控树base_tcp_acceptor_sup
+
+base_tcp_acceptor_server
+	handle_info({inet_async, LSock, Ref, {ok, Sock}, State)时开启supervisor:start_child(base_tcp_client_sup, []).
+
+
+base_tcp_client_sup:start_link()
+两个参数：
+	接收数据回调
+	关闭连接回调
+两个周期任务：alive_check、object_update_interval
+	alive_check：固定间隔内向自身发送消息，监测自身多久未接受到 tcp 消息。
+	send_pending_update： 通过packet_object_update来传递消息
+		packet_object_update通过role_packet:encode_object_update_s2c来组建Message
+		Message通过erlang:binary_to_term(Message)处理数据。
+		并通过erlang:port_command(clientsock, Message, [force]).来传递数据。
+		object_update 为 {objectid,objecttype,attrs}记录。
+
+
+base_tcp_client_fsm
+	初始状态：connecting	可接受消息：socket_ready、socket_disable	下一状态：connected
+	流程： gen_tcp:recv(ClientSocket, 4, 180000）限时3分钟 获取4字节头
+		4字节数据若对应CROSS_DOMAIN_FLAG_HEADER	则获取CROSS_DOMAIN_FLAG，并通过base_crossdomain_server反馈make_normal_cross_file
+			若对应"tgw_", 则先filter_tgw接受残留数据。再反馈login_pb:encode_tgw_gateway_s2c()
+			若对应Packet头，则正常获取PacketLength，逐步接受数据
+	connected->authing->rolelisting->logining->gaming
+网络编程：
+	//套接字 gen_tcp:connect(Address,Port,Opts)、gen_tcp:listen(Port,Opts)
+	//Opts中的{active, true|false|once}设置套接字的打开模式：主动、单次主动、被动
+	//主动套接字收到数据时向控制进程发送{tcp, Socket, Data}消息，无法控制消息流。
+	//被动套接字通过gen_tcp:recv(Socket, N)尝试接受N个字节。N=0代表返回可用字节。
+	{ok, Listen_socket} = gen_tcp:listen(Port, Opts)
+	inet:setopts(Listen_socket, [{packet, 0}])//显式设置套接字选项
+	{ok, {IPAddress, Port}} = inet:sockname(Listen_socket)
+	gen_tcp:close(Listen_socket)
+	
+	erlang:register(AcceptorIndex, self())// tcp_acceptor根据id注册自己
+	
+	{ok, Ref} = prim_inet:async_accept(Listen_socket, -1)
+	该操作会触发 handle_info({inet_async, Listen_socket, Ref, {ok, ClientSock}},  State)
+	其中ClientSock为客户端连接的sock,用于向客户端发送数据
+	{ok, Mod} = inet_db:lookup_socket(Listen_socket)
+	inet_db:register_socket(ClientSock, Mod)//？？为啥关联ClientSock与Mod
+	{ok, ChildPid} = supervisor:start_child(base_tcp_client_sup, [])
+	ok = gen_tcp:controlling_process(ClientSock, ChildPid)//修改套接字的控制进程，默认为创建该套接字的进程
+	转发数据给base_tcp_client_fsm
+	base_tcp_client_fsm:socket_ready(node(), ChildPid, ClientSock)
+	
