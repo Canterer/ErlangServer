@@ -1,12 +1,12 @@
-%% Description: TODO: Add description to base_tcp_listener_sup
--module(base_tcp_listener_sup).
+%% Description: TODO: Add description to base_gm_client_sup
+-module(base_gm_client_sup).
 
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
 -export([
-	start_link/4,
-	start_link/5
+	start_link/1,
+	get_client_count/0
 ]).
 
 %% --------------------------------------------------------------------
@@ -25,30 +25,25 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
-start_link(Port, OnStartup, OnShutdown, AcceptCallback) ->
-    start_link( Port, OnStartup, OnShutdown, AcceptCallback, 1).
+start_link([])->
+	supervisor:start_link({local, ?SERVER},?MODULE, []).
 
-start_link(Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount) ->
-    supervisor:start_link({local,?MODULE},?MODULE, {Port, OnStartup, OnShutdown,
-									AcceptCallback, AcceptorCount}).
+get_client_count()->
+	%% count_children函数在新版的OTP库中存在
+	%%supervisor:count_children(?MODULE).
+	not_implement.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init({ Port, OnStartup, OnShutdown, AcceptCallback, AcceptorCount}) ->
-    %% This is gross. The base_tcp_listener_server needs to know about the
-    %% tcp_acceptor_sup, and the only way I can think of accomplishing
-    %% that without jumping through hoops is to register the
-    %% tcp_acceptor_sup.
-	{ok, {{one_for_all, 10, 10},
-          [{base_tcp_acceptor_sup, 
-				{base_tcp_acceptor_sup, start_link,
-				 [AcceptCallback]},
-			    transient, infinity, supervisor, [base_tcp_acceptor_sup]},
-		   {base_tcp_listener_server, {base_tcp_listener_server, start_link,
-				[Port,  AcceptorCount, OnStartup, OnShutdown]},
-			    transient, 100, worker, [base_tcp_listener_server]}		
-		  ]}}.
+do_init([]) ->
+	{ok,{{simple_one_for_one,5, 60}, 
+		[
+			{base_gm_client_fsm, 				%% target process noname
+			{base_gm_client_fsm,start_link,[]},
+			temporary, 				%% target process is temporary
+			brutal_kill,worker,[]}
+		]}}.
 
 %% --------------------------------------------------------------------
 %%% not export functions

@@ -11,6 +11,7 @@
 -define(BASE_MAP_OPTION_FILE,"../src/base_core/option/base_map_config.option").
 -define(BASE_GATE_OPTION_FILE,"../src/base_core/option/base_gate_config.option").
 -define(BASE_CROSSDOMAIN_OPTION_FILE,"../src/base_core/option/base_crossdomain_config.option").
+-define(BASE_GM_OPTION_FILE,"../src/base_core/option/base_gm_config.option").
 
 %%
 %% Exported Functions
@@ -118,6 +119,7 @@ reset()->
 	read_from_file(?BASE_MAP_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_GATE_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_CROSSDOMAIN_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_GM_OPTION_FILE,?OPTION_ETS),
 	ok.
 
 

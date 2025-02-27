@@ -1,25 +1,24 @@
-%% Description: TODO: Add description to base_tcp_listener_server
--module(base_tcp_listener_server).
+%% Description: TODO: Add description to base_gm_listener_server
+-module(base_gm_listener_server).
 
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
--export([start_link/4,
+-export([
+	start_link/4,
 	disable_connect/0,
-	enable_connect/0,
-	query_port/0
+	enable_connect/0
 ]).
 
 %% --------------------------------------------------------------------
 %% Macros
 %% --------------------------------------------------------------------
--define(ACCEPTOR_PROC_ETS,'$ets_acceptor_proc$').
 -ifdef(debug).
-	-define(OPEN_GATE_TIME,10*1000).		%%debug  time is short
-	-define(OPEN_GATE_DOOR,enable_connect()).
+	-define(OPEN_GM_TIME,60*2).		%%debug  time is short
+	-define(OPEN_GM_DOOR,enable_connect()).
 -else.
-	-define(OPEN_GATE_DOOR,disable_connect()).
-	-define(OPEN_GATE_TIME,60*2*1000).	%%10min
+	-define(OPEN_GM_DOOR,disable_connect()).
+	-define(OPEN_GM_TIME,60*2*1000).	%%10min
 -endif.
 
 %% --------------------------------------------------------------------
@@ -49,9 +48,6 @@ start_link(Port, AcceptorCount ,
 	base_gen_server:start_link({local, ?SERVER}, ?MODULE, 
 						  {Port, AcceptorCount  ,
 						   OnStartup, OnShutdown}, []).
-
-query_port()->
-	base_gen_server:call(?SERVER, {query_port} ,infinity).
 
 %%--------------------------------------------------------------------
 %% Function: disable_connect/0
@@ -83,12 +79,11 @@ do_init({Port,AcceptorCount,{M,F,A} = OnStartup, OnShutdown}) ->
 		{ok, Listen_socket} ->
 			 SeqList = lists:seq(1, AcceptorCount),
 			 Fun = fun(AccIndex,Acc)->
-						   {ok, _APid} = supervisor:start_child(base_tcp_acceptor_sup, [Listen_socket,AccIndex]),
+						   {ok, _APid} = supervisor:start_child(base_gm_acceptor_sup, [Listen_socket,AccIndex]),
 						   
 						   AcceptorName = base_tcp_acceptor_server:get_proc_name(AccIndex),
-%%@@ 						   ?OPEN_GATE_DOOR,
-%%@@ 						   erlang:send_after(?OPEN_GATE_TIME,?MODULE,{enable_connect}),
-                           erlang:send_after(0,?SERVER,{3}),
+ 						   disable_connect(),
+ 						   erlang:send_after(?OPEN_GM_TIME,?MODULE,{enable_connect}),
 						   [AcceptorName|Acc]
 				   end,
              AccProcs = lists:foldl(Fun,[],SeqList),
@@ -121,13 +116,13 @@ do_handle_cast(_Msg, State) ->
 do_handle_info({disable_connect}, State = #state{acceptors=AccProcs}) ->
 %%	base_logger_util:msg("handle_info disable_connect ~p ~n",[?MODULE]),
 	lists:foreach(fun(AcceptorName)->
-						  R = base_tcp_acceptor_server:disable_connect(AcceptorName),
+						  R = base_gm_acceptor_server:disable_connect(AcceptorName),
 						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
     {noreply, State};
 do_handle_info({enable_connect},State = #state{acceptors=AccProcs})->
 	lists:foreach(fun(AcceptorName)->
-						  R = base_tcp_acceptor_server:enable_connect(AcceptorName),
+						  R = base_gm_acceptor_server:enable_connect(AcceptorName),
 						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
 	{noreply, State};

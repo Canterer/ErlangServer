@@ -1,0 +1,29 @@
+{application, base_gm_app,
+[
+	{description,"base gm application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_gm_app,
+			base_gm_client_sup,
+			base_gm_client_fsm,
+			base_gm_listener_sup,
+			base_gm_listener_server,
+			base_gm_acceptor_sup,
+			base_gm_acceptor_server
+		]
+	},
+	{registered,
+		[
+			base_gm_client_sup,
+			base_gm_client_fsm,
+			base_gm_listener_sup,
+			base_gm_listener_server,
+			base_gm_acceptor_sup,
+			base_gm_acceptor_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_gm_app,[]}}
+]
+}.

@@ -28,6 +28,12 @@
 			{timer,
 				['timer']
 			},
+			{auth,
+				['auth']
+			},
+			{guild,
+				['guild']
+			},
 			%%跨服进程
 			{map_travel,
 				['map_share']
@@ -56,6 +62,11 @@
 			{loop_instance_mgr,			['map2']},
 			{db_node,					['db']},	%%数据库进程所在节点	
 			%%{gm_node,					['gm']},
+			%%{auth_processor,['auth']},
+			%%{gmauth_processor,['auth']},
+			%%{loudspeaker_manager,['chat1']},
+			%%{guild_manager,['guild']},
+			%%{country_manager,['guild']},
 			{guild_instance_processor,	['map2']}			
 		]
 	},
@@ -74,16 +85,66 @@
 		[
 			%%{节点类型,[需要当作global使用的进程]}
 			{gate,
-				[base_line_manager_server,db_node]
+				[
+					base_line_manager_server,
+					%%gm_node,
+					%%auth_processor,gmauth_processor,
+					db_node
+				]
 			},
 			{map,
-				[auction_manager,instanceid_generator,itemid_generator,base_line_processor_server,base_line_manager_server,mailid_generator,petid_generator,roleid_generator,visitor_generator,activity_manager,group_manager,loop_instance_mgr,auction_manager,battle_ground_manager,dragon_fight_processor,answer_processor,db_node,game_rank_manager,guildbattle_manager,guild_instance_processor]
+				[
+					auction_manager,instanceid_generator,itemid_generator,base_line_processor_server,base_line_manager_server,mailid_generator,petid_generator,roleid_generator,visitor_generator,activity_manager,group_manager,loop_instance_mgr,auction_manager,battle_ground_manager,dragon_fight_processor,answer_processor,game_rank_manager,guildbattle_manager,guild_instance_processor,
+					%%gm_node,
+					%%loudspeaker_manager,
+					db_node
+				]
 			},
 			{db,
-				[itemid_generator,mailid_generator,petid_generator,roleid_generator,visitor_generator,db_node]
+				[
+					itemid_generator,mailid_generator,petid_generator,roleid_generator,visitor_generator,
+					%%gm_node,
+					db_node
+				]
 			},
 			{line,
-				[guildid_generator,instanceid_generator,itemid_generator,gm_notice_checker,base_line_manager_server,base_line_processor_server,mailid_generator,petid_generator,roleid_generator,visitor_generator,db_node]
+				[
+					guildid_generator,instanceid_generator,itemid_generator,gm_notice_checker,base_line_manager_server,base_line_processor_server,mailid_generator,petid_generator,roleid_generator,visitor_generator,
+					%%gm_node,
+					%%loudspeaker_manager,
+					db_node
+				]
+			},
+			{gm,
+				[
+					base_line_manager_server,
+					%%gm_node,
+					%%auth_processor,gmauth_processor,
+					db_node
+				]
+			},
+			{auth,
+				[
+					%%auth_processor,gmauth_processor,
+					%%itemid_generator,mailid_generator,petid_generator,roleid_generator,visitor_generator,
+					db_node
+				]
+			},
+			{chat,
+				[
+					base_line_manager_server,
+					%%loudspeaker_manager,
+					%%gm_node,
+					db_node
+				]
+			},
+			{guild,
+				[
+					%%guild_manager,guildid_generator,
+					mailid_generator,
+					%%gm_node,country_manager,
+					db_node
+				]
 			}
 		]
 	},

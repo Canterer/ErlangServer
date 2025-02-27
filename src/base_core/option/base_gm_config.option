@@ -1,0 +1,8 @@
+[
+	{gmport,[{'gm',20130}]},
+	{gm,[{acceptor_count,2}]},
+	{gmsecretkey,"E3it45taadfasxcyerfs%&*&6uMu67h"},
+	{gmauthttimeout,3600},
+	{gmiplist,[{"192.168.1.1","192.168.1.254"},{"192.168.0.1","192.168.0.254"},{"127.0.0.1","127.0.0.1"}]},
+	{gmaccount,["yanghh","yanghuan","zhanghao","testivy1","testivy2","testivy3","testivy4","testivy5","testivy6","testivy7","testivy8","testivy9","testivy0"]}
+].

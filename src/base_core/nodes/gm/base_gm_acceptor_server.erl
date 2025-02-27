@@ -1,5 +1,5 @@
-%% Description: TODO: Add description to base_tcp_acceptor_server
--module(base_tcp_acceptor_server).
+%% Description: TODO: Add description to base_gm_acceptor_server
+-module(base_gm_acceptor_server).
 
 %% --------------------------------------------------------------------
 %% External exports
@@ -31,7 +31,7 @@
 %%% put(key, value)、get(key)在进程字典中存储和检索键值对
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
-start_link(Callback, LSock, AcceptorIndex) ->
+start_link(Callback, LSock,AcceptorIndex) ->
     base_gen_server:start_link(?MODULE, {Callback, LSock, AcceptorIndex}, []).
 
 
@@ -48,7 +48,7 @@ enable_connect(NamedProc)->
 	end.
 
 get_proc_name(AcceptorIndex)->
-	list_to_atom("acceptor_"++integer_to_list(AcceptorIndex)).
+	list_to_atom("gm_acceptor_"++integer_to_list(AcceptorIndex)).
 
 %% --------------------------------------------------------------------
 %%% Internal functions
@@ -56,7 +56,7 @@ get_proc_name(AcceptorIndex)->
 do_init({Callback, LSock, AcceptorIndex}) ->
 	?ZS_LOG("{Callback:~p, LSock:~p, AcceptorIndex:~p}",[Callback,LSock,AcceptorIndex]),
 	%%make acceptor name
-	erlang:register(get_proc_name(AcceptorIndex), self()),
+	% erlang:register(get_proc_name(AcceptorIndex), self()),
     base_gen_server:cast(self(), accept),
     {ok, #state{callback=Callback, sock=LSock,disable_connect=false}}.
 
@@ -83,7 +83,7 @@ do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
 		{Address, Port}         = inet_op(fun () -> inet:sockname(LSock) end),
 		{PeerAddress, PeerPort} = inet_op(fun () -> inet:peername(Sock) end),
 		base_logger_util:msg("accepted TCP connection on ~s:~p from ~s:~p~n",[inet_parse:ntoa(Address), Port,inet_parse:ntoa(PeerAddress), PeerPort]),
-		{ok, ChildPid} = supervisor:start_child(base_tcp_client_sup, []),
+		{ok, ChildPid} = supervisor:start_child(base_gm_client_sup, []),
 		ok = gen_tcp:controlling_process(Sock, ChildPid),
 		case Disable of
 			true->
@@ -95,9 +95,9 @@ do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
 	catch
 		{inet_error, Reason} ->
 				gen_tcp:close(Sock),
-				base_logger_util:error_msg("unable to accept TCP connection: ~p~n",[Reason]);
+				base_logger_util:error_msg("unable to accept gm TCP connection: ~p~n",[Reason]);
 		EXP->
-				base_logger_util:error_msg("unable to accept TCP connection: ~p~n",[EXP])
+				base_logger_util:error_msg("unable to accept gm TCP connection: ~p~n",[EXP])
 	end,
 	accept(State);
 do_handle_info({inet_async, LSock, Ref, {error, closed}},
