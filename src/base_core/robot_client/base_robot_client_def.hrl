@@ -1,0 +1,1 @@
+-record(robot_client_config, {life_time, user_name, user_password, server_addr, server_port,lineid, mapid,level,speekrate,serverid}).

@@ -46,9 +46,9 @@ send_data(GMPid, Data) ->
 	try
 		case Data of
 			<<>> ->
-				throw("error: empty data to gm client")
+				throw("error: empty data to gm client");
 			[] ->
-				throw("error: empty data to gm client")
+				throw("error: empty data to gm client");
 			_ ->
 				GMPid ! {send_to_client, Data}
 		end			
@@ -61,11 +61,11 @@ send_data(GMPid, GMProc, Data) ->
 	GMPid = GMProc,
 	case Data of
 		<<>> ->
-			throw("error: empty data to gm client")
+			throw("error: empty data to gm client");
 		[] ->
-			throw("error: empty data to gm client")
+			throw("error: empty data to gm client");
 		_ ->
-			base_rpc_util:cast(GMPid, {send_to_client, Data}
+			base_rpc_util:cast(GMPid, {send_to_client, Data})
 	end.
 	
 shutown_client(Pid) ->
@@ -119,7 +119,7 @@ connecting({socket_ready,CliSocket},StateData)->
 		true->
 			% ProcName = make_client_name(CliSocket),
 			% erlang:register(ProcName, self()),
-			inet_setopts(CliSocket, ?TCP_CLIENT_SOCKET_OPTIONS),
+			inet:setopts(CliSocket, ?TCP_CLIENT_SOCKET_OPTIONS),
 			put(clientsock, CliSocket),
 			put(clientaddr, PeerIPAddress);
 		_->
@@ -137,10 +137,10 @@ connecting(Event,StateData)->
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 connected({start_auth,GMUserName,GMUserId,Time,AuthResult}, StateData) ->
-	gmauth_processor:auth(node(),self(),GMUserName,GMUserId,Time,AuthResult);
+	gmauth_processor:auth(node(),self(),GMUserName,GMUserId,Time,AuthResult),
 	{next_state, authing, StateData};
-connected(Event,State) ->
-	{next_state, connected, State}.
+connected(Event,StateData) ->
+	{next_state, connected, StateData}.
 
 
 
@@ -150,7 +150,7 @@ connected(Event,State) ->
 authing({auth_failed,Reason}, StateData) ->
 	self()!{kick_client,Reason},
 	{next_state, connected,StateData};
-=authing({auth_ok,GMId}, StateData) ->
+authing({auth_ok,GMId}, StateData) ->
 	AuthOk = {struct,[{<<"cmd">>,<<"auth_ok">>}]},
 	case base_json_util:json_encode(AuthOk) of
 		{ok,JsonBin}->
@@ -249,7 +249,7 @@ handle_info({send_to_client, Data}, StateName, StateData) ->
 	{next_state,StateName, StateData};
 handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	handle_clien_json(BinData),
-	inet_setopts(Socket, [{active, once}]),
+	inet:setopts(Socket, [{active, once}]),
 	{next_state, StateName, StateData};
 handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 	{stop, normal, StateData};
@@ -326,7 +326,7 @@ handle_json({struct,_JsonMember}=JsonObj)->
 	end.
 
 handle_json_auth(JsonObj)->
-	{ok,GMUser} = base_json_util:get_json_member(JsonObj,"username"),
+	{ok,GMUserName} = base_json_util:get_json_member(JsonObj,"username"),
 	{ok,GMUserId} = base_json_util:get_json_member(JsonObj,"userid"),
 	{ok,Time} = base_json_util:get_json_member(JsonObj,"time"),
 	{ok,Flag} = base_json_util:get_json_member(JsonObj,"flag"),

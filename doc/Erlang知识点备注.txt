@@ -142,3 +142,12 @@ filename:dirname(Filename)//返回路径
 filelib:ensure_dir(Name)
 filelib:wildcard(Wildcard)//用于查找匹配指定模式的文件路径
 filelib:file_size()
+
+
+外部启动
+erl.exe -name xx@127.0.0.1 -s xxModule xxModuleFunc -s init stop
+
+启动参数有三种
+-s Module Func Arg1 Arg2	Module:Func([Arg1,Arg2])
+-run Module Func Arg1 Arg2  Module:Func([Arg1,Arg2])
+-eval "Module:Func(1,2)"	Module:Func(1,2)
