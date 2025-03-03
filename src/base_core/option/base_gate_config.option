@@ -1,4 +1,12 @@
 [
-	{gateport,[{'gate1',8001}]},
-	{gate,[{acceptor_count,2}]}
+	{gateport,
+		[
+			{'gate1',8001}
+		]
+	},
+	{gate,
+		[
+			{acceptor_count,2}
+		]
+	}
 ].

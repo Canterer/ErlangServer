@@ -158,7 +158,7 @@ authing({auth_ok,GMId}, StateData) ->
 		{error, Reason}->
 			base_logger_util:msg("util:json_encode ~p error:~p~n",[AuthOk,Reason])
 	end,
-	{next_state,rolelisting,StateData};
+	{next_state,managing,StateData};
 authing(Event, State) ->
 	{next_state, authing, State}.
 

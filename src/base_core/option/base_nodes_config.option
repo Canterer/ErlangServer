@@ -34,6 +34,8 @@
 			{guild,
 				['guild']
 			},
+			%% 以上可理解为 {节点类型,[同类型的节点列表,共享逻辑]} 如map1、map2都是指定map_app运行
+			%% 以下可理解为 {全局唯一进程，[启动节点名]} 如auction_manager全局进程只会在map1节点的启动
 			%%跨服进程
 			{map_travel,
 				['map_share']
@@ -62,8 +64,8 @@
 			{loop_instance_mgr,			['map2']},
 			{db_node,					['db']},	%%数据库进程所在节点	
 			%%{gm_node,					['gm']},
-			%%{auth_processor,['auth']},
-			%%{gmauth_processor,['auth']},
+			{base_auth_processor_server,['auth']},
+			{base_auth_gm_processor_server,['auth']},
 			%%{loudspeaker_manager,['chat1']},
 			%%{guild_manager,['guild']},
 			%%{country_manager,['guild']},
@@ -83,12 +85,17 @@
 
 	{global_wait_proc,
 		[
-			%%{节点类型,[需要当作global使用的进程]}
+			%%{节点类型,[需要通信的global进程名列表]}
+			%% 属于该节点类型的节点中需要通信的进程名列表 
+			%% 可以直接通过进程global_proc_name 发送消息给其进程对应的节点中
+			%% 每个进程global_proc_name在proc_allowed_nodes中限制了其所属的节点
+			%% 所以每个global_proc_name都只能关联一个节点，
+			%% 如xxx只属于gate1,不属于gate2. 即使两者属于同一节点类型，具备同样的全局进程名列表
 			{gate,
 				[
 					base_line_manager_server,
 					%%gm_node,
-					%%auth_processor,gmauth_processor,
+					base_auth_processor_server,base_auth_gm_processor_server,
 					db_node
 				]
 			},
@@ -119,13 +126,13 @@
 				[
 					base_line_manager_server,
 					%%gm_node,
-					%%auth_processor,gmauth_processor,
+					base_auth_processor_server,base_auth_gm_processor_server,
 					db_node
 				]
 			},
 			{auth,
 				[
-					%%auth_processor,gmauth_processor,
+					base_auth_processor_server,base_auth_gm_processor_server,
 					%%itemid_generator,mailid_generator,petid_generator,roleid_generator,visitor_generator,
 					db_node
 				]

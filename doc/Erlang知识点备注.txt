@@ -151,3 +151,57 @@ erl.exe -name xx@127.0.0.1 -s xxModule xxModuleFunc -s init stop
 -s Module Func Arg1 Arg2	Module:Func([Arg1,Arg2])
 -run Module Func Arg1 Arg2  Module:Func([Arg1,Arg2])
 -eval "Module:Func(1,2)"	Module:Func(1,2)
+
+
+inet:sockname(Socket) ->
+	prim_inet:sockname(Socket).
+inet:peername(Socket) -> 
+	prim_inet:peername(Socket).
+inet:setopts(Socket, Opts)
+inet:getopts(Socket, Opts)
+inet:tcp_close(S) when is_port(S) -> ...
+inet:tcp_module(Opts)
+inet:tcp_module(Opts, Addr)//inet_tcp | inet6_tcp | local_tcp
+inet_parse:ntoa(Addr)//Convert IP address to ascii
+
+gen_tcp:connect(Address, Port, Opts)
+gen_tcp:connect(Address, Port, Opts, Timeout)
+gen_tcp:listen(Port, Options)
+gen_tcp:accept(ListenSocket)->
+	case inet_db:lookup_socket(ListenSocket) of
+	{ok, Mod} ->
+		Mod:accept(ListenSocket);
+	Error ->
+		Error
+	end.
+accept(ListenSocket, Timeout)->
+	case inet_db:lookup_socket(ListenSocket) of
+	{ok, Mod} ->
+		Mod:accept(ListenSocket, Timeout);
+	Error ->
+		Error
+	end.
+gen_tcp:send(Socket, Packet)
+gen_tcp:recv(Socket, Length)
+gen_tcp:controlling_process(Socket, Pid)//修改套接字的控制进程，默认为创建该套接字的进程
+gen_tcp:close(Socket)->
+	inet:tcp_close(Socket).
+gen_tcp:fdopen(Fd, Opts)//Create a port/socket from a file descriptor 
+gen_tcp:shutdown(S,How) when is_port(S)->
+	case inet_db:lookup_socket(s) of
+		{ok, Mod} ->
+			Mod:shutdown(S, How);
+		Error->
+			Error
+	end.
+
+
+prim_inet:accept//间接调用prim_inet:async_accept
+prim_inet:async_accept(ListenSock, infinity)//等同于async_accept(ListenSock, -1)
+prim_inet众多接口底层都是调用erlang:port_control(Port, Cmd, Args)接口
+//prim_inet:async_accept. return {ok,Ref} or {error, Reason}
+//the owner of socket S will receive an {inet_async,S,Ref,Status} on socket condition
+//Status= {ok, ClientSock} | {error, Reason}
+
+inet_db:lookup_socket(Sock)//底层调用erlang:port_get_data(Socket)返回Mod
+inet_db:register_socket(Sock, Mod)//底层调用erlang:port_set_data(Socket, Mod)

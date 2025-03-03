@@ -39,3 +39,54 @@ gm.option里的
 	其中启动的node关联运行对应app，启动的时候指定的节点名NodeStr字符串是包含其对于的app字符串的。
 类似role_id_generator,['line']是所属节点line 其中对于的line.app后续创建的
 line节点是中心节点，其它节点通过net_adm:ping连接该节点。
+
+
+./src/base_core/nodes/ReadMe.txt 有相关node的简介
+
+框架流程：
+	gate节点 负责监听客户端连接。
+		base_tcp_client_fsm状态机负责持有ClientSock
+	给客户端发送消息即协议数据,都是直接或间接通过base_tcp_client_fsm:send_data实现的
+		base_tcp_client_fsm:send_data(GatePid,Data) GatePid找到客户端对应的base_tcp_client_fsm进程,然后再发送给ClientSock即客户端
+
+	base_tcp_client_fsm状态机只有四个状态：connecting、connected、authing、rolelisting、logining、gaming
+		连接中->连接成功->验证中->角色列表->登录中(先进入line后进入map)->gaming
+	gaming中之后,会关联一个role_processor用于处理各种角色逻辑。
+	line一对多map, map一对多role_processor
+
+	line(分线)、map(地图)、db(数据库)、timer、crossdomain(跨域)、gm(后台管理)、chat(聊天)、guid(公会或联盟)、auth(登录验证即各平台)等均为辅助节点
+
+协议逻辑：
+	请求协议接收接口：base_tcp_client_fsm:handle_info({tcp, Socket, BinData}, StateName, StateData)
+	响应协议发送接口：base_tcp_client_fsm:send_data(GatePid,Data)//GatePid即base_tcp_client_fsm进程id
+	协议接受分派接口：package_dispatcher:dispatch(ID,Binary,FromProcName,RolePid)
+	//FromProcName即base_tcp_client_fsm进程id, RolePid即{role_processor进程id, 所在map节点}
+
+	客户端的协议数据流 大部分通过xxx_packet:handle流向role_processor进程 少部分流向base_tcp_client_fsm进程影响其状态
+	xxx_packet:handle(Message,RolePid)->
+		{ProcName,Node} ! {messageName, Message}
+
+	服务端的协议数据流 基本都在 xxx_packet中
+	xxx_packet:encode_xxx_s2c接口提供协议响应包
+	xxx_op中通过xxx_packet:encode_xxx_s2c组建响应协议包,并通过role_op:send_data_to_gate(Message)发送给base_tcp_client_fsm
+
+	role_op:send_data_to_gate(Message) ->
+		GateProc = get_proc_from_gs_system_gateinfo(get(gate_info)),
+		base_tcp_client_fsm:send_data(GateProc, Message).
+	其他接口
+	role_op:broadcast_message_to_aoi
+	role_op:broadcast_message_to_aoi_role
+	role_op:broadcast_message_to_aoi_client
+	role_op:broadcast_message_to_other_role
+	role_op:send_data_to_gate
+	role_op:send_to_other_role
+	role_op:send_to_other_client
+	role_op:send_to_other_client_roleinfo
+
+协议主要类：
+	login_pb.erl 所有协议的encode/decode 编码、解密接口
+	login_pb.hrl 所有协议的结构体记录 定义
+	package_dispatcher.erl 所有协议的分发逻辑
+	xxx_package: 提供某组协议的 转发、组建 接口   handle、encode_xxx_s2c、process_xxx
+	xxx_op: 提供协议数据的处理逻辑
+	xxx_db: 提供数据存储与查询

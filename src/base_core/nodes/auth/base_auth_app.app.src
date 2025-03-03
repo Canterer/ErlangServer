@@ -1,0 +1,27 @@
+{application, base_auth_app,
+[
+	{description,"base auth application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_auth_app,
+			base_auth_sup,
+			default_auth_func_mod,
+			base_auth_processor_server,
+			default_auth_gm_func_mod,
+			base_auth_gm_processor_server
+		]
+	},
+	{registered,
+		[
+			base_auth_sup,
+			default_auth_func_mod,
+			base_auth_processor_server,
+			default_auth_gm_func_mod,
+			base_auth_gm_processor_server
+		]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_auth_app,[]}}
+]
+}.

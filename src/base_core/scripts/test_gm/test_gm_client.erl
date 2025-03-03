@@ -560,7 +560,7 @@ code_change(OldVsn, State, Extra) ->
 %%% Internal functions
 %% --------------------------------------------------------------------
 handle_server_json(Bin)->
-	case util:json_decode(Bin) of
+	case base_json_util:json_decode(Bin) of
 		{ok,JsonObj}-> 
 			handle_json(JsonObj);
 		{error,_JsonError}-> ignor;
@@ -568,7 +568,7 @@ handle_server_json(Bin)->
 	end.
 
 handle_json({struct,_JsonMember} = JsonObj)->
-	Cmd = util:get_json_member(JsonObj,"cmd"),
+	Cmd = base_json_util:get_json_member(JsonObj,"cmd"),
 	io:format("cmd: ~p ~n",[Cmd]),
 	case Cmd of
 		{ok,"auth_ok"}-> handle_json_auth_ok(JsonObj);

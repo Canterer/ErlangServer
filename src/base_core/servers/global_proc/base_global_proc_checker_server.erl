@@ -1,4 +1,6 @@
 %% Description: TODO: Add description to base_global_proc_checker_server
+%% 每个节点都具有一张base_global_proc_ets表，记录自身需要通信的全局进程列表
+%% 同节点类型 gate1 gate2 拥有的全局进程表是一样的 global_proc_1只会属于一个节点 
 -module(base_global_proc_checker_server).
 
 %% --------------------------------------------------------------------
@@ -86,6 +88,7 @@ do_wait()->
 						not Re->
 							Re;
 						true->
+							% 限制只取本节点所对应的节点类型 需要通信的全局进程名列表
 							case base_node_util:check_node_allowable(NodeKey, node()) of
 								false->
 									Re;
@@ -108,6 +111,7 @@ wait_stop()->
 	put(global_proc_ready,true),
 	self() ! {stop}.
 
+% gate1节点会获取自身节点类型gate 对应的需要通信的全局进程名列表  gate=[global_proc1,global_proc2]
 is_all_node_waite_finish(MyWaitList)->
 	StillNotWaitedList = lists:filter(
 		fun(ModuleName)-> 
@@ -119,6 +123,7 @@ is_all_node_waite_finish(MyWaitList)->
 			true;			%%wait finish
 		true->
 			AllNodes = base_node_util:get_all_nodes(),
+			base_logger_util:msg("TTTTT~p~n",[AllNodes]),
 			lists:foreach(
 				fun(ProcNotWaited)-> 
 					wait_global_proc_regist(ProcNotWaited,AllNodes) 
@@ -126,6 +131,8 @@ is_all_node_waite_finish(MyWaitList)->
 			false
 	end.
 
+% 每个全局进程 只属于一个节点 即auction_manager只会在map1节点中启动
+% map1、map2都是指定map_app运行逻辑,但map_app的启动流程会根据节点名选择性启动auction_manager
 wait_global_proc_regist(ProcNotWaited,AllNodes)->
 	MatchNodes = lists:filter(
 		fun(CurNode)->

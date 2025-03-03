@@ -8,6 +8,6 @@ ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name map2@12
 ulimit -SHn 65535 && erl +P 100000 +K true  -smp disable -detached -name gate1@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name cross@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name gm@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
+ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name auth@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name chat1@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
 ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name guild@127.0.0.1 -s base_server_tool run --line line@127.0.0.1
-ulimit -SHn 65535 && erl +P 100000 +K true   -detached -name auth@127.0.0.1 -s base_server_tool run --line line@127.0.0.1

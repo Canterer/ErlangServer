@@ -85,3 +85,270 @@ base_tcp_client_fsm
 	转发数据给base_tcp_client_fsm
 	base_tcp_client_fsm:socket_ready(node(), ChildPid, ClientSock)
 	
+
+
+客户端：
+init(...)->
+	gen_fsm:send_event(self(),{login}),
+	{ok, entryStateName, StateData}.
+entryStateName({login},State)->
+	{ok,Socket}=gen_tcp:connect(ServerIP,ServerPort,Opts),
+	{next_state, entryStateName, State#state{socket=Socket}};
+//发送协议消息
+Request_xxx(...)->
+	Msg=login_pb:encode_xxxx_c2s(#xxxx_c2s{key1=Value1,key2=Value2})
+	sendtoserver(self(),Msg).
+sendtoserver(Pid,Binary)->
+	Pid!{sendtoserver,Binary}.
+handle_info({sendtoserver,Binary},StateName,StateData)->
+	gen_tcp:send(Socket,Binary)
+//接受服务端响应消息
+handle_info({tcp,Socket,Binary},StateName,State)
+	<<ID:16, Binary0/binary>> = Binary,
+	RecordName = login_pb:get_record_name(ID),
+	case RecordName of
+		create_role_sucess_s2c->
+			BinMsg=login_pb:decode_create_role_sucess_s2c(Binary0)
+	end,
+	//给状态机发送事件消息，让当前所处状态处理响应消息
+	gen_fsm:send_event(self(),BinMsg)
+
+xxxState(#query_time_s2c{time_async = ServerTime},State)->
+	.....
+
+服务端:
+	base_gate_app: 开启base_tcp_listener_sup、base_tcp_client_sup
+	base_tcp_listener_sup:开启base_tcp_acceptor_sup、base_tcp_listener_server
+	base_tcp_client_sup:开启base_tcp_client_fsm
+
+base_tcp_listener_server:init(Port,AcceptorCount)
+	case gen_tcp:listen(Port, Opts) of
+		{ok,Listen_socket}->
+			//开启AcceptorCount个 base_tcp_acceptor_server
+			supervisor:start_child(base_tcp_acceptor_sup, [Listen_socket,AccIndex])
+	end
+base_tcp_acceptor_server:init({Callback, ListenSock, AcceptorIndex})->
+	base_gen_server:cast(self(), accept)
+	{ok, #state{callback=Callback, sock=ListenSock,disable_connect=false}}
+base_tcp_acceptor_server:handle_cast(accept, State)->
+	accept(State)
+base_tcp_acceptor_server:accept(State = #state{sock=ListenSock})->
+	case prim_inet:async_accept(ListenSock, -1) of
+		{ok, Ref} ->
+			{noreply, State#state{ref=Ref}};
+		Error ->
+			{stop, {cannot_accept, Error}, State}
+	end.
+base_tcp_acceptor_server:handle_info(
+	{inet_async, ListenerSock, Ref, {ok, ClientSock}},
+	State=#state{callback={M,F,A},sock=ListenerSock,ref=Ref,disable_connect=Disable})->
+	{ok,Mod}=inet_db:lookup_socket(ListenerSock),
+	inet_db:register_socket(ClientSock, Mod),
+	try
+		{Address,Port}=inet_op(fun()->inet:sockname(ListenSock)end),
+		{PeerAddress,PeerPort}=inet_op(fun()->inet:sockname(ClientSock)end),
+		{ok,ChildPid}=supervisor:start_child(base_tcp_client_sup,[]).
+		ok = gen_tcp:controlling_process(ClientSock,ChildPid)，
+		case Disable of
+			true->
+				base_tcp_client_fsm:socket_disable(node(),ChildPid,ClientSock)
+			false->
+				base_tcp_client_fsm:socket_ready(node(),ChildPid,ClientSock)
+		end
+	end
+	//接受下一个客户端连接
+	accept(State).
+
+base_tcp_client_fsm:init()
+	{ok, connecting, #state{}}
+//初始状态connecting
+base_tcp_client_fsm:connecting({socket_ready,CliSocket},StateData)->
+	case gen_tcp:recv(CliSocket,4,180000) of			%%timeout 3 min
+		{ok,RecvBin}->
+			<< PacketLenth:?PACKAGE_HEADER_BIT_LENGTH/big,LeftHeaderBin/binary >> = RecvBin,
+			case gen_tcp:recv(CliSocket,PacketLenth - 2,10000) of
+				{ok,LeftBin}->
+					FirstPackageBin = <<LeftHeaderBin/binary,LeftBin/binary>>,
+					self() ! {tcp, CliSocket, FirstPackageBin},
+					true;
+			end
+	end
+base_tcp_client_fsm:handle_info({tcp, Socket, BinData}, StateName, StateData) ->
+	{M,F,A} = get(on_receive_data),
+	RolePid  = {get(roleproc),get(mapnode)},
+	try	
+		send_recv_message_queue(RolePid),		
+		apply(M,F,A++[self(), BinData, RolePid])//调用socket_callback:on_client_receive_packet来分发协议数据包
+	catch		
+		Type:Reason ->				
+			base_logger_util:msg("tcp recv exception: ~p BinData~p ~n",[{Type,Reason},BinData]),
+			put_recv_Message(BinData)		
+	end,	
+	inet:setopts(Socket, [{active, once}]),
+	{next_state, StateName, StateData};
+
+
+示例：
+
+//发送协议请求
+send_create_role_request(Name,Gender,Class)->
+	Msg=login_pb:encode_create_role_request_c2s(#create_role_request_c2s{role_name = Name,gender = Gender,classtype = Class})
+	sendToServer(self(), Msg).
+
+sendToServer(Pid,Binary)->
+	Pid!{sendtoserver,Binary}.
+
+底层接口gen_tcp:send通过ServerSocket发送给服务端,
+handle_info({sendtoserver,Binary},StateName,#state{socket=ServerSocket}=StateData)->
+	gen_tcp:send(ServerSocket, Binary),
+	{next_state,StateName,StateData}
+handle_info({tcp,Socket,Binary},StateName,StateData)->
+	<<ID:16,Binary0/binary>>=Binary,
+	RecordName=login_pb:get_record_name(ID),
+	case RecordName of
+		create_role_sucess_s2c->
+			BinMsg=login_pb:decode_create_role_sucess_s2c(Binary0);
+	end,
+	gen_fsm:send_event(self(),BinMsg)
+
+//xxxState为状态机中的自定义状态 接受gen_fsm:send_event发送的事件
+xxxState(#create_role_sucess_s2c{role_id=RoleID},State)->
+	put(role_id,RoleId),
+	{next_state,loginState,State};
+
+
+
+// 协议名 create_role_request_c2s  协议ID 400
+message create_role_request_c2s{
+		required int32 msgid=1;
+		required string role_name=2;
+		required int32 gender=3;
+		required int32 classtype=4;
+}
+
+message create_role_sucess_s2c{
+		required int32 msgid=1;
+		required int64 role_id=2;
+}
+
+login_pb:init()->
+	ets:new(proto_msg_id_record_map,[set,named_table])
+	ets:insert(proto_msg_id_record_map,{400,'create_role_request_c2s'})
+
+login_pb:get_record_name(ID)->
+	case ets:lookup(proto_msg_id_record_map,ID) of
+		[]->error;
+		[{_Id,Rec}]->
+			Rec
+	end.
+
+login_pb:encode_create_role_request_c2s(Term)->
+	Role_name=encode_string(Term#create_role_request_c2s.role_name),
+	Gender=Term#create_role_request_c2s.gender,
+	Classtype=Term#create_role_request_c2s.classtype,
+	Data = <<Role_name/binary, Gender:32, Classtype:32>>,
+	<<400:16, Data/binary>>.
+
+login_pb:decode_create_role_sucess_s2c(Binary0)->
+	{Role_id, Binary1}=read_int64(Binary0),
+	Term = #create_role_sucess_s2c{role_id=Role_id},
+	Term.
+
+
+
+login_package:handle(#create_role_request_c2s{role_name=RoleName,gender=Gender,classtype=ClassType},FromProcName,_RolePid)->
+	tcp_client:role_create_request(node(),FromProcName,RoleName,Gender,ClassType).
+
+tcp_client:role_create_request(GateNode,GateProc,RoleName,Gender,ClassType)-》
+	GatePid=GateProc,
+	gen_fsm:send_event(GatePid,{role_create_request,RoleName,Gender,ClassType}).
+
+//xxxState为状态机中的自定义状态 接受gen_fsm:send_event发送的事件
+tcp_client:xxxState({role_create_request,RoleName,Gender,ClassType},StateData)->
+	case gate_op:create_role(.....) of
+		{ok,RoleId}->
+			SendData=login_pb:encode_create_role_sucess_s2c(#create_role_sucess_s2c{role_id=RoleId}),
+			self() ! {send_to_client,SendData};
+		{_,Reason}->
+			SendData=login_pb:encode_create_role_failed_s2c(#create_role_failed_s2c{reasonid=Reason}),
+			self() ! {send_to_client,SendData}
+	end;
+
+tcp_client:handle_info({send_to_client,Data},StateName,StateData)->
+	erlang:binary_to_term(Data)
+	erlang:port_command(get(clientSock), Data, [force]).
+
+gate_op:create_role(....)->
+	case role_db:create_role_rpc(...) of
+		{ok,Result}->
+			case base_db_dal_util:read_rpc(account, AccountName) of
+				{ok,[AccountInfo]}->
+					NewAccounnt=AccountInfo#account{....};
+				_->
+					NewAccount = #account{....};
+			end,
+			base_db_dal_util:write_rpc(NewAccount),
+			{ok,Result};
+		{failed,Reason}->
+			{failed,Reason};
+		_Any->
+			//-define(ERR_CODE_CREATE_ROLE_INTERL,10003). %%创建失败
+			{failed,?ERR_CODE_CREATE_ROLE_INTERL}
+	end
+
+//补充协议框架
+gate_app:boot_client_sup()->
+	tcp_client_sup:start_link([
+	{socket_callback,on_client_receive_packet,[]},
+	 {socket_callback,on_client_close_socket,[]}
+	 ])
+tcp_acceptor:handle_info(
+	{inet_async,LinsterSock,Ref,P={ok,ClientSock}},
+	State=#state{callback={M,F,A},sock=LinsterSock,ref=Ref,disable_connect=Disable}
+	)->
+	{ok,Mod}=inet_db:lookup_socket(LinsterSock),
+	inet_db:rregister_socket(ClientSock, Mod),
+	try
+		{ok, ChildPid}=supervisor:start_child(tcp_client_sup, []),
+		ok = gen_tcp:controlling_process(Sock, ChildPid),
+		case Disable of
+			true->
+				tcp_client:socket_disable(node(), ChildPid, ClientSock);
+			false->
+				tcp_client:socket_ready(node(), ChildPid, ClientSock)
+		end,
+		apply(M,F,A++[Sock,ChildPid])
+	catch
+		...
+	end,
+	tcp_acceptro:accept(State).
+
+tcp_client:init([OnReceiveData,OnClientClose])->
+	put(on_receive_data, OnReceiveData)
+tcp_client:handle_info({tcp,Socket,BinData},StateName,StateData)->
+	{M,F,A}=get(on_receive_data).
+	RolePid={get(roleproc),get(mapnode)},
+	try
+		send_recv_message_queue(RolePid),
+		apply(M,F,A++[self(),BinData,RolePid])
+	catch
+		Type:Reason ->
+			base_logger_util:msg("tcp recv exception:~p BinData~p~n",[{Type,Reason},BinData]),
+			put_recv_Message(BinData)
+	end,
+	inet.setopts(Socket, [{active, once}]),
+	{next_state, StateName, StateData};
+
+socket_callback:on_client_receive_packet(GateProc,Binary,RolePid)->
+	<<ID:16,Binary0/binary>>=Binary,
+	package_dispatcher:dispatch(ID,Binary0,GateProc,RolePid).
+
+package_dispatcher:dispatch(ID,Binary,FromProcName,RolePid)->
+	RecordName=login_pb:get_record_name(ID),
+	case RecordName of
+		create_role_request_c2s->
+			Msg=login_pb:decode_create_role_request_c2s(Binary),
+			login_package:handle(Message,FromProcName,RolePid);
+		_UnknownMsg->
+			base_logger_util:msg("get unknown message ~p~n",[ID])
+	end.
