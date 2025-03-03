@@ -69,11 +69,7 @@ do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
 % do_handle_info({auth_player,{FromNode,FromProc,Time,AuthResult,AccountName}},
-% 	#state{
-% 		auth_algorithm=Mod,
-% 		visitor_key=VisitorKey,
-% 		authtimeout=CfgTimeOut
-% 	}=State) ->
+% 	#state{auth_algorithm=Mod,visitor_key=VisitorKey,authtimeout=CfgTimeOut}=State) ->
 % 	Fun = case VisitorKey of
 % 			""-> validate_user_test;
 % 			_->  validate_visitor
@@ -86,13 +82,9 @@ do_handle_cast(_Msg, State) ->
 % 			base_tcp_client_fsm:auth_failed(FromNode, FromProc, Reason)
 % 	end,
 % 	{noreply, State};
-%%is_visitor_c2s
+% %is_visitor_c2s
 % do_handle_info({auth_player,{FromNode,FromProc,Time,AuthResult}},
-% 	#state{
-% 		auth_algorithm=Mod,
-% 		visitor_key=VisitorKey,
-% 		authtimeout=CfgTimeOut
-% 	}=State)->
+% 	#state{auth_algorithm=Mod,visitor_key=VisitorKey,authtimeout=CfgTimeOut}=State)->
 % 	Fun = case VisitorKey of
 % 			""-> validate_user_test;
 % 			_->  validate_visitor
@@ -107,14 +99,9 @@ do_handle_cast(_Msg, State) ->
 % 	end,
 % 	{noreply, State};
 %%user_auth_c2s
-do_handle_info({auth_player,{FromNode,FromProc,ServerId,UserAuth},
-	#state{
-		auth_algorithm=Mod,
-		authtimeout=CfgTimeOut,
-		fatigue_list=FatigueList,
-		nofatigue_list=NoFatigueList
-	}=State) ->
-	SecretKey =base_env_ets:get(platformkey, ""),
+do_handle_info({auth_player,{FromNode,FromProc,ServerId,UserAuth}},State) ->
+	#state{auth_algorithm=Mod,authtimeout=CfgTimeOut,fatigue_list=FatigueList,nofatigue_list=NoFatigueList}=State,
+	SecretKey = base_env_ets:get(platformkey, ""),
 	Fun = case SecretKey of
 			""-> validate_user_test;
 			_->  validate_user

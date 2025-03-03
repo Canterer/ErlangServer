@@ -53,13 +53,8 @@ do_handle_call(_Request, _From, State) ->
 do_handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({auth_gm,{FromNode,FromProc,GmName, GmId,Time,AuthResult}},
-	#state{
-		auth_algorithm=Mod,
-		secret=SecretKey,
-		authtimeout=CfgTimeOut
-	}=State) ->
-	
+do_handle_info({auth_gm,{FromNode,FromProc,GmName, GmId,Time,AuthResult}},State) ->
+	#state{auth_algorithm=Mod,secret=SecretKey,authtimeout=CfgTimeOut}=State,
 	Fun = case SecretKey of
 			""-> validate_gm_test;
 			_->  validate_gm

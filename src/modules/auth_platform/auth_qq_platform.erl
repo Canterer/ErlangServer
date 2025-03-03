@@ -1,4 +1,4 @@
--module(auth_qq).
+-module(auth_qq_platform).
 
 %%
 %% Include files
@@ -19,8 +19,8 @@
 %%
 validate_user(UserAuth,SecretKey,CfgTimeOut,FatigueList,NoFatigueList)->
 	#user_auth{userid=UserId,openid=OpenId,openkey=OpenKey,appid=AppId,pf=Pf,userip=UserIp,lgtime=Time} = UserAuth,
-	{MegaSec,Sec,_} = base_timer_server:get_correct_now(),
-	Seconds = MegaSec*1000000 + Sec,
+%%	{MegaSec,Sec,_} = base_timer_server:get_correct_now(),
+%%	Seconds = MegaSec*1000000 + Sec,
 %%	DiffTim = erlang:abs(Seconds-list_to_integer(Time)),
 %%	base_logger_util:msg("1111111~n"),
 %%	if DiffTim>CfgTimeOut->
@@ -97,7 +97,7 @@ verify(OpenId,OpenKey,_,Pf,UserIp)->
 	AppId = base_env_ets:get(id_secret_appid,[]),
 	Sig = make_sig(AppId,OpenId,OpenKey,Pf,UserIp),
 	DataStr = get_data_string(OpenId,OpenKey,AppId,Sig,Pf,UserIp),
-	DataLength = erlang:length(DataStr),
+	% DataLength = erlang:length(DataStr),
 	SendUrl = "GET /v3/user/get_info" ++ "?" ++ DataStr ++ " " ++  "HTTP/1.1\r\nHost:" ++ Host
 				++"\r\n\r\n",
 
@@ -135,7 +135,7 @@ make_sig(AppId,OpenId,OpenKey,Pf,UserIp)->
 	Dataencode =  base_url_util:urlencode("appid="++AppId++"&openid="++OpenId++"&openkey="++OpenKey++"&pf="++Pf),
 	BaseString = "GET&"++Urlencode++"&"++Dataencode,
 	AppKey = base_env_ets:get(id_secret_appkey,"8256306d3d287ac69c7632513a75aa54"),
-	base64:encode_to_string(crypto:sha_mac(AppKey ++ "&", BaseString)).
+	base64:encode_to_string(crypto:hmac(sha, AppKey ++ "&", BaseString)).
 
 handle_json({struct,_} = JsonObj)->
 	Ret = base_json_util:get_json_member(JsonObj,"ret"),

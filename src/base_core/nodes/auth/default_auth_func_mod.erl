@@ -1,4 +1,4 @@
--module(base_auth_func_mod).
+-module(default_auth_func_mod).
 
 %%
 %% Include files
@@ -10,10 +10,12 @@
 %%
 -export([
 	validate_user/5,
-	validate_user_test/5,
-	validate_visitor/5,
-	validate_visitor_test/5
+	validate_user_test/5
 ]).
+% -export([
+% 	validate_visitor/5,
+% 	validate_visitor_test/5
+% ]).
 %%
 %% API Functions
 %%

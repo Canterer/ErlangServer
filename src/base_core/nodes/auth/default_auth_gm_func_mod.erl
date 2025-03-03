@@ -1,4 +1,4 @@
--module(base_auth_gm_func_mod).
+-module(default_auth_gm_func_mod).
 
 %%
 %% Include files
