@@ -7,7 +7,15 @@
 %%
 %% Exported Functions
 %%
--export([asyn_call/4,asyn_call/5,cast/2,cast/3,mult_cast/3]).
+-export([
+	asyn_call/4,
+	asyn_call/5,
+	cast/2,
+	cast/3,
+	mult_cast/3,
+	is_process_alive/1,
+	is_process_alive/2
+]).
 
 %%
 %% API Functions
@@ -44,11 +52,31 @@ cast(Node,NamedProc,Msg)->
 			error
 	end.
 
-
 mult_cast(Nodes,NamedProc,Msg) ->
 	base_logger_util:msg("~p:~p(Nodes:~p,NamedProc:~p,Msg:~p) CurNode:~p~n",[?MODULE,?FUNCTION_NAME,Nodes,NamedProc,Msg]),
 	rpc:abcast(Nodes, NamedProc, Msg).
-	
+
+is_process_alive(Pid) when is_pid(Pid) ->
+	rpc:call(node(Pid), erlang, is_process_alive, [Pid]).
+
+is_process_alive(undefined, _ProcName) ->
+	false;
+is_process_alive(_Node, undefined) ->
+	false;
+is_process_alive(Node, Pid) when is_pid(Pid) ->
+	case rpc:call(Node, erlang, is_process_alive, [Pid]) of
+		undefined ->
+			false;
+		_Pid ->
+			true
+	end;
+is_process_alive(Node, ProcName) ->
+	case rpc:call(Node, erlang, whereis, [ProcName]) of
+		undefined ->
+			false;
+		_Pid ->
+			true
+	end.
 %%
 %% Local Functions
 %%

@@ -109,7 +109,10 @@ verify(OpenId,OpenKey,_,Pf,UserIp)->
 		end,
 		case gen_tcp:send(Socket,SendUrl) of
 				ok ->next;
-				{error,R2}->gen_tcp:close(Socket),exit(R2)
+				{error,R2}->
+					base_logger_util:msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
+					gen_tcp:close(Socket),
+					exit(R2)
 		end,
 		RecvPacket = 
 		receive
@@ -122,6 +125,7 @@ verify(OpenId,OpenKey,_,Pf,UserIp)->
 			_->
 				{error,tcp_connect_error}
 		end,
+		base_logger_util:msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
 		gen_tcp:close(Socket),
 		RecvPacket 	 		
 	catch

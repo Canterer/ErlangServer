@@ -36,6 +36,10 @@ run()->
 	check_map_run(),
 	% gate节点
 	check_gate_run(),
+	% auth节点
+	check_auth_run(),
+	% gm节点
+	check_gm_run(),
 	% crossdomain节点
 	check_crossdomain_run().
 
@@ -70,6 +74,18 @@ check_map_run()->
 check_gate_run()->
 	case base_node_util:check_node_allowable(gate, node()) of
 		true-> base_gate_app:start();
+		_-> ignor
+	end.
+
+check_auth_run()->
+	case base_node_util:check_node_allowable(auth, node()) of
+		true-> base_auth_app:start();
+		_-> ignor
+	end.
+
+check_gm_run()->
+	case base_node_util:check_node_allowable(gm, node()) of
+		true-> base_gm_app:start();
 		_-> ignor
 	end.
 

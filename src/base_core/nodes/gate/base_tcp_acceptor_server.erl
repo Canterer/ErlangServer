@@ -77,6 +77,8 @@ do_handle_cast(_Msg, State) ->
 
 do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
             State = #state{callback={M,F,A}, sock=LSock, ref=Ref,disable_connect=Disable}) ->
+	base_logger_util:msg("~p:~p({inet_async ok}) Sock:~p~n",[?MODULE,?FUNCTION_NAME,Sock]),
+	inet:setopts(Sock, [{active, false}]),
 	{ok, Mod} = inet_db:lookup_socket(LSock),
 	inet_db:register_socket(Sock, Mod),
 	try
@@ -85,6 +87,7 @@ do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
 		base_logger_util:msg("accepted TCP connection on ~s:~p from ~s:~p~n",[inet_parse:ntoa(Address), Port,inet_parse:ntoa(PeerAddress), PeerPort]),
 		{ok, ChildPid} = supervisor:start_child(base_tcp_client_sup, []),
 		ok = gen_tcp:controlling_process(Sock, ChildPid),
+		base_logger_util:msg("~p:~p({inet_async ok}) start_child base_tcp_client_sup:~p Disable:~p~n",[?MODULE,?FUNCTION_NAME,ChildPid,Disable]),
 		case Disable of
 			true->
 				base_tcp_client_fsm:socket_disable(node(),ChildPid,Sock);
@@ -102,6 +105,7 @@ do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
 	accept(State);
 do_handle_info({inet_async, LSock, Ref, {error, closed}},
             State=#state{sock=LSock, ref=Ref}) ->
+	base_logger_util:msg("~p:~p({inet_async error})~n",[?MODULE,?FUNCTION_NAME]),
     %% It would be wrong to attempt to restart the acceptor when we
     %% know this will fail.
     {stop, normal, State};
@@ -127,6 +131,7 @@ throw_on_error(E, Thunk) ->
 inet_op(F) -> throw_on_error(inet_error, F).
 
 accept(State = #state{sock=LSock}) ->
+	base_logger_util:msg("~p:~p() try accept client tcp!!!~n",[?MODULE,?FUNCTION_NAME]),
     case prim_inet:async_accept(LSock, -1) of
         {ok, Ref} -> {noreply, State#state{ref=Ref}};
         Error     -> {stop, {cannot_accept, Error}, State}

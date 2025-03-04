@@ -35,7 +35,7 @@ start_link(OnReceiveData,OnClientClose)->
 
 init([OnReceiveData,OnClientClose]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	base_timer_util:start_at_process(),
+	base_timer_server:start_at_process(),
 	process_flag(trap_exit, true),
 	% put(on_receive_data, OnReceiveData),
 	% put(on_close_socket, OnClientClose),
@@ -137,7 +137,7 @@ connecting(Event,StateData)->
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 connected({start_auth,GMUserName,GMUserId,Time,AuthResult}, StateData) ->
-	gmauth_processor:auth(node(),self(),GMUserName,GMUserId,Time,AuthResult),
+	base_auth_gm_processor_server:auth(node(),self(),GMUserName,GMUserId,Time,AuthResult),
 	{next_state, authing, StateData};
 connected(Event,StateData) ->
 	{next_state, connected, StateData}.

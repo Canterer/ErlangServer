@@ -59,7 +59,7 @@ base_init(RoleId)->
 	put(roleid,RoleId),
 	base_timer_server:start_at_process(),
 	{A,B,C} = base_timer_server:get_correct_now(),
-	rand:seed(A,B,C).
+	rand:seed(exsplus,{A,B,C}).
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 外部函数

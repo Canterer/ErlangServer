@@ -1,67 +1,69 @@
 -module(base_tcp_client_fsm).
 
--behaviour(gen_fsm).
-% -behaviour(gen_statem).
+% -behaviour(gen_fsm).
 
 %% External exports
 -export([start_link/2,
 	 send_data/2,
 	 shutown_client/1]).
 
--export([init/1, handle_event/3,
-	 handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+% -export([init/1, handle_event/3,handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
 
--export([connecting/2,socket_ready/3,socket_disable/3]).
+-export([connecting/3,socket_ready/3,socket_disable/3]).
 
 
--export([connected/2,
+-export([connected/3,
 	 start_auth/4]).
 
--export([authing/2,
+-export([authing/3,
 	 auth_ok/6,auth_failed/4]).
 
--export([rolelisting/2,
+-export([rolelisting/3,
 	 role_list_request/2,
 	 role_create_request/5,role_create_success/3,
 	 role_create_failed/3]).
 
--export([logining/2,
+-export([logining/3,
 	 line_info_success/3]).
 
--export([preparing_into_map/2,
+-export([preparing_into_map/3,
 	 env_prepared/3]).
 
--export([gaming/2,
+-export([gaming/3,
 	 line_info_request/3]).
 
 -export([kick_client/1]).
 
 -compile(export_all).
 
+-define(OBJECT_PACKET_UPDATE_INTERVAL,500).	%%500ms
+-define(TIME_OUT_MICROS,300000000).		%%300s超时
+-define(TIME_OUT_CHECK_INTERVER,100000).	%%100s
+-record(state, {}).
+-include("base_gen_statem_shared.hrl").
 -include("network_setting.hrl").
 -include("login_def.hrl").
 -include("login_pb.hrl").
 -include("data_struct.hrl").
 -include("game_map_define.hrl").
--define(OBJECT_PACKET_UPDATE_INTERVAL,500).	%%500ms
--define(TIME_OUT_MICROS,300000000).		%%300s超时
--define(TIME_OUT_CHECK_INTERVER,100000).	%%100s
--record(state, {}).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
 start_link(OnReceiveData,OnClientClose)->
-	base_fsm_util:start_link(?MODULE, [OnReceiveData,OnClientClose], []).
-
-init([OnReceiveData,OnClientClose]) ->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	base_timer_util:start_at_process(),
+	base_gen_statem:start_link(?MODULE, [OnReceiveData,OnClientClose], []).
+
+do_init([OnReceiveData,OnClientClose]) ->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_timer_server:start_at_process(),
 	process_flag(trap_exit, true),
 	put(on_receive_data, OnReceiveData),
 	put(on_close_socket, OnClientClose),
 	packet_object_update:init(),
-	rand:seed(os:timestamp()),
+	{A,B,C} = os:timestamp(),
+	base_logger_util:msg("~p:~p os:timestamp=~p~n",[?MODULE,?FUNCTION_NAME,os:timestamp()]),
+	rand:seed(exsplus,{A,B,C}),
 	erlang:send_after(?TIME_OUT_CHECK_INTERVER,self(),{alive_check}),
 	erlang:send_after(?OBJECT_PACKET_UPDATE_INTERVAL,self(),{object_update_interval}),
 	{ok, connecting, #state{}}.
@@ -103,47 +105,48 @@ kick_client(GatePid)->
 %% 事件: 列举角色请求
 role_list_request(GateNode,GateProc)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {role_list_request}).
+	base_gen_statem:cast(GatePid, {role_list_request}).
 	
 %%autoname reset
 reset_random_rolename(_GateNode,GateProc)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {reset_random_rolename}).
+	base_gen_statem:cast(GatePid, {reset_random_rolename}).
 
 %% 事件: 创建角色请求
 role_create_request(GateNode, GateProc,RoleName,Gender,ClassType)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {role_create_request,RoleName,Gender,ClassType}).
+	base_gen_statem:cast(GatePid, {role_create_request,RoleName,Gender,ClassType}).
 
 %% 事件: 创建角色成功
 role_create_success(GateNode, GateProc,RoleInfo)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {role_create_success,RoleInfo}).
+	base_gen_statem:cast(GatePid, {role_create_success,RoleInfo}).
 
 %% 事件: 创建角色失败
 role_create_failed(GateNode, GateProc,Reason)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {role_create_failed,Reason}).
+	base_gen_statem:cast(GatePid, {role_create_failed,Reason}).
 
 %% 事件: 创建地图请求
 role_into_map_request(GateNode, GateProc, RoleId,LineId)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {role_into_map_request,RoleId,LineId}).
+	base_gen_statem:cast(GatePid, {role_into_map_request,RoleId,LineId}).
 
 %% 事件: 获取分线服务器信息成功
 line_info_success(GateNode,GateProc,LineInfos)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {line_info_success,LineInfos}).
+	base_gen_statem:cast(GatePid, {line_info_success,LineInfos}).
 
 %% 事件: 获取分线服务器信息请求
 line_info_request(GateNode,GateProc,MapId)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid,{line_info_request,MapId}).
+	base_gen_statem:cast(GatePid,{line_info_request,MapId}).
 
 %% 事件: 角色进程启动
 role_process_started(GatePid, MapNode,RoleProc)->
 	try
-		base_fsm_util:sync_send_all_state_event(GatePid, {role_process_started,MapNode,RoleProc})
+		% gen_fsm:sync_send_all_state_event(GatePid, {role_process_started,MapNode,RoleProc})
+		base_gen_statem:call(GatePid, {role_process_started,MapNode,RoleProc})
 	catch
 		_:_->
 			error
@@ -152,76 +155,115 @@ role_process_started(GatePid, MapNode,RoleProc)->
 
 %%  事件: socket已经连接
 socket_ready(GateNode,GateProc,ClientSocket)->
+	?ZS_LOG(),
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {socket_ready,ClientSocket}).
+	base_gen_statem:cast(GatePid, {socket_ready,ClientSocket}).
 
 socket_disable(GateNode,GateProc,ClientSocket)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {socket_disable,ClientSocket}).
+	base_gen_statem:cast(GatePid, {socket_disable,ClientSocket}).
 
 %% 事件: 开始认证
 start_auth(GateNode, GateProc,ServerId,UserAuth)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid,{start_auth,ServerId,UserAuth}).
+	base_gen_statem:cast(GatePid,{start_auth,ServerId,UserAuth}).
 
 %%start_auth(GateNode, GateProc,Time,AuthResult)->
 %%	GatePid = GateProc,    %% proc name is the remote pid
-%%	base_fsm_util:send_state_event(GatePid,{start_auth,Time,AuthResult}).
+%%	base_gen_statem:cast(GatePid,{start_auth,Time,AuthResult}).
 
 %% 事件: 认证成功
 auth_ok(GateNode, GateProc,ServerId,PlayerId,AccountName,IsAdult)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}).
+	base_gen_statem:cast(GatePid,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}).
 
 qq_auth_ok(GateNode, GateProc,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid,{qq_auth_ok,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}).
+	base_gen_statem:cast(GatePid,{qq_auth_ok,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}).
 
 auth_failed(GateNode, GateProc,ServerId,Reason)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid, {auth_failed,ServerId,Reason}).
+	base_gen_statem:cast(GatePid, {auth_failed,ServerId,Reason}).
 
 %% 事件: 认证失败
 env_prepared(GateNode,GateProc,Info)->
 	GatePid = GateProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GatePid,{env_prepared,Info}).
+	base_gen_statem:cast(GatePid,{env_prepared,Info}).
 
 %% 事件: 准备进入地图
 role_into_map_success(GatePid) ->
-	base_fsm_util:send_state_event(GatePid, {role_into_map_success}).
+	base_gen_statem:cast(GatePid, {role_into_map_success}).
 
 mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	GatePid = GateProc,    %% proc name is the remote pid
 	base_rpc_util:cast(GatePid,{mapid_change,MapNode,MapId,RoleProc}).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+connecting(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_connecting_state(EventType,EventContent,StateData).
+
+connected(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_connected_state(EventType,EventContent,StateData).
+
+authing(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_authing_state(EventType,EventContent,StateData).
+
+rolelisting(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_rolelisting_state(EventType,EventContent,StateData).
+
+logining(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_logining_state(EventType,EventContent,StateData).
+
+preparing_into_map(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_preparing_into_map_state(EventType,EventContent,StateData).
+
+gaming(EventType,EventContent,StateData)->
+	base_logger_util:msg("~p:~p(EventType=~p,EventContent=~p,StateData=~p)~n",[?MODULE,?FUNCTION_NAME,EventType,EventContent,StateData]),
+	handle_gaming_state(EventType,EventContent,StateData).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：连接中
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-connecting({socket_ready,CliSocket},StateData)->
-	case gate_op:check_socket(CliSocket) of
+handle_connecting_state(cast,{socket_ready,CliSocket},StateData)->
+	?ZS_LOG(),
+	case base_gate_op:check_socket(CliSocket) of
 		false->
+			?ZS_LOG(),
 			self()!{kick_client,"black ip"},
 			put(clientsock, CliSocket),
 			{next_state, connected, StateData};
 		true->
+			?ZS_LOG(),
 			FPacketProcRe = 
 				case gen_tcp:recv(CliSocket,4,180000) of			%%timeout 3 min
 					{ok,?CROSS_DOMAIN_FLAG_HEADER}->
+						?ZS_LOG(),
 						base_logger_util:msg("client port policy-file-request failed,game proc ~n"),
 						case gen_tcp:recv(CliSocket,erlang:byte_size(?CROSS_DOMAIN_FLAG)-4,10000) of
 							{ok,_}->
+								?ZS_LOG(),
 								gen_tcp:send(CliSocket,base_crossdomain_server:make_normal_cross_file()),
 								true;
 							{error,closed}->
+								?ZS_LOG(),
 								stop;
 							_->
+								?ZS_LOG(),
 								false	
 						end;
 					{ok, <<"tgw_">>} ->	
+						?ZS_LOG(),
 						filter_tgw(CliSocket),
 						send_data(self(), login_pb:encode_tgw_gateway_s2c(#tgw_gateway_s2c{})),
 						true; 
 					{ok,RecvBin}->
+						?ZS_LOG(),
 						<< PacketLenth:?PACKAGE_HEADER_BIT_LENGTH/big,LeftHeaderBin/binary >> = RecvBin,
 						io:format("PacketLenth ~p RecvBin ~p ~n",[PacketLenth,RecvBin]),
 						
@@ -229,8 +271,10 @@ connecting({socket_ready,CliSocket},StateData)->
 							{ok,LeftBin}->
 								FirstPackageBin = <<LeftHeaderBin/binary,LeftBin/binary>>,
 								self() ! {tcp, CliSocket, FirstPackageBin},
+								?ZS_LOG(),
 								true;	
 							{error,closed}->
+								?ZS_LOG(),
 								stop;
 							Errno2->
 								{ok, {PeerIPAddressTmp, _}} = inet:peername(CliSocket),
@@ -238,6 +282,7 @@ connecting({socket_ready,CliSocket},StateData)->
 								false	
 						end;                       
 					{error,closed}->
+						?ZS_LOG(),
 						stop;
 					Errno->
 						base_logger_util:msg("socket_ready recv ERROR ~p !!!! ~n",[Errno]),
@@ -249,10 +294,12 @@ connecting({socket_ready,CliSocket},StateData)->
 					true->		
 						inet:setopts(CliSocket, ?TCP_CLIENT_SOCKET_OPTIONS),
 						{ok, {PeerIPAddress, _Port}} = inet:peername(CliSocket),
+						?ZS_LOG(),
 						put(clientsock, CliSocket),
 						put(clientaddr, PeerIPAddress),
 						{next_state, connected, StateData};
 					stop->
+						?ZS_LOG(),
 						{stop, normal, StateData};
 					false->
 						base_logger_util:msg("first packet proc failed,kick client ~n"),
@@ -261,30 +308,30 @@ connecting({socket_ready,CliSocket},StateData)->
 						{next_state, connected, StateData}
 				end							
 	end;
-connecting({socket_disable,CliSocket},StateData)->
+handle_connecting_state(cast,{socket_disable,CliSocket},StateData)->
 	self()!{kick_client,"socket is disable "},
 	put(clientsock, CliSocket),
 	{stop, normal, StateData};
-connecting(Event,StateData)->
+handle_connecting_state(_EventType,Event,StateData)->
 	{next_state, connecting, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-connected({start_auth,ServerId,UserAuth}, StateData) ->
+handle_connected_state(cast,{start_auth,ServerId,UserAuth}, StateData) ->
 	case lists:member(ServerId,base_env_ets:get(serverids,[])) of
 		true->
 			put(serverid,ServerId),
-			auth_processor:auth(node(),self(),ServerId,UserAuth);
+			base_auth_processor_server:auth(node(),self(),ServerId,UserAuth);
 		_->
 			base_logger_util:msg("Server is id ~p~n",[ServerId]),
 			self()!{kick_client,"error serverid"}
 	end,	
 	{next_state, authing, StateData};
-%%connected({start_auth,Time,AuthResult}, StateData) ->
-%%	auth_processor:auth(node(),self(),Time,AuthResult),
+%%handle_connected_state({start_auth,Time,AuthResult}, StateData) ->
+%%	base_auth_processor_server:auth(node(),self(),Time,AuthResult),
 %%	{next_state, authing, StateData};
-connected(Event,State) ->
+handle_connected_state(_EventType,Event,State) ->
 	{next_state, connected, State}.
 
 
@@ -292,21 +339,21 @@ connected(Event,State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  状态: 认证中
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-authing({auth_failed,ServerId,Reason}, StateData) ->
+handle_authing_state(cast,{auth_failed,ServerId,Reason}, StateData) ->
 	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
 	SendData = login_pb:encode_user_auth_fail_s2c(FailedMsg),
 	send_data(self(), SendData),
 	{next_state, connected,StateData};
 %% authing * auth_ok -> rolelisting
 %% 认证成功后直接发送分线服务器列表
-%%authing({auth_ok,{visitor,PlayerId},AccountName,IsAdult}, StateData) ->
-%%	base_fsm_util:send_state_event(node(),self(), {role_create_request}),
+%%handle_authing_state({auth_ok,{visitor,PlayerId},AccountName,IsAdult}, StateData) ->
+%%	base_gen_statem:cast(node(),self(), {role_create_request}),
 %%	put(playerid, {visitor,PlayerId}),
 %%	put(account,AccountName),
 %%	put(adult,IsAdult),
 %%	{next_state,rolelisting,StateData};
-authing({auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
-	RoleList = gate_op:get_role_list(AccountName,get(serverid)),
+handle_authing_state(cast,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
+	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
 	SendData = login_pb:encode_player_role_list_s2c(#player_role_list_s2c{roles=RoleList}),
 	send_data(self(), SendData),
 	%%auto_name
@@ -327,8 +374,8 @@ authing({auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
 	put(account,AccountName),
 	put(adult,IsAdult),
 	{next_state,rolelisting,StateData};
-authing({qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}, StateData) ->
-	RoleList = gate_op:get_role_list(AccountName,get(serverid)),
+handle_authing_state(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}, StateData) ->
+	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
 	{NickName,Gender,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level} = Info,
 	SendData = login_pb:encode_player_role_list_s2c(#player_role_list_s2c{roles=RoleList,
 																		  nickname=NickName,
@@ -366,13 +413,13 @@ authing({qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,Ope
 	put(openkey, OpenKey),
 	put(pfkey, PfKey),
 	{next_state,rolelisting,StateData};
-authing(Event, State) ->
+handle_authing_state(_EventType,Event, State) ->
 	{next_state, authing, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 列举角色状态
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-rolelisting({role_create_request}, StateData)->
+handle_rolelisting_state(cast,{role_create_request}, StateData)->
 	{visitor,PlayerId} = get(playerid),
 	AccountName= get(account),
 	LoginTime = get(install),
@@ -382,7 +429,7 @@ rolelisting({role_create_request}, StateData)->
 	Is_yellow_year_vip = get(is_yellow_year_vip),
 	Yellow_vip_level = get(yellow_vip_level),
 	Pf = get(pf),
-	case gate_op:create_role(PlayerId,AccountName,NickName,Gender,gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
+	case base_gate_op:create_role(PlayerId,AccountName,NickName,Gender,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
 		{ok,RoleId}->SendData = login_pb:encode_create_role_sucess_s2c(#create_role_sucess_s2c{role_id=RoleId}),
 					 send_data(self(), SendData),
@@ -392,7 +439,7 @@ rolelisting({role_create_request}, StateData)->
 					send_data(self(), SendData),
 					{next_state,rolelisting,StateData}
 	end;
-rolelisting({role_create_request,RoleName,Gender,ClassType}, StateData)->
+handle_rolelisting_state(cast,{role_create_request,RoleName,Gender,ClassType}, StateData)->
 	PlayerId = get(playerid),
 	AccountName= get(account),
 	QQGender = get(gender),
@@ -402,7 +449,7 @@ rolelisting({role_create_request,RoleName,Gender,ClassType}, StateData)->
 	Is_yellow_year_vip = get(is_yellow_year_vip),
 	Yellow_vip_level = get(yellow_vip_level),
 	Pf = get(pf),
-	case gate_op:create_role(PlayerId,AccountName,NickName,QQGender,RoleName,Gender,ClassType,gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
+	case base_gate_op:create_role(PlayerId,AccountName,NickName,QQGender,RoleName,Gender,ClassType,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
 		{ok,RoleId}->
 			autoname_op:create_role(RoleName,RoleId),
@@ -419,21 +466,21 @@ rolelisting({role_create_request,RoleName,Gender,ClassType}, StateData)->
 					send_data(self(), SendData),
 					{next_state,rolelisting,StateData}
 	end;
-rolelisting({role_create_success,RoleInfo}, StateData)->
+handle_rolelisting_state(cast,{role_create_success,RoleInfo}, StateData)->
 	RoleList = get(role_list) ++ RoleInfo,
 	put(role_list, RoleList),
 	SendData = login_pb:encode_player_role_list_s2c(#player_role_list_s2c{roles=RoleList}),
 	send_data(self(),SendData),
 	{next_state,rolelisting,StateData};
-rolelisting({line_info_request,MapId},StateData)->
+handle_rolelisting_state(cast,{line_info_request,MapId},StateData)->
 	async_get_line_info_by_mapid(MapId),
 	{next_state,rolelisting,StateData};
-rolelisting({line_info_success,LineInfos},StateData)->
+handle_rolelisting_state(cast,{line_info_success,LineInfos},StateData)->
 	LineInfoByRecord = linesinfo_to_record(LineInfos),
 	SendData = login_pb:encode_role_line_query_ok_s2c(#role_line_query_ok_s2c{lines=LineInfoByRecord}),
 	send_data(self(),SendData),
 	{next_state,logining,StateData};
-rolelisting({reset_random_rolename}, StateData)->
+handle_rolelisting_state(cast,{reset_random_rolename}, StateData)->
 	%%auto_name
 	put(autoname,[]),
 	case autoname_op:init_autoname_s2c() of
@@ -444,21 +491,21 @@ rolelisting({reset_random_rolename}, StateData)->
 			nothing
 	end,
 	{next_state, rolelisting, StateData};
-rolelisting(Event, State) ->
+handle_rolelisting_state(_EventType,Event, State) ->
 	{next_state, rolelisting, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  事件: 获取分线服务器信息成功
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-logining({role_into_map_request,RoleId,_LineId},StateData) ->
-	RoleList = gate_op:get_role_list(get(account),get(serverid)),
+handle_logining_state(cast,{role_into_map_request,RoleId,_LineId},StateData) ->
+	RoleList = base_gate_op:get_role_list(get(account),get(serverid)),
 	case lists:member(RoleId,[ pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
 		true->
 			case role_pos_util:where_is_role(RoleId) of
 				[]->
 					%%由于line是客户端发来的,有可能会与当前地图线路不符.所以重新再请求一次线路,自动选择最优线路
-					Mapid = gate_op:get_last_mapid(RoleId),
+					Mapid = base_gate_op:get_last_mapid(RoleId),
 					put(roleid, RoleId),
 					put(mapid, Mapid),
 					async_get_line_info_by_mapid(Mapid);
@@ -466,7 +513,7 @@ logining({role_into_map_request,RoleId,_LineId},StateData) ->
 					base_logger_util:msg("Role_id:[~p], is exist~n", [RoleId]),
 					RoleNode = role_pos_db:get_role_mapnode(RolePos),
 					RoleProc = role_pos_db:get_role_pid(RolePos),
-					case role_manager:stop_role_processor(RoleNode,RoleId, RoleProc,other_login) of
+					case base_role_manager:stop_role_processor(RoleNode,RoleId, RoleProc,other_login) of
 						{error,{noproc,_}}->				%%进程已经不在了,直接删除该玩家残留  zhangting
 							role_pos_db:unreg_role_pos_to_mnesia(RoleId);
 						_->
@@ -480,15 +527,15 @@ logining({role_into_map_request,RoleId,_LineId},StateData) ->
 			self()!{kick_client}
 	end,
 	{next_state,logining,StateData};
-logining({line_info_success,LineInfos}, StateData)->
+handle_logining_state(cast,{line_info_success,LineInfos}, StateData)->
 	{LineId,_OnlineRole}=line_util:get_min_count_of_lines(LineInfos),
 	put(lineid, LineId),
 %% 	start_game_after_line_fixed(LineId),
 	start_game_after_line_fixed(1),				%%枫少修改只有一线
 	{next_state,logining,StateData};
-logining({role_into_map_success}, StateData) ->
+handle_logining_state(cast,{role_into_map_success}, StateData) ->
 	{next_state, gaming,StateData};
-logining(Event, State) ->
+handle_logining_state(_EventType,Event, State) ->
 	{next_state, logining, State}.
 
 
@@ -497,9 +544,9 @@ logining(Event, State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% env_prepared X preparing_into_map -> gaming 
-preparing_into_map({env_prepared,Info},StateData)->
+handle_preparing_into_map_state(cast,{env_prepared,Info},StateData)->
 	{next_state,gaming,StateData};
-preparing_into_map(Event, State) ->
+handle_preparing_into_map_state(_EventType,Event, State) ->
 	{next_state, preparing_into_map, State}.
 
 
@@ -508,41 +555,53 @@ preparing_into_map(Event, State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 %%
-gaming({line_info_request,MapId}, StateData)->
+handle_gaming_state(cast,{line_info_request,MapId}, StateData)->
 	async_get_line_info_by_mapid(MapId),
 	{next_state,gaming,StateData};
-gaming({line_info_success,LineInfos},StateData)->
+handle_gaming_state(cast,{line_info_success,LineInfos},StateData)->
 	LineInfoByRecord = linesinfo_to_record(LineInfos),
 	SendData = login_pb:encode_role_line_query_ok_s2c(#role_line_query_ok_s2c{lines=LineInfoByRecord}),
 	send_data(self(),SendData),
 	{next_state,gaming,StateData};
-gaming({auth_failed,Reason}, StateData) ->
+handle_gaming_state(cast,{auth_failed,Reason}, StateData) ->
 	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
 	SendData = login_pb:encode_user_auth_fail_s2c(FailedMsg),
 	send_data(self(), SendData),
 	{next_state, connected,StateData};
-gaming({auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
+handle_gaming_state(cast,{auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
 	put(playerid, AccountName),
 	put(account,AccountName),
 	RolePid  = {get(roleproc),get(mapnode)},
-	role_processor:finish_visitor(RolePid,AccountName),
+	base_role_processor:finish_visitor(RolePid,AccountName),
 	self()! {needchangename},
 	{next_state,gaming,StateData};
-gaming(Event,StateData)->
+handle_gaming_state(_EventType,Event,StateData)->
 	{next_state,gaming,StateData}.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+do_callback_mode()->
+	state_functions.
+do_handle_event(_EventType,_EventContent,_StateName,_StateData)->
+	keep_state_and_data.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 异步事件处理: send by gen_fsm:sync_send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_event(stop, StatName , StateData)->
-	{stop, normal, StateData};
-handle_event(Event, StateName, StateData) ->
-	{next_state, StateName, StateData}.
+do_handle_event(cast, stop, _StateData)->
+% handle_event(stop, StatName , StateData)->
+	% {stop, normal, StateData};
+	{stop, normal};
+do_handle_event(cast, _EventContent, _StateData)->
+% handle_event(Event, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	{keep_state_and_data,[]};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 同步事件处理: send by gen_fsm:send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, StateData) ->
+do_handle_event({call, From}, {role_process_started,MapNode,RoleProc}, StateData) ->
+% handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, StateData) ->
 	put(mapnode, MapNode),
 	put(roleproc, RoleProc),
 	%% add 
@@ -551,7 +610,7 @@ handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, Stat
 	put(chatproc,ChatProc),
 	case get(neednotchange) of
 		undefined->
-			NeedChangeName = role_db:name_can_change(role_db:get_role_info(get(roleid))),
+			NeedChangeName = base_role_db:name_can_change(base_role_db:get_role_info(get(roleid))),
 				%%可以改名
 			case NeedChangeName of
 				true->  self()! {needchangename};
@@ -559,17 +618,23 @@ handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, Stat
 			end;
 		_-> nothing
 	end,
-	{reply, {ChatNode,ChatProc}, StateName, StateData};
-handle_sync_event(Event, From, StateName, StateData) ->
+	% {reply, {ChatNode,ChatProc}, StateName, StateData};
+	{keep_state_and_data, [{reply, From, {ChatNode,ChatProc}}]};
+do_handle_event({call, From}, _EventContent, _StateData) ->
+% handle_sync_event(Event, From, StateName, StateData) ->
 	Reply = ok,
-	{reply, Reply, StateName, StateData}.
+% 	{reply, Reply, StateName, StateData}.
+	{keep_state_and_data, [{reply, From, Reply}]};
 
-handle_info({mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
+do_handle_event(info, {mapid_change,MapNode,MapId,RoleProc}, StateData) ->
+% handle_info({mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 	put(mapnode, MapNode),
 	put(mapid, MapId),
 	put(roleproc, RoleProc),
-	{next_state,StateName, StateData};
-handle_info({alive_check}, StateName, StateData) ->
+	% {next_state,StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {alive_check}, StateData) ->
+% handle_info({alive_check}, StateName, StateData) ->
 	case get(alive_time) of
 		undefined->
 			put(alive_time,os:timestamp()),
@@ -583,10 +648,12 @@ handle_info({alive_check}, StateName, StateData) ->
 					nothing
 			end
 	end,
-	{next_state, StateName, StateData};
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
 %%
 %% game gate need to send data
-handle_info({send_to_client, Data}, StateName, StateData) ->
+do_handle_event(info, {send_to_client, Data}, StateData) ->
+% handle_info({send_to_client, Data}, StateName, StateData) ->
 	%%TODO
 	try erlang:binary_to_term(Data) of
 		Val-> base_logger_util:msg("send_to_role ~p~n",[erlang:binary_to_term(Data)])
@@ -596,8 +663,10 @@ handle_info({send_to_client, Data}, StateName, StateData) ->
 %% 			base_logger_util:msg("send_to_role@@ [~p]~n",[ID])
 	end,
 	erlang:port_command(get(clientsock), Data, [force]),
-	{next_state, StateName, StateData};
-handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {send_to_client_filter, Cur_Binary,Flt_Binary}, StateData) ->
+% handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData) ->
 	IpAddr = get(clientaddr),
 	case whiteip:match(IpAddr) of
 		true->
@@ -620,8 +689,10 @@ handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData
 			erlang:port_command(get(clientsock), Cur_Binary, [force])
 	end,
 	
-	{next_state, StateName, StateData};
-handle_info({do_recv}, StateName, StateData) ->	
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {do_recv}, StateData) ->
+% handle_info({do_recv}, StateName, StateData) ->	
 	%%RolePid = rpc:call(get(mapnode), erlang, whereis, [get(roleproc)]),
 	RolePid  = {get(roleproc),get(mapnode)},
 	send_recv_message_queue(RolePid),
@@ -635,8 +706,10 @@ handle_info({do_recv}, StateName, StateData) ->
 			RecvTimerRef = erlang:send_after(40,self(),{do_recv}),
 			put(recv_timer_ref, RecvTimerRef)	
 	end,
-	{next_state, StateName, StateData};
-handle_info({tcp, Socket, BinData}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {tcp, Socket, BinData}, StateData) ->
+% handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	put(alive_time,os:timestamp()),
 	{M,F,A} = get(on_receive_data),
 	%%RolePid = rpc:call(get(mapnode), erlang, whereis, [get(roleproc)]),
@@ -651,51 +724,74 @@ handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	end,
 		
 	inet:setopts(Socket, [{active, once}]),
-	{next_state, StateName, StateData};
-handle_info({tcp_closed, _Socket}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {tcp_closed, _Socket}, StateData) ->
+% handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 	do_clear_on_close(),
-	{stop, normal, StateData};
-handle_info({shutdown},StateName,StateData)->
+	% {stop, normal, StateData};
+	stop;
+do_handle_event(info, {shutdown}, StateData) ->
+% handle_info({shutdown},StateName,StateData)->
 	do_clear_on_close(),
-	{stop, normal, StateData};
+	% {stop, normal, StateData};
+	stop;
 %%no player logout
-handle_info({kick_client},StateName,StateData)->
+do_handle_event(info, {kick_client}, StateData) ->
+% handle_info({kick_client},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, maybe error client!\n"),
 	close_and_clear_no_logout(),
-	{stop,normal, StateData};	
-handle_info({kick_client,KickInfo},StateName,StateData)->
+	% {stop,normal, StateData};
+	stop;
+do_handle_event(info, {kick_client,KickInfo}, StateData) ->
+% handle_info({kick_client,KickInfo},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, Reason:~p!\n",[KickInfo]),
 	do_clear_on_close(),
-	{stop,normal, StateData};
-handle_info({needchangename},StateName,StateData)->
+	% {stop,normal, StateData};
+	stop;
+do_handle_event(info, {needchangename}, StateData) ->
+% handle_info({needchangename},StateName,StateData)->
 	 SendData = login_pb:encode_visitor_rename_s2c(#visitor_rename_s2c{}),
 	 send_data(self(), SendData),
-	{next_state,StateName, StateData};
-handle_info({object_update_create,CreateData}, StateName, StateData) ->
+	% {next_state,StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {object_update_create,CreateData}, StateData) ->
+% handle_info({object_update_create,CreateData}, StateName, StateData) ->
 	packet_object_update:push_to_create_data(CreateData),
-	{next_state, StateName, StateData};
-handle_info({object_update_delete,DelData}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {object_update_delete,DelData}, StateData) ->
+% handle_info({object_update_delete,DelData}, StateName, StateData) ->
 	packet_object_update:push_to_delete_data(DelData),
-	{next_state, StateName, StateData};
-handle_info({object_update_update,UpdateData}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {object_update_update,UpdateData}, StateData) ->
+% handle_info({object_update_update,UpdateData}, StateName, StateData) ->
 	packet_object_update:push_to_update_data(UpdateData),
-	{next_state, StateName, StateData};
-handle_info({object_update_interval}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {object_update_interval}, StateData) ->
+% handle_info({object_update_interval}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
 	erlang:send_after(?OBJECT_PACKET_UPDATE_INTERVAL,self(),{object_update_interval}),
-	{next_state, StateName, StateData};
-handle_info({send_pending_update}, StateName, StateData) ->
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, {send_pending_update}, StateData) ->
+% handle_info({send_pending_update}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
-	{next_state, StateName, StateData};
-handle_info(_Info, StateName, StateData) ->
-	{next_state, StateName, StateData}.
+	% {next_state, StateName, StateData};
+	keep_state_and_data;
+do_handle_event(info, _EventContent, _StateData) ->
+% handle_info(_Info, StateName, StateData) ->
+	% {next_state, StateName, StateData}.
+	keep_state_and_data.
 
 %% --------------------------------------------------------------------
 %% Func: terminate/3
 %% Purpose: Shutdown the fsm
 %% Returns: any
 %% --------------------------------------------------------------------
-terminate(Reason, StateName, StatData) ->
+do_terminate(Reason, StateName, StatData) ->
 	%%add for terminat
 	{M,F,A} = get(on_close_socket),
 	apply(M,F,A++[get(clientsock), playercontex]),
@@ -707,7 +803,7 @@ terminate(Reason, StateName, StatData) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState, NewStateData}
 %% --------------------------------------------------------------------
-code_change(OldVsn, StateName, StateData, Extra) ->
+do_code_change(OldVsn, StateName, StateData, Extra) ->
 	{ok, StateName, StateData}.
 
 %% --------------------------------------------------------------------
@@ -727,11 +823,11 @@ send_left_msg()->
 	end.
 
 clear_game_player()->
-	case util:is_process_alive(get(mapnode), get(roleproc)) of
+	case base_rpc_util:is_process_alive(get(mapnode), get(roleproc)) of
 		false ->
 			nothing;
 		true ->
-			role_manager:stop_role_processor(get(mapnode), get(roleid), get(roleproc),uninit)
+			base_role_manager:stop_role_processor(get(mapnode), get(roleid), get(roleproc),uninit)
 	end.
 	
 close_port()->
@@ -766,7 +862,7 @@ linesinfo_to_record(LineInfos)->
 %% 启动聊天进程
 start_chat_role()->
    base_logger_util:msg("start_chat_role~n"),
-   case lines_manager:get_chat_name() of
+   case base_line_manager_server:get_chat_name() of
 		[]->
 			base_logger_util:msg("start_chat_role get chatnode name err!!!!!!~n"),
 			{node(),self()};
@@ -850,7 +946,7 @@ send_recv_message_queue(Pid)	->
 async_get_line_info_by_mapid(MapId)->
 	case base_map_info_db:get_map_info(MapId) of
 		[]->
-			lines_manager:query_line_status(node(),self() ,MapId);
+			base_line_manager_server:query_line_status(node(),self() ,MapId);
 		MapInfo->
 			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(MapInfo)) of
 				true->
@@ -858,7 +954,7 @@ async_get_line_info_by_mapid(MapId)->
 					LineInfos = [{1,0}],
 					line_info_success(node(),self(),LineInfos);
 				_->
-					lines_manager:query_line_status(node(),self() ,MapId)
+					base_line_manager_server:query_line_status(node(),self() ,MapId)
 			end
 	end.
 	
@@ -867,7 +963,7 @@ start_game_after_line_fixed(LineId)->
 	RoleId = get(roleid),
 	AccountName= get(account),
 	LoginTime = get(install),
-	LoginIp = gate_op:trans_addr_to_list(get(clientaddr)),
+	LoginIp = base_gate_op:trans_addr_to_list(get(clientaddr)),
 	Gender = get(gender),
 	NickName = get(nickname),
 	% Is_yellow_vip = get(is_yellow_vip),
@@ -875,13 +971,13 @@ start_game_after_line_fixed(LineId)->
 	Yellow_vip_level = get(yellow_vip_level),
 	Pf = get(pf),
 	
-	gate_op:update_account_info(AccountName, LoginTime, LoginIp, NickName, Gender, Pf, Is_yellow_year_vip, Yellow_vip_level),
+	base_gate_op:update_account_info(AccountName, LoginTime, LoginIp, NickName, Gender, Pf, Is_yellow_year_vip, Yellow_vip_level),
 	GateProc = self(),%%get(procname),
-	case lines_manager:get_map_name(LineId, MapId) of
+	case base_line_manager_server:get_map_name(LineId, MapId) of
 		{ok,{MapNodeTmp,MapProcNameTmp}}->
 			case server_travels_util:is_share_map_node(MapNodeTmp) of
 				true->			%%玩家在跨服地图上,由于到从本地数据库中加载玩家数据,所以先在本地节点启动,之后再转移过去
-					[MapNode|_] = lines_manager:get_map_nodes(),
+					[MapNode|_] = base_line_manager_server:get_map_nodes(),
 					MapProcName = undefined;
 				_->
 					MapNode = MapNodeTmp,
@@ -890,7 +986,7 @@ start_game_after_line_fixed(LineId)->
 		_->
 			%%玩家在副本中,先在本地节点启动,之后再转移过去
 			MapProcName = undefined,
-			[MapNode|_] = lines_manager:get_map_nodes()
+			[MapNode|_] = base_line_manager_server:get_map_nodes()
 	end,
 	GS_system_map_info = #gs_system_map_info{map_id=MapId,
 								 line_id=LineId, 
@@ -900,8 +996,8 @@ start_game_after_line_fixed(LineId)->
 	GS_system_gate_info = #gs_system_gate_info{gate_proc = GateProc, gate_node=node(), gate_pid=self()},
 	New_GS_system_role_info = GS_system_role_info#gs_system_role_info{role_node=MapNode},
 	put(gs_system_role_info, New_GS_system_role_info),
-	%base_logger_util:msg("role_manager:start_one_role ~p ~p ~p ~n",[GS_system_gate_info,New_GS_system_role_info,GS_system_map_info]),
-	role_manager:start_one_role(GS_system_map_info, New_GS_system_role_info, GS_system_gate_info,
+	%base_logger_util:msg("base_role_manager:start_one_role ~p ~p ~p ~n",[GS_system_gate_info,New_GS_system_role_info,GS_system_map_info]),
+	base_role_manager:start_one_role(GS_system_map_info, New_GS_system_role_info, GS_system_gate_info,
 								{get(account),get(pf),get(adult),LoginIp,get(is_yellow_vip), get(is_yellow_year_vip),
 								 get(yellow_vip_level),get(openid),get(openkey),get(pfkey)}).
 

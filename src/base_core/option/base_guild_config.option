@@ -1,0 +1,4 @@
+[
+	%%{gateport,[{'gate1',8001}]},
+	{undefine_guid_config, false}
+].

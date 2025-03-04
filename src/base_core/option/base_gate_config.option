@@ -8,5 +8,6 @@
 		[
 			{acceptor_count,2}
 		]
-	}
+	},
+	{register_enable,1}%%是否开放新角色注册 
 ].

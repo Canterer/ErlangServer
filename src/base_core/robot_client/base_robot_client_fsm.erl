@@ -1,6 +1,7 @@
 -module(base_robot_client_fsm).
 
 -behaviour(gen_fsm).
+-define(ZS_LOG(), base_logger_util:msg("#####ZZZZZ##### ~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE])).
 -define(PACKAGE_INDEX,1000).
 -define(ITEMNUM,10).
 -include("login_pb.hrl").
@@ -31,7 +32,7 @@
 
 -record(state, {socket, role_info, map_info, client_config}).
 
--export([loging/2,gaming/2,attacking/2]).
+-export([loging/2,testing/2,gaming/2,attacking/2]).
 
 -export([kick_robot/1,kick_many_robot/1]).
 
@@ -39,21 +40,44 @@
 -record(account,{username,roleids,gold,qq_gold,local_gold,nickname,gender,first_login_ip,first_login_time,last_login_ip,last_login_time,login_days,is_yellow_vip,is_yellow_year_vip,yellow_vip_level,first_login_platform,login_platform}).
 
 start(Id, Client_config)->
+	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	base_fsm_util:start_link({local,Id},?MODULE, [Client_config], []).
 
 sendtoserver(Pid,Binary)->
+	?ZS_LOG(),
 	Pid ! {sendtoserver,Binary}.
 
 init([Client_config]) ->
+	?ZS_LOG(),
 	process_flag(trap_exit,true),
+	?ZS_LOG(),
 	{A,B,C} = os:timestamp(),
-	rand:seed(A,B,C),
-	base_fsm_util:send_state_event(self(), {login}),
-	{ok,  loging,#state{client_config=Client_config}}.
+	?ZS_LOG(),
+	% rand:seed(exsplus,{A,B,C}),
+	?ZS_LOG(),
+	#robot_client_config{server_addr=Server_addr,server_port=Server_port} = Client_config,
+	% {ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2}]),
+	% base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),
+	% base_fsm_util:send_state_event(self(), {login}),
+	base_fsm_util:send_event_after(2000, {login}),
+	?ZS_LOG(),
+	{ok,testing,#state{socket=A, role_info=B, map_info=C,client_config=Client_config}}.
+	% {ok,testing,#state{socket=Socket,client_config=Client_config}}.
+	% {ok,loging,#state{socket=Socket,client_config=Client_config}}.
 
+testing({login},StateData)->
+	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,{login}]),
+	base_fsm_util:send_event_after(2000, {move}),
+	{next_state, testing, StateData};
+testing(Event,StateData)->
+	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,Event]),
+	{next_state,loging,StateData}.
 loging({login}, State) ->
+	base_logger_util:msg("~p:~p({login})~n",[?MODULE,?FUNCTION_NAME]),
 	#state{client_config=Client_config} = State,
+	?ZS_LOG(),
 	{A,B,C} = os:timestamp(),
+	?ZS_LOG(),
 	#robot_client_config{user_name=Index, 
 		       server_addr=Server_addr,
 		       server_port=Server_port,
@@ -62,7 +86,9 @@ loging({login}, State) ->
 				level = Level,
 				speekrate = SpeekRate,
 				serverid = ServerId} = Client_config,
-	rand:seed(A,B+Index,C),
+	?ZS_LOG(),
+	rand:seed(exsplus,{A,B+Index,C}),
+	?ZS_LOG(),
 	User_name ="1000" ++ integer_to_list(Index),
 	put(user_name,User_name),
 	put(lineid ,LineId),
@@ -71,23 +97,29 @@ loging({login}, State) ->
 	put(level,Level),
 	put(in_battle,false),
 	put(attack_time,0),
+	?ZS_LOG(),
 	Gender = (Index rem 2),
 	put(gender,Gender),
 	Class = (Index rem 3) + 1,
 	put(class,Class),
-	{ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2}]),    
+	?ZS_LOG(),
+	% {ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2},{active,once},{keepalive,true}]),
+	% base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),    
 	%% 认证开始
 	UserId = integer_to_list(Index),
 	put(userid,UserId),
+	?ZS_LOG(),
 	begin_auth(User_name,UserId,ServerId),
+	?ZS_LOG(),
 	put(player_list, []),
-	{next_state, loging, State#state{socket=Socket}};
-
+	?ZS_LOG(),
+	{next_state, loging, State};
 loging(#user_auth_fail_s2c{reasonid = ReasonId}, State)->
 	io:format("user_auth_fail_s2c reasonid:~p~n",[ReasonId]),
 	{next_state, loging, State};
 
 loging(#init_random_rolename_s2c{bn=Bname,gn=Gname},State)->
+	base_logger_util:msg("~p:~p(init_random_rolename_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	%%io:format("a new player ~n"),
 	Gender = get(gender),
 	if
@@ -110,7 +142,8 @@ loging(#init_random_rolename_s2c{bn=Bname,gn=Gname},State)->
 	{next_state, loging, State};
 
 
-loging(#player_role_list_s2c{roles=RoleList}, State)->	
+loging(#player_role_list_s2c{roles=RoleList}, State)->
+	base_logger_util:msg("~p:~p(player_role_list_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	case RoleList of
 		[]->
 			nothing;
@@ -133,24 +166,24 @@ loging(#player_role_list_s2c{roles=RoleList}, State)->
 					put(role_name,RoleName)
 			end,
 			{A,B,C} = os:timestamp(),
-			rand:seed(A,B+RoleId,C),
+			rand:seed(exsplus,{A,B+RoleId,C}),
 			send_line_query(LastMapId)	
 	end,
 	{next_state, loging, State};
  
 loging(#create_role_sucess_s2c{role_id=RoleId}, State)->
-%% io:format("create_role_sucess_s2c RoleId:~p ~n",[RoleId]),
+	base_logger_util:msg("~p:~p(create_role_sucess_s2c) RoleId:~p~n",[?MODULE,?FUNCTION_NAME,RoleId]),
 	put(role_id,RoleId),
 	send_role_select(get(role_id),get(lineid)),
 	{next_state, loging, State};
 
 loging(#role_line_query_ok_s2c{lines = Lines}, State)->
-%%	io:format("role_line_query_ok_s2c ok~n"),
+	base_logger_util:msg("~p:~p(role_line_query_ok_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	send_role_select(get(role_id),get(lineid)),	
 	{next_state, loging, State};
 	
 loging(#learned_skill_s2c{skills = SkillsList}, State)->
-%%	io:format("learned_skill_s2c loging,skilllist:~p~n",[SkillsList]),
+	base_logger_util:msg("~p:~p(learned_skill_s2c) SkillsList~p~n",[?MODULE,?FUNCTION_NAME,SkillsList]),
 	Skills =
 		if
 			SkillsList =:= []->
@@ -165,6 +198,7 @@ loging(#learned_skill_s2c{skills = SkillsList}, State)->
 	{next_state, loging, State};
 	
 loging(#role_map_change_s2c{x=LX, y=LY,lineid = LastLineId,mapid =LastMapid}, State)->
+	base_logger_util:msg("~p:~p(role_map_change_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	send_map_complete(),
 	TargetMap = get(mapid),
 	TargetLine = get(lineid),
@@ -195,6 +229,7 @@ loging(#role_map_change_s2c{x=LX, y=LY,lineid = LastLineId,mapid =LastMapid}, St
 	end;	
 
 loging(_Other, State)->
+	base_logger_util:msg("~p:~p(_Other)~n",[?MODULE,?FUNCTION_NAME]),
 	ignor,	
 	{next_state, loging, State}.
 
@@ -265,7 +300,6 @@ gaming(#questgiver_states_update_s2c{npcid = Npcs,queststate = States}, State)->
 					%%io:format("questgiver_states_update_s2c0000000~n"),
 					put(next_action,{com_quest,2010001}),
 					put(path,[]);
-%%					;
 				true->
 					nothing
 			end;			 
@@ -430,12 +464,14 @@ attacking(_Other, State)->
 	{next_state, attacking, State}.
 
 handle_info({quit},StateName, State) ->
+	?ZS_LOG(),
 	#state{client_config=Client_config,socket=Socket} = State,    
 	gen_tcp:close(Socket),
 	timer:send_after(2000, {init}),
 	{next_state, StateName, State};
 
 handle_info({check_alive},StateName, State) ->
+	?ZS_LOG(),
 	case get(check_alive) of
 		undefined->
 			put(check_alive,os:timestamp());
@@ -454,6 +490,7 @@ handle_info({check_alive},StateName, State) ->
 	{next_state, StateName, State};
 
 handle_info({speek_loop},StateName,State)->
+	?ZS_LOG(),
 	case rand:uniform(100) > get(speek_rate) of
 		true->
 			nothing;
@@ -465,15 +502,19 @@ handle_info({speek_loop},StateName,State)->
 	{next_state, StateName, State};
 
 handle_info({sendtoserver,Binary},StateName,#state{socket=Socket}=State)->
+	?ZS_LOG(),
+	base_logger_util:msg("~p:~p({sendtoserver,Binary=~p},StateName=~p,State=~p)~n)",[?MODULE,?FUNCTION_NAME,Binary,StateName,State]),
 	gen_tcp:send(Socket, Binary),
 	{next_state, StateName, State};
 	
 handle_info({tcp_closed, _Socket}, StateName, StateData) ->
+	?ZS_LOG(),
 	io:format("tcp_closed Roleid ~p~n",[get(role_id)]),
 	exit(normal),
 	{stop,normal, StateData};
 
 handle_info({tcp,Socket,Binary},StateName,State)->
+	?ZS_LOG(),
 	try
 		put(check_alive,os:timestamp()),	
 		%@@Term = erlang:binary_to_term(Binary),
@@ -481,6 +522,7 @@ handle_info({tcp,Socket,Binary},StateName,State)->
 		%@@BinMsg = erlang:setelement(1,Term, login_pb:get_record_name(ID)),
 		<<ID:16, Binary0/binary>> = Binary,
 		RecordName = login_pb:get_record_name(ID),
+		base_logger_util:msg("~p:~p({tcp,Socket,Binary}) proto:~p~n",[?MODULE,?FUNCTION_NAME,RecordName]),
 		case RecordName of
 			user_auth_fail_s2c ->
 				BinMsg = login_pb:decode_user_auth_fail_s2c(Binary0);
@@ -523,10 +565,12 @@ handle_info({tcp,Socket,Binary},StateName,State)->
 	catch
 		E:R->
 			nothing%%slogger:msg("tcp error record_name Binary E:~p,R~p~n",[E,R])
-	end,			
-	{next_state, StateName, State};	
+	end,
+	inet:setopts(Socket, [{active, once}]),
+	{next_state, StateName, State};
 
 handle_info({join_battle},StateName,State)->
+	?ZS_LOG(),
 	case get(in_battle) of
 		true->
 			nothing;
@@ -538,10 +582,12 @@ handle_info({join_battle},StateName,State)->
 	{next_state, StateName, State};	
 
 handle_info({continue_attack,{Skill,TargetId}},StateName,State)->
+	?ZS_LOG(),
 	robot_attack(Skill,TargetId),
 	{next_state, StateName, State};
 
 handle_info(Info, StateName,State) ->
+	?ZS_LOG(),
 	{next_state, StateName, State}.
 
 handle_server_message(#other_role_move_s2c{})->	
@@ -798,7 +844,9 @@ begin_auth(AccountName,UserId,ServerId)->
 	MD5Bin = erlang:md5(ValStr),
 	Md5Str = base_auth_util:binary_to_hexstring(MD5Bin),
 	AuthTerm = #user_auth_c2s{username=AccountName,userid=UserId,time=Time,cm="1",serverid = ServerId,flag = Md5Str,userip = "",type = "",sid = "",openid="",openkey="",appid="",pf="",pfkey=""},
+	?ZS_LOG(),
 	Binary = login_pb:encode_user_auth_c2s(AuthTerm),
+	?ZS_LOG(),
 	sendtoserver(self(), Binary).
 
 set_robot_gmaccount(RobotName)->
@@ -972,8 +1020,8 @@ destroy_item(PackageSlot,ItemNum)->
 %% Purpose: Shutdown the fsm
 %% Returns: any
 %% --------------------------------------------------------------------
-terminate(Reason, _StateName, _StatData) ->
-	io:format("process terminate Reason ~p~n",[Reason]),
+terminate(Reason, StateName, StateData) ->
+	base_logger_util:msg("process terminate Reason=~p StateName=~p StateData=~p~n",[Reason,StateName,StateData]),
     ok.
 
 %% --------------------------------------------------------------------

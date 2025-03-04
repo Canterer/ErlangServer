@@ -47,6 +47,9 @@ start_robot_client_test(Server,ServerId,Index)->
 	catch
 		_:_-> ignor
 	end,
+	filelib:ensure_dir("../log/"),
+	FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ "_node.log",
+	error_logger:logfile({open, FileName}),
 	start_robot_clients(Server,ServerId,Index,1).
 
 start_robot_client(Server,ServerId,Index,LineId,Port,MapId,Level,SpeekRate)->
@@ -60,7 +63,7 @@ start_robot_client(Server,ServerId,Index,LineId,Port,MapId,Level,SpeekRate)->
 						level = Level,
 						speekrate = SpeekRate,
 						serverid = ServerId},
-	%%io:format("start_client:~p~n", [Index]),
+	base_logger_util:msg("start_client index:~p client_config:~p~n", [Index, Client_config]),
 	base_robot_client_fsm:start(list_to_atom(integer_to_list(Index)), Client_config).
 
 %%base_robot_client_tool:start_robot_clients("192.168.1.251", 1, 10, 1).
@@ -85,7 +88,7 @@ start_robot_clients(Server,ServerId,Index,Num,LineId,Port,MapId,Level,SpeekRate)
 	catch
 		_:_-> ignor
 	end,
-	lists:foreach(fun(IndexTmp)-> start_robot_client(Server,ServerId,IndexTmp,LineId,Port,MapId,Level,SpeekRate) end,lists:seq(RealIndex,RealIndex + Num)).		
+	lists:foreach(fun(IndexTmp)-> start_robot_client(Server,ServerId,IndexTmp,LineId,Port,MapId,Level,SpeekRate) end,lists:seq(RealIndex,RealIndex + Num -1)).
 
 
 start_send()->

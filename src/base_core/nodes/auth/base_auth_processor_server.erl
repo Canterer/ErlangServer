@@ -123,7 +123,7 @@ do_handle_info({auth_player,{FromNode,FromProc,ServerId,UserAuth}},State) ->
 		end
 	catch
 		R:E->
-			base_logger_util:msg("auth_processor error,R:~p,E:~p,UserAuth:~p~n",[R,E,UserAuth]),
+			base_logger_util:msg("base_auth_processor_server error,R:~p,E:~p,UserAuth:~p~n",[R,E,UserAuth]),
 			base_tcp_client_fsm:auth_failed(FromNode, FromProc, ServerId,?AUTH_FAILED)
 	end,
     {noreply, State};

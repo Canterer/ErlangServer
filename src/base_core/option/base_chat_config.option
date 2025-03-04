@@ -1,3 +1,4 @@
 [
 	%%{gateport,[{'gate1',8001}]},
+	{undefine_chat_config, false}
 ].

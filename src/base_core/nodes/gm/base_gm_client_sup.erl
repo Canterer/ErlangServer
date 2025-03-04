@@ -25,8 +25,8 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
-start_link([])->
-	supervisor:start_link({local, ?SERVER},?MODULE, []).
+start_link([OnReceiveData,OnClientClose])->
+	supervisor:start_link({local, ?SERVER},?MODULE, [OnReceiveData,OnClientClose]).
 
 get_client_count()->
 	%% count_children函数在新版的OTP库中存在
@@ -36,11 +36,11 @@ get_client_count()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+do_init([OnReceiveData,OnClientClose]) ->
 	{ok,{{simple_one_for_one,5, 60}, 
 		[
 			{base_gm_client_fsm, 				%% target process noname
-			{base_gm_client_fsm,start_link,[]},
+			{base_gm_client_fsm,start_link,[OnReceiveData,OnClientClose]},
 			temporary, 				%% target process is temporary
 			brutal_kill,worker,[]}
 		]}}.
