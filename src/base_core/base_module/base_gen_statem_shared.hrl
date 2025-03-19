@@ -37,7 +37,7 @@ callback_mode()	->
 	Returns.
 
 %% --------------------------------------------------------------------
-%% Function: handle_event/3
+%% Function: user_state_name/3
 %% Description: State callback for all states when callback_mode() =:= state_functions.
 %% EventType: enter | {'call',From :: from()} | 'cast' | 'info'
 %% 					| 'timeout' | {'timeout', Name :: term()} | 'state_timeout' | 'internal'
@@ -45,11 +45,8 @@ callback_mode()	->
 %%		  {noreply, State, Timeout} |
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_event(EventType, EventContent, StateData) ->
-	?OTP_FUNC_START("EventType=~p, EventContent=~p, StateData=~p",[EventType,EventContent,StateData]),
-	Returns = do_handle_event(EventType, EventContent, StateData),
-	?OTP_FUNC_END("Returns=~p",[Returns]),
-	Returns.
+do_handle_state_event(EventType, EventContent, StateName, StateData) ->
+	handle_event(EventType, EventContent, StateName, StateData).
 
 %% --------------------------------------------------------------------
 %% Function: handle_event/4

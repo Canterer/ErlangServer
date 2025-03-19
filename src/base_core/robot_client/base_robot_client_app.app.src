@@ -1,0 +1,18 @@
+{application, base_robot_client_app,
+[
+	{description,"base robot_client application"},
+	{vsn,"1.0"},
+	{modules,
+		[
+			base_robot_client_app,
+			base_robot_client_sup,
+			base_robot_client_fsm
+		]
+	},
+	{registered,
+		[base_robot_client_fsm,base_robot_client_sup]
+	},
+	{applications,[kernel,stdlib]},
+	{mod,{base_robot_client_app,[]}}
+]
+}.

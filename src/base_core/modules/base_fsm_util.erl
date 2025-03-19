@@ -55,4 +55,5 @@ sync_send_all_state_event(Name, Event, Timeout)->
 	gen_fsm:sync_send_all_state_event(Name, Event, Timeout).
 
 send_event_after(Time, Event) ->
+	base_logger_util:msg("gen_fsm:send_event_after(Time=~p, Event=~p)~n",[Time, Event]),
 	gen_fsm:send_event_after(Time, Event).

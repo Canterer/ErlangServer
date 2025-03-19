@@ -265,7 +265,7 @@ handle_connecting_state(cast,{socket_ready,CliSocket},StateData)->
 					{ok,RecvBin}->
 						?ZS_LOG(),
 						<< PacketLenth:?PACKAGE_HEADER_BIT_LENGTH/big,LeftHeaderBin/binary >> = RecvBin,
-						io:format("PacketLenth ~p RecvBin ~p ~n",[PacketLenth,RecvBin]),
+						base_logger_util:msg("PacketLenth ~p RecvBin ~p ~n",[PacketLenth,RecvBin]),
 						
 						case gen_tcp:recv(CliSocket,PacketLenth - 2,10000) of
 							{ok,LeftBin}->
@@ -313,7 +313,8 @@ handle_connecting_state(cast,{socket_disable,CliSocket},StateData)->
 	put(clientsock, CliSocket),
 	{stop, normal, StateData};
 handle_connecting_state(_EventType,Event,StateData)->
-	{next_state, connecting, StateData}.
+	do_handle_state_event(_EventType,Event,connecting,StateData).
+	% {next_state, connecting, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：已连接
@@ -331,8 +332,9 @@ handle_connected_state(cast,{start_auth,ServerId,UserAuth}, StateData) ->
 %%handle_connected_state({start_auth,Time,AuthResult}, StateData) ->
 %%	base_auth_processor_server:auth(node(),self(),Time,AuthResult),
 %%	{next_state, authing, StateData};
-handle_connected_state(_EventType,Event,State) ->
-	{next_state, connected, State}.
+handle_connected_state(EventType,Event,StateData) ->
+	do_handle_state_event(EventType,Event,connected,StateData).
+	% {next_state, connected, State}.
 
 
 
@@ -413,8 +415,9 @@ handle_authing_state(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,User
 	put(openkey, OpenKey),
 	put(pfkey, PfKey),
 	{next_state,rolelisting,StateData};
-handle_authing_state(_EventType,Event, State) ->
-	{next_state, authing, State}.
+handle_authing_state(EventType,Event,StateData) ->
+	do_handle_state_event(EventType,Event,authing,StateData).
+	% {next_state, authing, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 列举角色状态
@@ -491,8 +494,9 @@ handle_rolelisting_state(cast,{reset_random_rolename}, StateData)->
 			nothing
 	end,
 	{next_state, rolelisting, StateData};
-handle_rolelisting_state(_EventType,Event, State) ->
-	{next_state, rolelisting, State}.
+handle_rolelisting_state(EventType,Event,StateData) ->
+	do_handle_state_event(EventType,Event,rolelisting,StateData).
+	% {next_state, rolelisting, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  事件: 获取分线服务器信息成功
@@ -535,8 +539,9 @@ handle_logining_state(cast,{line_info_success,LineInfos}, StateData)->
 	{next_state,logining,StateData};
 handle_logining_state(cast,{role_into_map_success}, StateData) ->
 	{next_state, gaming,StateData};
-handle_logining_state(_EventType,Event, State) ->
-	{next_state, logining, State}.
+handle_logining_state(EventType,Event,StateData) ->
+	do_handle_state_event(EventType,Event,logining,StateData).
+	% {next_state, logining, State}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -546,8 +551,9 @@ handle_logining_state(_EventType,Event, State) ->
 %% env_prepared X preparing_into_map -> gaming 
 handle_preparing_into_map_state(cast,{env_prepared,Info},StateData)->
 	{next_state,gaming,StateData};
-handle_preparing_into_map_state(_EventType,Event, State) ->
-	{next_state, preparing_into_map, State}.
+handle_preparing_into_map_state(EventType,Event, StateData) ->
+	do_handle_state_event(EventType,Event,preparing_into_map,StateData).
+	% {next_state, preparing_into_map, State}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -575,24 +581,23 @@ handle_gaming_state(cast,{auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
 	base_role_processor:finish_visitor(RolePid,AccountName),
 	self()! {needchangename},
 	{next_state,gaming,StateData};
-handle_gaming_state(_EventType,Event,StateData)->
-	{next_state,gaming,StateData}.
+handle_gaming_state(EventType,Event,StateData)->
+	do_handle_state_event(EventType,Event,gaming,StateData).
+	% {next_state,gaming,StateData}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 do_callback_mode()->
 	state_functions.
-do_handle_event(_EventType,_EventContent,_StateName,_StateData)->
-	keep_state_and_data.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 异步事件处理: send by gen_fsm:sync_send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-do_handle_event(cast, stop, _StateData)->
+do_handle_event(cast, stop, _StateName, _StateData)->
 % handle_event(stop, StatName , StateData)->
 	% {stop, normal, StateData};
 	{stop, normal};
-do_handle_event(cast, _EventContent, _StateData)->
+do_handle_event(cast, _EventContent, _StateName, _StateData)->
 % handle_event(Event, StateName, StateData) ->
 	% {next_state, StateName, StateData};
 	{keep_state_and_data,[]};
@@ -600,7 +605,7 @@ do_handle_event(cast, _EventContent, _StateData)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 同步事件处理: send by gen_fsm:send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-do_handle_event({call, From}, {role_process_started,MapNode,RoleProc}, StateData) ->
+do_handle_event({call, From}, {role_process_started,MapNode,RoleProc}, StateName, StateData) ->
 % handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, StateData) ->
 	put(mapnode, MapNode),
 	put(roleproc, RoleProc),
@@ -620,20 +625,20 @@ do_handle_event({call, From}, {role_process_started,MapNode,RoleProc}, StateData
 	end,
 	% {reply, {ChatNode,ChatProc}, StateName, StateData};
 	{keep_state_and_data, [{reply, From, {ChatNode,ChatProc}}]};
-do_handle_event({call, From}, _EventContent, _StateData) ->
+do_handle_event({call, From}, _EventContent, StateName, _StateData) ->
 % handle_sync_event(Event, From, StateName, StateData) ->
 	Reply = ok,
 % 	{reply, Reply, StateName, StateData}.
 	{keep_state_and_data, [{reply, From, Reply}]};
 
-do_handle_event(info, {mapid_change,MapNode,MapId,RoleProc}, StateData) ->
+do_handle_event(info, {mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 % handle_info({mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 	put(mapnode, MapNode),
 	put(mapid, MapId),
 	put(roleproc, RoleProc),
 	% {next_state,StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {alive_check}, StateData) ->
+do_handle_event(info, {alive_check}, StateName, StateData) ->
 % handle_info({alive_check}, StateName, StateData) ->
 	case get(alive_time) of
 		undefined->
@@ -652,7 +657,7 @@ do_handle_event(info, {alive_check}, StateData) ->
 	keep_state_and_data;
 %%
 %% game gate need to send data
-do_handle_event(info, {send_to_client, Data}, StateData) ->
+do_handle_event(info, {send_to_client, Data}, StateName, StateData) ->
 % handle_info({send_to_client, Data}, StateName, StateData) ->
 	%%TODO
 	try erlang:binary_to_term(Data) of
@@ -665,7 +670,7 @@ do_handle_event(info, {send_to_client, Data}, StateData) ->
 	erlang:port_command(get(clientsock), Data, [force]),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {send_to_client_filter, Cur_Binary,Flt_Binary}, StateData) ->
+do_handle_event(info, {send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData) ->
 % handle_info({send_to_client_filter, Cur_Binary,Flt_Binary}, StateName, StateData) ->
 	IpAddr = get(clientaddr),
 	case whiteip:match(IpAddr) of
@@ -691,7 +696,7 @@ do_handle_event(info, {send_to_client_filter, Cur_Binary,Flt_Binary}, StateData)
 	
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {do_recv}, StateData) ->
+do_handle_event(info, {do_recv}, StateName, StateData) ->
 % handle_info({do_recv}, StateName, StateData) ->	
 	%%RolePid = rpc:call(get(mapnode), erlang, whereis, [get(roleproc)]),
 	RolePid  = {get(roleproc),get(mapnode)},
@@ -708,7 +713,7 @@ do_handle_event(info, {do_recv}, StateData) ->
 	end,
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {tcp, Socket, BinData}, StateData) ->
+do_handle_event(info, {tcp, Socket, BinData}, StateName, StateData) ->
 % handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	put(alive_time,os:timestamp()),
 	{M,F,A} = get(on_receive_data),
@@ -726,62 +731,62 @@ do_handle_event(info, {tcp, Socket, BinData}, StateData) ->
 	inet:setopts(Socket, [{active, once}]),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {tcp_closed, _Socket}, StateData) ->
+do_handle_event(info, {tcp_closed, _Socket}, StateName, StateData) ->
 % handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 	do_clear_on_close(),
 	% {stop, normal, StateData};
 	stop;
-do_handle_event(info, {shutdown}, StateData) ->
+do_handle_event(info, {shutdown}, StateName, StateData) ->
 % handle_info({shutdown},StateName,StateData)->
 	do_clear_on_close(),
 	% {stop, normal, StateData};
 	stop;
 %%no player logout
-do_handle_event(info, {kick_client}, StateData) ->
+do_handle_event(info, {kick_client}, StateName, StateData) ->
 % handle_info({kick_client},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, maybe error client!\n"),
 	close_and_clear_no_logout(),
 	% {stop,normal, StateData};
 	stop;
-do_handle_event(info, {kick_client,KickInfo}, StateData) ->
+do_handle_event(info, {kick_client,KickInfo}, StateName, StateData) ->
 % handle_info({kick_client,KickInfo},StateName,StateData)->
 	base_logger_util:msg("receive need kick client, Reason:~p!\n",[KickInfo]),
 	do_clear_on_close(),
 	% {stop,normal, StateData};
 	stop;
-do_handle_event(info, {needchangename}, StateData) ->
+do_handle_event(info, {needchangename}, StateName, StateData) ->
 % handle_info({needchangename},StateName,StateData)->
 	 SendData = login_pb:encode_visitor_rename_s2c(#visitor_rename_s2c{}),
 	 send_data(self(), SendData),
 	% {next_state,StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {object_update_create,CreateData}, StateData) ->
+do_handle_event(info, {object_update_create,CreateData}, StateName, StateData) ->
 % handle_info({object_update_create,CreateData}, StateName, StateData) ->
 	packet_object_update:push_to_create_data(CreateData),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {object_update_delete,DelData}, StateData) ->
+do_handle_event(info, {object_update_delete,DelData}, StateName, StateData) ->
 % handle_info({object_update_delete,DelData}, StateName, StateData) ->
 	packet_object_update:push_to_delete_data(DelData),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {object_update_update,UpdateData}, StateData) ->
+do_handle_event(info, {object_update_update,UpdateData}, StateName, StateData) ->
 % handle_info({object_update_update,UpdateData}, StateName, StateData) ->
 	packet_object_update:push_to_update_data(UpdateData),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {object_update_interval}, StateData) ->
+do_handle_event(info, {object_update_interval}, StateName, StateData) ->
 % handle_info({object_update_interval}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
 	erlang:send_after(?OBJECT_PACKET_UPDATE_INTERVAL,self(),{object_update_interval}),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, {send_pending_update}, StateData) ->
+do_handle_event(info, {send_pending_update}, StateName, StateData) ->
 % handle_info({send_pending_update}, StateName, StateData) ->
 	packet_object_update:send_pending_update(),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-do_handle_event(info, _EventContent, _StateData) ->
+do_handle_event(info, _EventContent, _StateName, _StateData) ->
 % handle_info(_Info, StateName, StateData) ->
 	% {next_state, StateName, StateData}.
 	keep_state_and_data.

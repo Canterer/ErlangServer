@@ -32,7 +32,7 @@
 
 -record(state, {socket, role_info, map_info, client_config}).
 
--export([loging/2,testing/2,gaming/2,attacking/2]).
+-export([loging/2,gaming/2,attacking/2]).
 
 -export([kick_robot/1,kick_many_robot/1]).
 
@@ -41,7 +41,9 @@
 
 start(Id, Client_config)->
 	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	base_fsm_util:start_link({local,Id},?MODULE, [Client_config], []).
+	base_logger_util:msg("Id:~p Client_config:~p~n", [Id, Client_config]),
+	% base_fsm_util:start_link({local,Id},?MODULE, [Client_config], []).
+	gen_fsm:start({local,Id},?MODULE, [Client_config], []).
 
 sendtoserver(Pid,Binary)->
 	?ZS_LOG(),
@@ -53,25 +55,26 @@ init([Client_config]) ->
 	?ZS_LOG(),
 	{A,B,C} = os:timestamp(),
 	?ZS_LOG(),
-	% rand:seed(exsplus,{A,B,C}),
+	rand:seed(exsplus,{A,B,C}),
 	?ZS_LOG(),
 	#robot_client_config{server_addr=Server_addr,server_port=Server_port} = Client_config,
-	% {ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2}]),
-	% base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),
-	% base_fsm_util:send_state_event(self(), {login}),
-	base_fsm_util:send_event_after(2000, {login}),
+	{ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2}]),
+	base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),
+	base_fsm_util:send_state_event(self(), {login}),
 	?ZS_LOG(),
-	{ok,testing,#state{socket=A, role_info=B, map_info=C,client_config=Client_config}}.
+	% {ok,testing,#state{socket=Socket, role_info=B, map_info=C,client_config=Client_config}}.
 	% {ok,testing,#state{socket=Socket,client_config=Client_config}}.
-	% {ok,loging,#state{socket=Socket,client_config=Client_config}}.
+	{ok,loging,#state{socket=Socket,client_config=Client_config}}.
 
-testing({login},StateData)->
-	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,{login}]),
-	base_fsm_util:send_event_after(2000, {move}),
-	{next_state, testing, StateData};
-testing(Event,StateData)->
-	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,Event]),
-	{next_state,loging,StateData}.
+% testing({login1},StateData)->
+% 	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,{login1}]),
+% 	base_fsm_util:send_state_event(self(), {login}),
+% 	{next_state, testing, StateData};
+% testing(Event,StateData)->
+% 	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,Event]),
+% 	base_fsm_util:send_state_event(self(), {login}),
+% 	?ZS_LOG(),
+% 	{next_state,loging,StateData}.
 loging({login}, State) ->
 	base_logger_util:msg("~p:~p({login})~n",[?MODULE,?FUNCTION_NAME]),
 	#state{client_config=Client_config} = State,
@@ -103,8 +106,6 @@ loging({login}, State) ->
 	Class = (Index rem 3) + 1,
 	put(class,Class),
 	?ZS_LOG(),
-	% {ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2},{active,once},{keepalive,true}]),
-	% base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),    
 	%% 认证开始
 	UserId = integer_to_list(Index),
 	put(userid,UserId),
@@ -1036,6 +1037,7 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
 %% 处理其他事件
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_event(Event, StateName, StateData) ->
+	base_logger_util:msg("handle_event Event=~p StateName=~p StateData=~p~n",[Event,StateName,StateData]),
 	{next_state, StateName, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1043,6 +1045,7 @@ handle_event(Event, StateName, StateData) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 handle_sync_event(Event, From, StateName, StateData) ->
+	base_logger_util:msg("handle_sync_event Event=~p From=~p StateName=~p StateData=~p~n",[Event,From,StateName,StateData]),
 	Reply = ok,
 	{reply, Reply, StateName, StateData}.		
 		
