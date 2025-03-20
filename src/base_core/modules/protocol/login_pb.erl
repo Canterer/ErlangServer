@@ -9,12 +9,39 @@
 -define(ETS_OPERATER_BEHAVIOUR,true).
 -include("base_all_behaviour_shared.hrl").
 
+-define(TT(A), {A,record_info(fields,A)}).
+
 get_record_name(ID)->
 	case ets:lookup(proto_msg_id_record_map,ID) of
 		[]->error;
-		[{_Id,Rec}]->
-			Rec
+		[{_Id,{Name,Fields}}] ->
+			Name;
+		[{_Id,Name}]->
+			Name
 	end.
+
+get_record_fields(ID)->
+	case ets:lookup(proto_msg_id_record_map,ID) of
+		[]->error;
+		[{_Id,{Name,Fields}}]->
+			Fields;
+		[{_Id,Name}]->
+			[]
+	end.
+
+message_to_string(Term)->
+	Id = erlang:element(2,Term),
+	Fields = get_record_fields(Id),
+	Num = erlang:length(Fields),
+	% base_logger_util:msg("record_to_string Num:~p Fields:~p",[Num,Fields]),
+	TermStr = lists:foldl(fun(Index,Acc)->
+			Key = lists:nth(Index, Fields),
+			Value = erlang:element(Index+1, Term),%第一个是记录名
+			Str = io_lib:format(",~p:~p",[Key,Value]),
+			% base_logger_util:msg("Str:~s",[Str]),
+			lists:append(Acc, Str)
+		end,[],lists:seq(1,Num)),
+	io_lib:format("~p#{~s}",[erlang:element(1, Term), lists:nthtail(1,TermStr)]).
 
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
@@ -235,7 +262,8 @@ do_init_ets()->
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{403,'inspect_c2s'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{404,'inspect_s2c'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{405,'inspect_faild_s2c'}),
-	ets_operater_behaviour:insert(proto_msg_id_record_map,{410,'user_auth_c2s'}),
+	% ets_operater_behaviour:insert(proto_msg_id_record_map,{410,'user_auth_c2s'}),
+	ets_operater_behaviour:insert(proto_msg_id_record_map,{410,?TT('user_auth_c2s')}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{411,'user_auth_fail_s2c'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{412,'enum_skill_item_c2s'}),
 	ets_operater_behaviour:insert(proto_msg_id_record_map,{413,'enum_skill_item_fail_s2c'}),

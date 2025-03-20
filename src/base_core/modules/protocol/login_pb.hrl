@@ -1,3 +1,4 @@
+% proto_record_def.hrl
 -record(mail_query_detail_c2s, {msgid=533,mailid}).
 -record(equipment_sock_c2s, {msgid=603,equipment,sock}).
 -record(item_identify_error_s2c, {msgid=1481,error}).

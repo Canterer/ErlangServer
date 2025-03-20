@@ -22,20 +22,23 @@ get_client_mod()->
 	 {?MODULE,on_client_close_socket,[]}].
 
 on_client_receive_packet(GateProc,Binary,RolePid)->
-	<<ID:16, Binary1/binary>> = Binary,
-	%slogger:msg("dispatch Message:~p, GateProc:~p, RolePid:~p ~n", [ID,GateProc,RolePid]),
-%% 	Message = try
-%% 			  	  Term = erlang:binary_to_term(Binary),
-%% 				  ID = element(2,Term),
-%% 				  erlang:setelement(1,Term, login_pb:get_record_name(ID))
-%% 			  catch
-%% 				  _:_-> slogger:msg("socket_callback:receive_packet error ~p~n",[Binary]),{}
-%% 			  end,	
-%% 	slogger:msg("dispatch Message:~p, GateProc:~p, RolePid:~p ~n", [Message,GateProc,RolePid]),
-	package_dispatcher:dispatch(ID, Binary1,GateProc,RolePid).
+	base_logger_util:msg("~p:~p(GateProc:~p,RolePid:~p)~n",[?MODULE,?FUNCTION_NAME,GateProc,RolePid]),
+	try
+		<<ID:16, Binary1/binary>> = Binary,
+		% 内部指定了转换规则 防止解码
+		% Term = erlang:binary_to_term(Binary),
+		% TempId = erlang:menemt(1,Term),
+		% base_logger_util:msg("ID:~p TempId:~p~n",[ID,TempId]),		
+		% Message = erlang:menemt(2,Term),
+		% ProtoName = login_pb:get_record_name(ID),
+		% base_logger_util:msg("~p:~p(GateProc:~p,RolePid:~p,MsgId:~p,MsgName:~p)~n", [?MODULE,?FUNCTION_NAME,GateProc,RolePid,ID,ProtoName]),
+		package_dispatcher:dispatch(ID,Binary1,GateProc,RolePid)
+	catch
+		_:_-> base_logger_util:msg("socket_callback:receive_packet parse error ~p~n",[Binary])
+	end.
 
-on_client_close_socket(_GateProc,RolePid) ->
-	base_logger_util:msg("close socket call back called\n").
+on_client_close_socket(GateProc,RolePid) ->
+	base_logger_util:msg("~p:~p(GateProc:~p,RolePid:~p)~n", [?MODULE,?FUNCTION_NAME,GateProc,RolePid]).
 %%
 %% Local Functions
 %%
