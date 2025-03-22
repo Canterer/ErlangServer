@@ -58,7 +58,7 @@ start_robot_client(Server,ServerId,Index,LineId,Port,MapId,Level,SpeekRate)->
 						serverid = ServerId},
 	base_logger_util:info_msg("start_client index:~p client_config:~p~n", [Index, Client_config]),
 	% base_robot_client_app:start(list_to_atom(integer_to_list(Index)), Client_config).
-	base_robot_client_fsm:start(list_to_atom(integer_to_list(Index)), Client_config).
+	base_robot_client_statem:start(list_to_atom(integer_to_list(Index)), Client_config).
 
 %%base_robot_client_tool:start_robot_clients("192.168.1.251", 1, 10, 1).
 start_robot_clients(Server,ServerId,Index,Num)->

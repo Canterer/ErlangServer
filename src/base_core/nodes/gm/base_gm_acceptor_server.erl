@@ -87,9 +87,9 @@ get_proc_name(AcceptorIndex)->
 		ok = gen_tcp:controlling_process(Sock, ChildPid),
 		case Disable of
 			true->
-				base_tcp_client_fsm:socket_disable(node(),ChildPid,Sock);
+				base_tcp_client_statem:socket_disable(node(),ChildPid,Sock);
 			false->
-				base_tcp_client_fsm:socket_ready(node(),ChildPid,Sock)
+				base_tcp_client_statem:socket_ready(node(),ChildPid,Sock)
 		end,
 		apply(M, F, A ++ [Sock,ChildPid])
 	catch

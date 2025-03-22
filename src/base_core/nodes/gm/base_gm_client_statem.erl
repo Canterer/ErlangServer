@@ -1,39 +1,47 @@
--module(base_gm_client_fsm).
+-module(base_gm_client_statem).
 
--behaviour(gen_fsm).
-% -behaviour(gen_statem).
 
 %% External exports
--export([start_link/2,
+-export([
+	start_link/2,
 	send_data/2,
 	send_data/3,
-	shutown_client/1]).
+	shutown_client/1,
+	kick_client/2
+]).
 
--export([init/1, handle_event/3,
-	handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+% 状态 connecting、connected、authing、managing
+-export([
+	% connecting/2,
+	socket_ready/3,
+	socket_disable/3
+]).
 
--export([connecting/2,socket_ready/3,socket_disable/3]).
+-export([
+	% connected/2,
+	start_auth/6
+]).
 
+-export([
+	% authing/2,
+	auth_ok/3,
+	auth_failed/3
+]).
 
--export([connected/2,
-	start_auth/6]).
+-export([
+	% managing/2
+]).
 
--export([authing/2,
-	auth_ok/3,auth_failed/3]).
-
--export([managing/2]).
--export([kick_client/2]).
-
--include("network_setting.hrl").
 -record(state, {}).
-
+-include("base_gen_statem_shared.hrl").
+-include("network_setting.hrl").
 %% ====================================================================
 %% External functions
 %% ====================================================================
 start_link(OnReceiveData,OnClientClose)->
-	base_fsm_util:start_link(?MODULE, [OnReceiveData,OnClientClose], []).
+	?base_gen_statem:start_link(?MODULE, [OnReceiveData,OnClientClose], []).
 
-init([OnReceiveData,OnClientClose]) ->
+?init([OnReceiveData,OnClientClose]) ->
 	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	base_timer_server:start_at_process(),
 	process_flag(trap_exit, true),
@@ -82,34 +90,35 @@ kick_client(GMPid,GMProc)->
 %%  事件: socket已经连接
 socket_ready(GMNode,GMProc,ClientSocket)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid, {socket_ready,ClientSocket}).
+	?base_gen_statem:cast(GMPid, {socket_ready,ClientSocket}).
 
 socket_disable(GMNode,GMProc,ClientSocket)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid, {socket_disable,ClientSocket}).
+	?base_gen_statem:cast(GMPid, {socket_disable,ClientSocket}).
 
 %% 事件: 开始认证
 start_auth(GMNode,GMProc,GMUserName,GMUserId,Time,AuthResult)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid,{start_auth,GMUserName,GMUserId,Time,AuthResult}).
+	?base_gen_statem:cast(GMPid,{start_auth,GMUserName,GMUserId,Time,AuthResult}).
 
 %% 事件: 认证成功
 auth_ok(GMNode,GMProc,GMUserId)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid,{auth_ok,GMUserId}).
+	?base_gen_statem:cast(GMPid,{auth_ok,GMUserId}).
 
 %% 事件: 认证失败
 auth_failed(GMNode,GMProc,Reason) when is_list(Reason)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid, {auth_failed,Reason});
+	?base_gen_statem:cast(GMPid, {auth_failed,Reason});
 auth_failed(GMNode,GMProc,ReasonId) when is_integer(ReasonId)->
 	GMPid = GMProc,    %% proc name is the remote pid
-	base_fsm_util:send_state_event(GMPid, {auth_failed,ReasonId}).
+	?base_gen_statem:cast(GMPid, {auth_failed,ReasonId}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：连接中
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-connecting({socket_ready,CliSocket},StateData)->
+?handle_event(cast,{socket_ready,CliSocket},connecting,StateData)->
+% connecting({socket_ready,CliSocket},StateData)->
 	OkIpList = base_env_ets:get(gmiplist, []),
 	{PeerIPAddress, _PeerPort} = inet_op(fun() -> inet:peername(CliSocket) end),
 	FilterFunc = fun({IpStr1,IpStr2})->
@@ -126,31 +135,35 @@ connecting({socket_ready,CliSocket},StateData)->
 			self()!{kick_client, "GM Error Ip login"}
 	end,
 	{next_state, connected, StateData};
-connecting({socket_disable,CliSocket},StateData)->
+?handle_event(cast,{socket_disable,CliSocket},connecting,StateData)->	
+% connecting({socket_disable,CliSocket},StateData)->
 	self()!{kick_client,"socket is disable "},
 	put(clientsock, CliSocket),
 	{stop, normal, StateData};
-connecting(Event,StateData)->
-	{next_state, connecting, StateData}.
+% connecting(Event,StateData)->
+% 	{next_state, connecting, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-connected({start_auth,GMUserName,GMUserId,Time,AuthResult}, StateData) ->
+?handle_event(cast,{start_auth,GMUserName,GMUserId,Time,AuthResult},connected,StateData) ->
+% connected({start_auth,GMUserName,GMUserId,Time,AuthResult}, StateData) ->
 	base_auth_gm_processor_server:auth(node(),self(),GMUserName,GMUserId,Time,AuthResult),
 	{next_state, authing, StateData};
-connected(Event,StateData) ->
-	{next_state, connected, StateData}.
+% connected(Event,StateData) ->
+% 	{next_state, connected, StateData}.
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  状态: 认证中
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-authing({auth_failed,Reason}, StateData) ->
+?handle_event(cast,{auth_failed,Reason},authing,StateData) ->
+% authing({auth_failed,Reason}, StateData) ->
 	self()!{kick_client,Reason},
 	{next_state, connected,StateData};
-authing({auth_ok,GMId}, StateData) ->
+?handle_event(cast,{auth_ok,GMId},authing,StateData) ->
+% authing({auth_ok,GMId}, StateData) ->
 	AuthOk = {struct,[{<<"cmd">>,<<"auth_ok">>}]},
 	case base_json_util:json_encode(AuthOk) of
 		{ok,JsonBin}->
@@ -159,11 +172,12 @@ authing({auth_ok,GMId}, StateData) ->
 			base_logger_util:info_msg("util:json_encode ~p error:~p~n",[AuthOk,Reason])
 	end,
 	{next_state,managing,StateData};
-authing(Event, State) ->
-	{next_state, authing, State}.
+% authing(Event, State) ->
+% 	{next_state, authing, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-managing({Cmd,JsonObj}, StateData)->
+?handle_event(cast,{Cmd,JsonObj},managing,StateData)->
+% managing({Cmd,JsonObj}, StateData)->
 	case Cmd of
 		{ok,"add_gm_notice"}-> gm_op:add_gm_notice(JsonObj);
 		{ok,"delete_gm_notice"}-> gm_op:delete_gm_notice(JsonObj);
@@ -226,52 +240,57 @@ managing({Cmd,JsonObj}, StateData)->
 		{ok,"gm_log_control"}->gm_op:gm_log_control(JsonObj)
 	end,
 	{next_state, managing, StateData};
-managing(Event,State)->
-	{next_state, managing, State}.
+% managing(Event,State)->
+% 	{next_state, managing, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 异步事件处理: send by gen_fsm:sync_send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_event(stop, StatName , StateData)->
+?handle_event(cast,stop,StatName,StateData)->
+% handle_event(stop, StatName , StateData)->
 	{stop, normal, StateData};
-handle_event(Event, StateName, StateData) ->
-	{next_state, StateName, StateData}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 同步事件处理: send by gen_fsm:send_all_state_event/2,3
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_sync_event(Event, From, StateName, StateData) ->
-	Reply = ok,
-	{reply, Reply, StateName, StateData}.
-
-handle_info({send_to_client, Data}, StateName, StateData) ->
+?handle_event(info, {send_to_client, Data}, StateName, StateData) ->
+% handle_info({send_to_client, Data}, StateName, StateData) ->
 	gen_tcp:send(get(clientsock), Data),
 	{next_state,StateName, StateData};
-handle_info({tcp, Socket, BinData}, StateName, StateData) ->
+?handle_event(info, {tcp, Socket, BinData}, StateName, StateData) ->
+% handle_info({tcp, Socket, BinData}, StateName, StateData) ->
 	handle_clien_json(BinData),
 	inet:setopts(Socket, [{active, once}]),
 	{next_state, StateName, StateData};
-handle_info({tcp_closed, _Socket}, StateName, StateData) ->
+?handle_event(info, {tcp_closed, _Socket}, StateName, StateData) ->
+% handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 	{stop, normal, StateData};
-handle_info({shutdown},StateName,StateData)->
+?handle_event(info, {shutdown},StateName,StateData)->
+% handle_info({shutdown},StateName,StateData)->
 	{stop, normal, StateData};
-handle_info({kick_client},StateName,StateData)->
+?handle_event(info, {kick_client},StateName,StateData)->
+% handle_info({kick_client},StateName,StateData)->
 	base_logger_util:info_msg("receive need kick client, maybe error client!\n"),
 	inet:tcp_close(get(clientsock)),
 	{next_state, StateName, StateData};	
-handle_info({kick_client,KickInfo},StateName,StateData)->
+?handle_event(info, {kick_client,KickInfo},StateName,StateData)->
+% handle_info({kick_client,KickInfo},StateName,StateData)->
 	base_logger_util:info_msg("receive need kick client, Reason:~p!\n",[KickInfo]),
 	inet:tcp_close(get(clientsock)),
 	{next_state, StateName, StateData};	
-handle_info(_Info, StateName, StateData) ->
-	{next_state, StateName, StateData}.
+
+% ==================================handle undefined event============================================
+?handle_event({call, From}, EventContent, StateName, StateData) ->
+	base_logger_util:info_msg("~p handle_event undefined event:({call, From:~p}, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, From, EventContent, StateName, StateData]),
+	{keep_state_and_data, [{reply, From, ok}]};
+?handle_event(Event, EventContent, StateName, StateData) ->
+	base_logger_util:info_msg("~p handle_event undefined event:(Event:~p, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, Event, EventContent, StateName, StateData]),
+	keep_state_and_data.
+% ==================================handle undefined event============================================
 
 %% --------------------------------------------------------------------
 %% Func: terminate/3
 %% Purpose: Shutdown the fsm
 %% Returns: any
 %% --------------------------------------------------------------------
-terminate(Reason, StateName, StatData) ->
+?terminate(Reason, StateName, StatData) ->
 	%%add for terminat
 	ok.
 
@@ -280,7 +299,7 @@ terminate(Reason, StateName, StatData) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState, NewStateData}
 %% --------------------------------------------------------------------
-code_change(OldVsn, StateName, StateData, Extra) ->
+?code_change(OldVsn, StateName, StateData, Extra) ->
 	{ok, StateName, StateData}.
 
 %% --------------------------------------------------------------------
@@ -322,7 +341,7 @@ handle_json({struct,_JsonMember}=JsonObj)->
 	case Cmd of
 		{ok, "auth"}->	handle_json_auth(JsonObj);
 		{ok, Str}->
-			base_fsm_util:send_state_event(self(),{Cmd,JsonObj})
+			?base_gen_statem:cast(self(),{Cmd,JsonObj})
 	end.
 
 handle_json_auth(JsonObj)->

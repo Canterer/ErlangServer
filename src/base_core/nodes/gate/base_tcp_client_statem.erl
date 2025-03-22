@@ -1,13 +1,9 @@
--module(base_tcp_client_fsm).
-
-% -behaviour(gen_fsm).
+-module(base_tcp_client_statem).
 
 %% External exports
 -export([start_link/2,
 	 send_data/2,
 	 shutown_client/1]).
-
-% -export([init/1, handle_event/3,handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
 
 % 状态 connecting、connected、authing、rolelisting、preparing_into_map、gaming
 -export([
@@ -632,11 +628,6 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 % handle_event(stop, StatName , StateData)->
 	% {stop, normal, StateData};
 	{stop, normal};
-?handle_event(cast, _EventContent, _StateName, _StateData)->
-% handle_event(Event, StateName, StateData) ->
-	% {next_state, StateName, StateData};
-	{keep_state_and_data,[]};
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 同步事件处理: send by gen_fsm:send_all_state_event/2,3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -660,12 +651,6 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	end,
 	% {reply, {ChatNode,ChatProc}, StateName, StateData};
 	{keep_state_and_data, [{reply, From, {ChatNode,ChatProc}}]};
-?handle_event({call, From}, _EventContent, StateName, _StateData) ->
-% handle_sync_event(Event, From, StateName, StateData) ->
-	Reply = ok,
-% 	{reply, Reply, StateName, StateData}.
-	{keep_state_and_data, [{reply, From, Reply}]};
-
 ?handle_event(info, {mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 % handle_info({mapid_change,MapNode,MapId,RoleProc}, StateName, StateData) ->
 	put(mapnode, MapNode),
@@ -821,10 +806,15 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	packet_object_update:send_pending_update(),
 	% {next_state, StateName, StateData};
 	keep_state_and_data;
-?handle_event(info, _EventContent, _StateName, _StateData) ->
-% handle_info(_Info, StateName, StateData) ->
-	% {next_state, StateName, StateData}.
+
+% ==================================handle undefined event============================================
+?handle_event({call, From}, EventContent, StateName, StateData) ->
+	base_logger_util:info_msg("~p handle_event undefined event:({call, From:~p}, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, From, EventContent, StateName, StateData]),
+	{keep_state_and_data, [{reply, From, ok}]};
+?handle_event(Event, EventContent, StateName, StateData) ->
+	base_logger_util:info_msg("~p handle_event undefined event:(Event:~p, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, Event, EventContent, StateName, StateData]),
 	keep_state_and_data.
+% ==================================handle undefined event============================================
 
 %% --------------------------------------------------------------------
 %% Func: terminate/3

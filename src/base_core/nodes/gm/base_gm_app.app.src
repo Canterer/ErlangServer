@@ -6,7 +6,7 @@
 		[
 			base_gm_app,
 			base_gm_client_sup,
-			base_gm_client_fsm,
+			base_gm_client_statem,
 			base_gm_listener_sup,
 			base_gm_listener_server,
 			base_gm_acceptor_sup,
@@ -16,7 +16,7 @@
 	{registered,
 		[
 			base_gm_client_sup,
-			base_gm_client_fsm,
+			base_gm_client_statem,
 			base_gm_listener_sup,
 			base_gm_listener_server,
 			base_gm_acceptor_sup,

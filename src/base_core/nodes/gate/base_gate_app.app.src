@@ -6,7 +6,7 @@
 		[
 			base_gate_app,
 			base_tcp_client_sup,
-			base_tcp_client_fsm,
+			base_tcp_client_statem,
 			base_tcp_listener_sup,
 			base_tcp_listener_server,
 			base_tcp_acceptor_sup,
@@ -16,7 +16,7 @@
 	{registered,
 		[
 			base_tcp_client_sup,
-			base_tcp_client_fsm,
+			base_tcp_client_statem,
 			base_tcp_listener_sup,
 			base_tcp_listener_server,
 			base_tcp_acceptor_sup,

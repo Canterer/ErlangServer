@@ -90,9 +90,9 @@ get_proc_name(AcceptorIndex)->
 		base_logger_util:info_msg("~p:~p({inet_async ok}) start_child base_tcp_client_sup:~p Disable:~p~n",[?MODULE,?FUNCTION_NAME,ChildPid,Disable]),
 		case Disable of
 			true->
-				base_tcp_client_fsm:socket_disable(node(),ChildPid,Sock);
+				base_tcp_client_statem:socket_disable(node(),ChildPid,Sock);
 			false->
-				base_tcp_client_fsm:socket_ready(node(),ChildPid,Sock)
+				base_tcp_client_statem:socket_ready(node(),ChildPid,Sock)
 		end,
 		apply(M, F, A ++ [Sock,ChildPid])
 	catch

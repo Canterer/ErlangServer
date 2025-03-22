@@ -6,11 +6,11 @@
 		[
 			base_robot_client_app,
 			base_robot_client_sup,
-			base_robot_client_fsm
+			base_robot_client_statem
 		]
 	},
 	{registered,
-		[base_robot_client_fsm,base_robot_client_sup]
+		[base_robot_client_statem,base_robot_client_sup]
 	},
 	{applications,[kernel,stdlib]},
 	{mod,{base_robot_client_app,[]}}

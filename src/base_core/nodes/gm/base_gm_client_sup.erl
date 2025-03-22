@@ -39,8 +39,8 @@ get_client_count()->
 ?init([OnReceiveData,OnClientClose]) ->
 	{ok,{{simple_one_for_one,5, 60}, 
 		[
-			{base_gm_client_fsm, 				%% target process noname
-			{base_gm_client_fsm,start_link,[OnReceiveData,OnClientClose]},
+			{base_gm_client_statem, 				%% target process noname
+			{base_gm_client_statem,start_link,[OnReceiveData,OnClientClose]},
 			temporary, 				%% target process is temporary
 			brutal_kill,worker,[]}
 		]}}.
