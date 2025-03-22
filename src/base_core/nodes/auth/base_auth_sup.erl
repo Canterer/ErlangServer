@@ -30,7 +30,7 @@ start_link()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	AuthChild = {base_auth_processor_server,
 					{base_auth_processor_server,start_link,[]},
 					permanent,2000,worker,

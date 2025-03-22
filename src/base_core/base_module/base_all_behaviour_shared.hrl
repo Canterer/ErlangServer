@@ -29,50 +29,50 @@
 %% behaviour functions
 %% --------------------------------------------------------------------
 -ifdef(ETS_OPERATER_BEHAVIOUR).
-create_ets()->
+?log_create_ets()->
 	?BEHAVIOUR_FUNC_START(),
-	Returns = do_create_ets(),
+	Returns = ?create_ets(),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
-init_ets()->
+?log_init_ets()->
 	?BEHAVIOUR_FUNC_START(),
-	Returns = do_init_ets(),
+	Returns = ?init_ets(),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 -endif.
 
 
 -ifdef(DB_OPERATER_BEHAVIOUR).
-start()->
+?log_start()->
 	?BEHAVIOUR_FUNC_START(),
-	Returns = do_start(),
+	Returns = ?start(),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 % TableType: ram/disc
-create_mnesia_table(TableType)->
+?log_create_mnesia_table(TableType)->
 	?BEHAVIOUR_FUNC_START("TableType=~p", [TableType]),
-	Returns = do_create_mnesia_table(TableType),
+	Returns = ?create_mnesia_table(TableType),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
-create_mnesia_split_table(BaseTable,TrueTabName)->
+?log_create_mnesia_split_table(BaseTable,TrueTabName)->
 	?BEHAVIOUR_FUNC_START("BaseTable=~p, TrueTabName=~p", [BaseTable,TrueTabName]),
-	Returns = do_create_mnesia_split_table(BaseTable,TrueTabName),
+	Returns = ?create_mnesia_split_table(BaseTable,TrueTabName),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
-delete_role_from_db(RoleId)->
+?log_delete_role_from_db(RoleId)->
 	?BEHAVIOUR_FUNC_START("RoleId=~p", [RoleId]),
-	Returns = do_delete_role_from_db(RoleId),
+	Returns = ?delete_role_from_db(RoleId),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
 % returns = [{DB,Type},...]  Type:disc_split/disc/ram/proto
-tables_info()->
+?log_tables_info()->
 	?BEHAVIOUR_FUNC_START(),
-	Returns = do_tables_info(),
+	Returns = ?tables_info(),
 	?BEHAVIOUR_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 -endif.

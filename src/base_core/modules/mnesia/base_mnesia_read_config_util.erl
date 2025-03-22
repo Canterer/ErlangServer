@@ -30,7 +30,7 @@ get_files(Path)->
 		{ok, Filenames}->
 			Filenames;
 		{error, Reason}->
-			base_logger_util:msg("get files error,error is ~p~n",[Reason]),
+			base_logger_util:info_msg("get files error,error is ~p~n",[Reason]),
 			[]
 	end.
 
@@ -38,20 +38,20 @@ get_file_text(Path,Names)->
 	lists:map(
 		fun(File_name)->
 			File_path=Path++"/"++File_name,
-		  	case file:open(File_path, read) of
+			case file:open(File_path, read) of
 				{ok,Fd}->
 					Len=string:len(File_name),
 					Name=string:left(File_name,Len-4),
 					AName=erlang:list_to_atom(Name),
 					BExist = base_db_tools:check_mnesia_table_exist(AName),
 					if BExist->
-							% base_logger_util:msg(" read config file ~p  warning !! ~n",[AName]),							
+							% base_logger_util:info_msg(" read config file ~p  warning !! ~n",[AName]),
 							read_file(File_name,Fd,1);
 						true->
-							base_logger_util:msg(" file ~p  warning !! not find table, base_db_tools:create_table_disc fix~n",[AName])							
+							base_logger_util:info_msg(" file ~p  warning !! not find table, base_db_tools:create_table_disc fix~n",[AName])
 					end;
 				{error,Reason}->
-					base_logger_util:msg(" file ~p  open error ,error is ~p~n",[Path,Reason])
+					base_logger_util:info_msg(" file ~p  open error ,error is ~p~n",[Path,Reason])
 			end
 		end, Names).
 
@@ -94,9 +94,9 @@ explain_text(Data,Num)->
 						error->
 							[X1|_]=X,
 							if X1=:=91->
-								   NewX=string:tokens(X, "[]"),
-								   Result=lists:map(fun(Y)->erlang:list_to_binary(Y) end,NewX),
-								   Result;
+									NewX=string:tokens(X, "[]"),
+									Result=lists:map(fun(Y)->erlang:list_to_binary(Y) end,NewX),
+									Result;
 								true->
 									erlang:list_to_binary(X)
 							end;
@@ -132,22 +132,22 @@ explain_auto_name(Data,Num5)->
 													if (Value2=:="{") or (Value2=:="}")->
 															[];
 														true->
-														   NewList=string:tokens(Value2, ","),
-														   lists:map(fun(X)-> erlang:list_to_binary(X) end,NewList) 
-												   end
-										   end
+															NewList=string:tokens(Value2, ","),
+															lists:map(fun(X)-> erlang:list_to_binary(X) end,NewList) 
+													end
+											end
 										end,Str_Last_Name),
 					Value_name_termlistq1=lists:foldl(fun(Q1,Acc1)-> if Q1=:=[]->Acc1;true->[Q1|Acc1] end end,[],Vlaue_names_lsit),
 					[Num1,First_Name_value,erlang:list_to_tuple(Value_name_termlistq1)];
 				true->
 					Len=string:len(Data),
-			  		NewData=string:left(Data, Len-1),
+					NewData=string:left(Data, Len-1),
 					Str=string:tokens(NewData, "\t"),
 					[Num,First_Name,LastName]=Str,
 					Num1=string_to_term(Num),
 					NewFirstName=string:tokens(First_Name, ","),
 					First_Name_value=lists:map(fun(X)->
-													  erlang:list_to_binary(X) end, NewFirstName),
+														erlang:list_to_binary(X) end, NewFirstName),
 					Str_Last_Name=string:tokens(LastName, "{}"),
 					[Value1,_,Value2]=Str_Last_Name,
 					Value_name1=string:tokens(Value1,"[]"),

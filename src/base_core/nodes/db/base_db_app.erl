@@ -81,15 +81,15 @@ do_start()->
 	case base_db_sup:start_master() of
 		{ok, _Pid} ->
 			base_db_tools:wait_for_tables_loop(local,1000,mnesia:system_info(tables)),
-			base_logger_util:msg("---------------------------------------------------------~n"),
-			base_logger_util:msg("2)To generate data input: data_gen:import_config(\"game\").~n"),
-			base_logger_util:msg("3)To backup   data input: db_backup:backup(YourFileName).~n"),
-			base_logger_util:msg("4)To recovery data input: db_backup:recovery(YourFileName).~n"),
-			base_logger_util:msg("5)To recovery data input: data_gen:backup_ext(YourFileName).~n"),
-			base_logger_util:msg("6)To recovery data input: data_gen:recovery_ext(YourFileName).~n"),
-			base_logger_util:msg("7)To recovery data input: combin_server:backup(YourFileName).~n"),
-			base_logger_util:msg("8)To recovery data input: combin_server:recovery(YourFileName).~n"),
-			base_logger_util:msg("---------------------------------------------------------~n");
+			base_logger_util:info_msg("---------------------------------------------------------~n"),
+			base_logger_util:info_msg("2)To generate data input: data_gen:import_config(\"game\").~n"),
+			base_logger_util:info_msg("3)To backup   data input: db_backup:backup(YourFileName).~n"),
+			base_logger_util:info_msg("4)To recovery data input: db_backup:recovery(YourFileName).~n"),
+			base_logger_util:info_msg("5)To recovery data input: data_gen:backup_ext(YourFileName).~n"),
+			base_logger_util:info_msg("6)To recovery data input: data_gen:recovery_ext(YourFileName).~n"),
+			base_logger_util:info_msg("7)To recovery data input: combin_server:backup(YourFileName).~n"),
+			base_logger_util:info_msg("8)To recovery data input: combin_server:recovery(YourFileName).~n"),
+			base_logger_util:info_msg("---------------------------------------------------------~n");
 		Error ->
 			Error
 	end,

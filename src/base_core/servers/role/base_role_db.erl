@@ -61,32 +61,30 @@
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
-% -include("base_ets_operater_shared.hrl").
-% -include("base_db_operater_shared.hrl").
 -define(ETS_OPERATER_BEHAVIOUR,true).
 -define(DB_OPERATER_BEHAVIOUR,true).
 -include("base_all_behaviour_shared.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_create_ets()->
-	ets_operater_behaviour:new(?CLASS_BASE_ATTRIB_ETS, [set,named_table]).
+?create_ets()->
+	?base_ets:new(?CLASS_BASE_ATTRIB_ETS, [set,named_table]).
 
-do_init_ets()->
+?init_ets()->
 	db_operater_behaviour:init_ets(classbase, ?CLASS_BASE_ATTRIB_ETS,[#classbase.classid,#classbase.level]).
 
-do_start()->
+?start()->
 	db_operater_behaviour:start_module(?MODULE,[]).
 
-do_create_mnesia_table(disc)->
+?create_mnesia_table(disc)->
 	base_db_tools:create_table_disc(classbase,record_info(fields,classbase),[],bag),
 	base_db_tools:create_table_disc(idmax, record_info(fields,idmax), [], set),
 	base_db_tools:create_table_disc(account, record_info(fields,account), [], set).
 
-do_create_mnesia_split_table(roleattr,TrueTabName)->
+?create_mnesia_split_table(roleattr,TrueTabName)->
 	base_db_tools:create_table_disc(TrueTabName,record_info(fields,roleattr),[account,name],set).
 
-do_delete_role_from_db(RoleId)->
+?delete_role_from_db(RoleId)->
 	RoleTable = base_db_split_util:get_owner_table(?ROLE_TABLE_BASE, RoleId),
 	case base_db_dal_util:read_rpc(RoleTable, RoleId) of
 		{ok,[RoleAttr]}->
@@ -101,14 +99,14 @@ do_delete_role_from_db(RoleId)->
 							base_db_dal_util:write_rpc(AllAccountRole#account{roleids = NewRoleIds})	
 					end;
 				_->
-					base_logger_util:msg("delelte_role_from_db not find account ~p ~n",[AccountName])
+					base_logger_util:info_msg("delelte_role_from_db not find account ~p ~n",[AccountName])
 			end;
 		_->
 			nothing
 	end,
 	base_db_dal_util:delete_rpc(RoleTable, RoleId).
 	
-do_tables_info()->
+?tables_info()->
 	[{roleattr,disc_split},{classbase,proto},{idmax,disc},{account,disc}].
 
 %% --------------------------------------------------------------------
@@ -412,7 +410,7 @@ get_account_gold(RoleInfo)->
 %%  For class base attrib
 %% -----------------------------------------------------------------------------------------
 get_class_base(ClassId,Level)->
-	case ets:lookup(?CLASS_BASE_ATTRIB_ETS, {ClassId,Level}) of
+	case ?base_ets:lookup(?CLASS_BASE_ATTRIB_ETS, {ClassId,Level}) of
 		[]->[];
 		[{{_,_},Value}] -> Value 
 	end.
@@ -446,13 +444,13 @@ flush_role(RoleInfo)->
 	try
 		base_db_dal_util:write_rpc(RoleInfo)
 	catch
-		_:_-> base_logger_util:msg("fulsh role ~p failed ~n",[RoleInfo])
+		_:_-> base_logger_util:info_msg("fulsh role ~p failed ~n",[RoleInfo])
 	end.
 create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)->
-	case node_util:get_dbnode() of
+	case base_node_util:get_dbnode() of
 		nonode-> [];
 		DbNode-> 
-				base_logger_util:msg("role_db:create_role_rpc AccountName ~p DbNode ~p ~n",[DbNode,AccountName]),
+				base_logger_util:info_msg("role_db:create_role_rpc AccountName ~p DbNode ~p ~n",[DbNode,AccountName]),
 				case base_rpc_util:asyn_call(DbNode, ?MODULE, create_role, [AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId]) of
 					 {failed,Reason}-> {failed,Reason};
 					 {ok,Result}-> {ok,Result};
@@ -460,7 +458,7 @@ create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)
 				 end
 	end.	
 create_role(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)->
-	base_logger_util:msg("role_db:create_role AccountName ~p Node ~p ~n",[AccountName,node()]),
+	base_logger_util:info_msg("role_db:create_role AccountName ~p Node ~p ~n",[AccountName,node()]),
 	case get_roleid_by_name(RoleName) of
 		{ok,[]}->
 			CreateMod = case base_env_ets:get(create_role_base, []) of

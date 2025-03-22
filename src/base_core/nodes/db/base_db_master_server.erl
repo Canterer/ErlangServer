@@ -38,7 +38,7 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	?base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 rpc_add_self_to_db_node(Node,TabList)->
 	base_rpc_util:cast(Node, ?SERVER, {add_db_ram_node, [node(),TabList]}).
@@ -48,18 +48,18 @@ rpc_add_self_to_dbslave_node(Node)->
 
 is_db_prepread(Node)->
 	try
-		base_gen_server:call({?SERVER,Node}, is_db_prepread)
+		?base_gen_server:call({?SERVER,Node}, is_db_prepread)
 	catch
 		E:R->
-			base_logger_util:msg("get_db_master error no_proc ,wait ~n "),
+			base_logger_util:info_msg("get_db_master error no_proc ,wait ~n "),
 			false
 	end.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(_Args) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+?init(_Args) ->
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(db_prepare_finish,false),
 	base_timer_server:start_at_process(),
 
@@ -74,7 +74,7 @@ do_init(_Args) ->
 	?ZS_LOG(),
 
 	% 初始化记录用的ets
-	base_db_split_util:create_ets(),
+	% base_db_split_util:create_ets(),
 	?ZS_LOG(),
 	% 记录自定义类型disc_split的表 通过db_operater_behaviour搜集
 	base_db_split_util:check_split_master_tables(),
@@ -86,18 +86,18 @@ do_init(_Args) ->
 	?ZS_LOG(),
 	{ok, #state{}}.
 
-do_handle_call(is_db_prepread, From, State) ->
+?handle_call(is_db_prepread, From, State) ->
 	Reply = get(db_prepare_finish),
 	{reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({check_backup},State)->
-	base_logger_util:msg("~p:~p({check_backup},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
+?handle_info({check_backup},State)->
+	base_logger_util:info_msg("~p:~p({check_backup},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	%% get backup filename
 	Dir = base_env_ets:get2(dbback, output,[]),
 	case Dir of
@@ -108,8 +108,8 @@ do_handle_info({check_backup},State)->
 			send_check_dump_message()
 	end,
 	{noreply,State};
-do_handle_info({check_split},State)->
-	base_logger_util:msg("~p:~p({check_split},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
+?handle_info({check_split},State)->
+	base_logger_util:info_msg("~p:~p({check_split},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	ServerList = base_env_ets:get(serverids, [0]),
 	Result = lists:foldl(fun(ServerId,Acc)->
 								 case Acc of
@@ -124,14 +124,14 @@ do_handle_info({check_split},State)->
 		ignor->erlang:send_after(?CHECK_SPLIT_TABLE_FIRSTINTERVAL, self(), {check_split})
 	end,
 	{noreply,State};
-do_handle_info({add_db_ram_node, [NewNode,TabList]}, State)->
+?handle_info({add_db_ram_node, [NewNode,TabList]}, State)->
 	base_db_tools:add_db_ram_node(NewNode,TabList),
 	{noreply,State};
-do_handle_info({add_dbslave_node, [NewNode]}, State)->
+?handle_info({add_dbslave_node, [NewNode]}, State)->
 	base_db_tools:add_dbslave_node(NewNode),
 	{noreply,State};
-do_handle_info({backupdata,FromProc}, State)->
-	base_logger_util:msg("backupdata begin~n"),
+?handle_info({backupdata,FromProc}, State)->
+	base_logger_util:info_msg("backupdata begin~n"),
 	case base_db_dal_util:read_rpc(role_pos) of
 		{ok,L}->
 			OnlineNum = length(L);
@@ -155,12 +155,12 @@ do_handle_info({backupdata,FromProc}, State)->
 			BackPath = BackDir ++ "zssbackup_db",
 			base_db_data_gen_util:backup_ext(BackPath),
 			base_rpc_util:cast(FromProc,{backup_db_ok}),
-			base_logger_util:msg("base_db_data_gen_util backup db finish!!!");
+			base_logger_util:info_msg("base_db_data_gen_util backup db finish!!!");
 		true->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata,FromProc})
 	end,
 	{noreply,State};
-do_handle_info({backupdata}, State)->
+?handle_info({backupdata}, State)->
 	case base_db_dal_util:read_rpc(role_pos) of
 		{ok,L}->
 			OnlineNum = length(L);
@@ -184,59 +184,59 @@ do_handle_info({backupdata}, State)->
 			BackPath = BackDir ++ "zssbackup_db",
 			base_db_data_gen_util:backup_ext(BackPath),
 			server_control:write_flag_file(),
-			base_logger_util:msg("base_db_data_gen_util backup db finish!!!");
+			base_logger_util:info_msg("base_db_data_gen_util backup db finish!!!");
 		true->
 			erlang:send_after(?DAL_WRITE_CHECK_INTERVAL, self(), {backupdata})
 	end,
 	{noreply,State};
-do_handle_info({recoverydata,FromProc},State)->
-	base_logger_util:msg("recoverydata start~n"),
+?handle_info({recoverydata,FromProc},State)->
+	base_logger_util:info_msg("recoverydata start~n"),
 	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zssbackup_db",
 	base_db_data_gen_util:recovery_ext(BackPath),
 	base_db_data_gen_util:import_config("game"),
-	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
+	base_logger_util:info_msg("base_db_data_gen_util recovery db finish!!!"),
 	base_rpc_util:cast(FromProc,{recoverydata_ok}),
 	{noreply,State};
-do_handle_info({recoverydata},State)->
+?handle_info({recoverydata},State)->
 	base_db_tools:wait_for_all_db_tables(),
 	BackDir = base_env_ets:get2(dbback, output,[]),
 	BackPath = BackDir ++ "zssbackup_db",
 	base_db_data_gen_util:recovery_ext(BackPath),
 	base_db_data_gen_util:import_config("game"),
 	server_control:write_flag_file(),
-	base_logger_util:msg("base_db_data_gen_util recovery db finish!!!"),
+	base_logger_util:info_msg("base_db_data_gen_util recovery db finish!!!"),
 	{noreply,State};
-do_handle_info({gen_data},State)->
+?handle_info({gen_data},State)->
 	%%base_db_data_gen_util:start(),
 	base_db_tools:wait_for_all_db_tables(),
 	base_db_data_gen_util:import_config("game"),
 	%%ServerId = base_env_ets:get(serverid,1),
 	%%giftcard_op:import("../config/gift_card-"++integer_to_list(ServerId)++"01.config"),
 	server_control:write_flag_file(),
-	base_logger_util:msg("base_db_data_gen_util gen db finish!!!"),
+	base_logger_util:info_msg("base_db_data_gen_util gen db finish!!!"),
 	{noreply,State};
-do_handle_info({create_giftcard},State)->
+?handle_info({create_giftcard},State)->
 	% %%create giftcard and import to db
 	% base_db_tools:wait_for_all_db_tables(),
 	% giftcard_op:auto_gen_and_import(),
 	% server_control:write_flag_file(),
-	base_logger_util:msg("create_giftcard gen db finish!!!"),
+	base_logger_util:info_msg("create_giftcard gen db finish!!!"),
 	{noreply,State};
-do_handle_info({format_data,Param},State)->
+?handle_info({format_data,Param},State)->
 	% base_db_tools:wait_for_all_db_tables(),
 	% data_change:update_db_data(Param),
 	% server_control:write_flag_file(),
-	% base_logger_util:msg("format_data ~p finish!!!~n",[Param]),
+	% base_logger_util:info_msg("format_data ~p finish!!!~n",[Param]),
 	{noreply,State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(Reason, _State) ->
-	base_logger_util:msg("dbmaster terminate Reason ~p ~n",[Reason]),
+?terminate(Reason, _State) ->
+	base_logger_util:info_msg("dbmaster terminate Reason ~p ~n",[Reason]),
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -259,7 +259,7 @@ dum_now(Dir)->
 		_-> case filelib:ensure_dir(Dir) of
 			   ok->File = get_out_file(Dir),
 				   base_db_data_gen_util:backup(File);
-			   _-> base_logger_util:msg("back database faild create dir [~p] failed!",[Dir])
+			   _-> base_logger_util:info_msg("back database faild create dir [~p] failed!",[Dir])
 		   end
 	end.
 
@@ -316,7 +316,7 @@ db_dump_now(Dir,LastTime)->
 				   	File = get_out_file(Dir),
 				   	base_db_data_gen_util:backup_ext(File),
 					put(dbfile_dump,{idle,base_timer_server:get_correct_now()});
-			   _-> base_logger_util:msg("back database faild create dir [~p] failed!",[Dir])
+			   _-> base_logger_util:info_msg("back database faild create dir [~p] failed!",[Dir])
 		   end
 	end.
 

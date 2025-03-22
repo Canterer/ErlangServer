@@ -30,22 +30,22 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_statem:start_link({local,?SERVER}, ?MODULE, [], []).
+	?base_gen_statem:start_link({local,?SERVER}, ?MODULE, [], []).
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(_Args) ->
+?init(_Args) ->
 	StateName = Custom, StateData = {}
 	{ok, StateName, StateData}.
 
-do_handle_event(_EventType, _EventContent, StateName, StateData) ->
+?handle_event(_EventType, _EventContent, StateName, StateData) ->
 	{next_state, StateName,StateData}.
 
-do_terminate(_Reason, _StateName, _StateData) ->
+?terminate(_Reason, _StateName, _StateData) ->
 	ok.
 
-do_code_change(_OldVsn, StateName, StateData, _Extra) ->
+?code_change(_OldVsn, StateName, StateData, _Extra) ->
 	{ok, StateName, StateData}.
 
 %% --------------------------------------------------------------------

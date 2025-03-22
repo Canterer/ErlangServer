@@ -22,7 +22,7 @@ validate_user(UserAuth,SecretKey,CfgTimeOut,FatigueList,NoFatigueList)->
 %%	{MegaSec,Sec,_} = base_timer_server:get_correct_now(),
 %%	Seconds = MegaSec*1000000 + Sec,
 %%	DiffTim = erlang:abs(Seconds-list_to_integer(Time)),
-%%	base_logger_util:msg("1111111~n"),
+%%	base_logger_util:info_msg("1111111~n"),
 %%	if DiffTim>CfgTimeOut->
 %%		   {error,timeout};			
 %%		true ->
@@ -110,7 +110,7 @@ verify(OpenId,OpenKey,_,Pf,UserIp)->
 		case gen_tcp:send(Socket,SendUrl) of
 				ok ->next;
 				{error,R2}->
-					base_logger_util:msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
+					base_logger_util:info_msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
 					gen_tcp:close(Socket),
 					exit(R2)
 		end,
@@ -119,18 +119,18 @@ verify(OpenId,OpenKey,_,Pf,UserIp)->
 			{tcp,_,P}-> 
 				P,
 				Result = binary_to_list(P),
-				base_logger_util:msg("json:~s~n", [Result]),
+				base_logger_util:info_msg("json:~s~n", [Result]),
 				{_,JsonObj} = base_json_util:json_decode("{" ++ lists:last(string:tokens(Result,"{"))),
 				handle_json(JsonObj);
 			_->
 				{error,tcp_connect_error}
 		end,
-		base_logger_util:msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
+		base_logger_util:info_msg("gen_tcp:close ~p:line:~p !!!~n",[?MODULE,?LINE]),
 		gen_tcp:close(Socket),
 		RecvPacket 	 		
 	catch
 		R:E->
-			base_logger_util:msg("R:~p,E:~p~n",[R,E]), 
+			base_logger_util:info_msg("R:~p,E:~p~n",[R,E]), 
 			{error,E}
 	end.
 

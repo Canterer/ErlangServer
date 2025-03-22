@@ -1,5 +1,6 @@
 %% Description: 生成配置文件数据库
 -module(base_mnesia_gen_tables_util).
+-include("base_define_min.hrl").
 
 %%
 %% Include files
@@ -18,7 +19,7 @@ read(Table, Key) ->
 	mnesia:start(),
 	mnesia:wait_for_tables(mnesia:system_info(tables), infinity),
 	Result = mnesia:dirty_read(Table, Key),
-	base_logger_util:msg("~p~n", [Result]),
+	?base_logger_util:info_msg("~p~n", [Result]),
 	mnesia:stop().
 
 run() ->
@@ -35,7 +36,7 @@ run() ->
 	mnesia:start(),
 	mnesia:wait_for_tables(mnesia:system_info(tables), infinity),
 	mnesia:stop(),
-	base_logger_util:msg("mnesia_gen_tables, process finished!!!~n").
+	?base_logger_util:info_msg("mnesia_gen_tables, process finished!!!~n").
 
 
 create_all_tables() ->
@@ -407,49 +408,49 @@ delete_all_tables() ->
 	mnesia:delete_table(wing_echant_lock).
 
 gen_game_db() ->
-%% 	FileName = "../config/game.config",
+%%	FileName = "../config/game.config",
 %% 	case file:open(FileName,[read]) of 
 %% 		{ok,Fd}->
 %% 			write_game_db(Fd);
 %% 		{error,Reason}-> 
-%% 			base_logger_util:msg("Consult error:~p~n",[Reason])
+%% 			?base_logger_util:info_msg("Consult error:~p~n",[Reason])
 %% 	end.
- 	FilePath="../config/config",
+	FilePath="../config/config",
 	base_mnesia_read_config_util:get_object(FilePath).
 
 write_game_db_old_zt(Fd) ->
 	case io:read(Fd,'') of
 		{error,Reason}->
-		 	base_logger_util:msg("reovery_from failed: ~p~n",[Reason]),
-		 	file:close(Fd);
+			?base_logger_util:info_msg("reovery_from failed: ~p~n",[Reason]),
+			file:close(Fd);
 		eof ->
 			file:close(Fd);
 		{ok,Term}->
-%% 			base_logger_util:msg("yanzengyan, Term: ~p~n", [Term]),
-		   if  element(1,Term) =:= continuous_logging_gift ->
-				  base_logger_util:msg("continuous_logging_op:init_data() 02 Item:~p~n",[Term]),
-				  if erlang:size(Term)=:=3 -> 
-					   base_db_dal_util:write( erlang:append_element(Term,[]));
-					   true->	  base_db_dal_util:write(Term)
-				  end;	 
-			 true->
-			 	 	base_db_dal_util:write(Term)
-			end,		   
-			 write_game_db(Fd),
-			 ok
+%%			?base_logger_util:info_msg("yanzengyan, Term: ~p~n", [Term]),
+			if element(1,Term) =:= continuous_logging_gift ->
+					?base_logger_util:info_msg("continuous_logging_op:init_data() 02 Item:~p~n",[Term]),
+					if erlang:size(Term)=:=3 -> 
+							base_db_dal_util:write( erlang:append_element(Term,[]));
+						true->	  base_db_dal_util:write(Term)
+					end;
+				true->
+					base_db_dal_util:write(Term)
+			end,
+			write_game_db(Fd),
+			ok
 	end.
 
 write_game_db(Fd) ->
 	case io:read(Fd,'') of
 		{error,Reason}->
-		 	base_logger_util:msg("reovery_from failed: ~p~n",[Reason]),
-		 	file:close(Fd);
+			?base_logger_util:info_msg("reovery_from failed: ~p~n",[Reason]),
+			file:close(Fd);
 		eof ->
 			file:close(Fd);
 		{ok,Term}->
-			 base_db_dal_util:write(Term),
-		 write_game_db(Fd),
-			 ok
+			base_db_dal_util:write(Term),
+			write_game_db(Fd),
+			ok
 	end.
 
 
@@ -458,9 +459,9 @@ gen_creature_db() ->
 	case file:consult(FileName) of
 		{ok,[Terms]}->
 			lists:foreach(fun(Term)->add_creature_spawns_to_mnesia(Term)
-						  end,Terms);
+							end,Terms);
 		{error,Reason} ->
-			base_logger_util:msg("import_creature_spawns error:~p~n",[Reason])
+			?base_logger_util:info_msg("import_creature_spawns error:~p~n",[Reason])
 	end.
 
 add_creature_spawns_to_mnesia(Term)->
@@ -468,11 +469,5 @@ add_creature_spawns_to_mnesia(Term)->
 		NewTerm = list_to_tuple([creature_spawns|tuple_to_list(Term)]),
 		base_db_dal_util:write(NewTerm)
 	catch
-		E:R-> base_logger_util:msg("Reason ~p: ~p~n",[E,R]),error
+		E:R-> ?base_logger_util:info_msg("Reason ~p: ~p~n",[E,R]),error
 	end.
-
-
-	
-
-
-

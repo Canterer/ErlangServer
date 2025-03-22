@@ -42,10 +42,10 @@
 %% --------------------------------------------------------------------
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	?base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 query_time()->
-	base_gen_server:call(?MODULE, {query_time}).
+	?base_gen_server:call(?MODULE, {query_time}).
 
 start_at_app()->
 	Now = query_time_rpc(500),
@@ -69,26 +69,26 @@ get_time_of_day()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(Args) ->
+?init(Args) ->
 	{ok, #state{}}.
 
-do_handle_call({query_time}, _From, State) ->
+?handle_call({query_time}, _From, State) ->
    Reply = os:timestamp(),
    {reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -110,18 +110,18 @@ put_deviation_seconds(OtherTimer)->
 	{A2,B2,_C2} = OtherTimer,
 	{A1,B1,_C1} = os:timestamp(),
 	Deviation = B2 + A2*1000000 - B1 - A1*1000000,
-	ets_operater_behaviour:new(?DEVIATION_SECONDS_ETS, [set,public,named_table]),
-	ets_operater_behaviour:insert(?DEVIATION_SECONDS_ETS, {1,Deviation}),
-	ets_operater_behaviour:insert(?DEVIATION_SECONDS_ETS, {2,{A1,B1,0}}).
+	?base_ets:new(?DEVIATION_SECONDS_ETS, [set,public,named_table]),
+	?base_ets:insert(?DEVIATION_SECONDS_ETS, {1,Deviation}),
+	?base_ets:insert(?DEVIATION_SECONDS_ETS, {2,{A1,B1,0}}).
 
 get_ets_deviation_seconds()->
-	case ets:lookup(?DEVIATION_SECONDS_ETS, 1) of
+	case ?base_ets:lookup(?DEVIATION_SECONDS_ETS, 1) of
 		[]-> 0;
 		[{_,Deviation}]->Deviation
 	end.
 
 get_ets_server_start_time()->
-	case ets:lookup(?DEVIATION_SECONDS_ETS, 2) of
+	case ?base_ets:lookup(?DEVIATION_SECONDS_ETS, 2) of
 		[]-> 0;
 		[{_,Time}]->Time
 	end.
@@ -131,7 +131,7 @@ query_time_rpc(N)->
 		0-> 0;
 		_->
 			case base_rpc_util:asyn_call(base_node_util:get_timernode(), ?MODULE, query_time, []) of
-				{badrpc,Reason}-> base_logger_util:msg("query_timer error:~p~n",[Reason]),
+				{badrpc,Reason}-> base_logger_util:info_msg("query_timer error:~p~n",[Reason]),
 								  timer:sleep(1000),
 								  query_time_rpc(N-1);
 				Deviation->	Deviation

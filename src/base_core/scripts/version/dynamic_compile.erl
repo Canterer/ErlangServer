@@ -117,14 +117,14 @@ scan_and_parse(RemainingText, CurrFilename, CurrLine, RevForms, MacroDict, Inclu
 			scan_and_parse(NRemainingText, CurrFilename, NLine, RevForms,NMacroDict, IncludeSearchPath);
 		{include, NLine, NRemainingText, IncludeFilename} ->
 			IncludeFileRemainingTextents = read_include_file(IncludeFilename, IncludeSearchPath),
-			%%base_logger_util:msg("include file ~p contents: ~n~p~nRemainingText = ~p~n", [IncludeFilename,IncludeFileRemainingTextents, RemainingText]),
+			%%base_logger_util:info_msg("include file ~p contents: ~n~p~nRemainingText = ~p~n", [IncludeFilename,IncludeFileRemainingTextents, RemainingText]),
 			%% Modify the FILE macro to reflect the filename
 			%%IncludeMacroDict = dict:store('FILE', {[],IncludeFilename}, MacroDict),
 			IncludeMacroDict = MacroDict,
 
 			%% Process the header file (inc. any nested header files)
 			{RevIncludeForms, IncludedMacroDict} = scan_and_parse(IncludeFileRemainingTextents, IncludeFilename, 1, [], IncludeMacroDict, IncludeSearchPath),
-			%base_logger_util:msg("include file results = ~p~n", [R]),
+			%base_logger_util:info_msg("include file results = ~p~n", [R]),
 			%% Restore the FILE macro in the NEW MacroDict (so we keep any macros defined in the header file)
 			%%NMacroDict = dict:store('FILE', {[],CurrFilename}, IncludedMacroDict),
 			NMacroDict = IncludedMacroDict,

@@ -36,24 +36,24 @@ start_child(MapProcName,MapId_line,Tag)->
 				  		  		transient,2000,worker,[base_map_processor_server]},
 		supervisor:start_child(?SERVER, AChild)
 	catch
-		E:R-> base_logger_util:msg("can not start map(~p:~p) ~p ~p ~p~n",[E,R,MapProcName,MapId_line,Tag]),
+		E:R-> base_logger_util:info_msg("can not start map(~p:~p) ~p ~p ~p~n",[E,R,MapProcName,MapId_line,Tag]),
 			  {error,R}
  	end.
 
 stop_child(MapProcName)->
 	?ZS_LOG("MapProcName=~p",[MapProcName]),
-	case ets:info(MapProcName) of
+	case ?base_ets:info(MapProcName) of
 		undefined->
 			nothing;
 		_->
-			ets_operater_behaviour:delete(MapProcName)
+			?base_ets:delete(MapProcName)
 	end,
 	supervisor:terminate_child(?SERVER, MapProcName),
 	supervisor:delete_child(?SERVER, MapProcName).
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	{ok,{{one_for_one,10,10}, []}}.
 
 %% --------------------------------------------------------------------

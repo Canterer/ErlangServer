@@ -30,7 +30,7 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?SERVER},?MODULE,[],[]).
+	?base_gen_server:start_link({local,?SERVER},?MODULE,[],[]).
 
 auth(FromNode,FromProc,GmUserName,GmUserId,Time,GmAuthResult)->
 	base_global_proc_util:send(?SERVER, {auth_gm,{FromNode,FromProc,GmUserName, GmUserId,Time,GmAuthResult}}).
@@ -38,7 +38,7 @@ auth(FromNode,FromProc,GmUserName,GmUserId,Time,GmAuthResult)->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	base_timer_server:start_at_process(),
 	SecretKey =base_env_ets:get(gmsecretkey, ""),
 	CfgTimeOut=base_env_ets:get(gmauthttimeout, 3600),
@@ -46,14 +46,14 @@ do_init([]) ->
     {ok, #state{auth_algorithm=AuthAlgorithmMod,secret= SecretKey,authtimeout=CfgTimeOut}}.
 
 
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({auth_gm,{FromNode,FromProc,GmName, GmId,Time,AuthResult}},State) ->
+?handle_info({auth_gm,{FromNode,FromProc,GmName, GmId,Time,AuthResult}},State) ->
 	#state{auth_algorithm=Mod,secret=SecretKey,authtimeout=CfgTimeOut}=State,
 	Fun = case SecretKey of
 			""-> validate_gm_test;
@@ -62,20 +62,20 @@ do_handle_info({auth_gm,{FromNode,FromProc,GmName, GmId,Time,AuthResult}},State)
 
 	case Mod:Fun(GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut) of
 		{ok,GmId}->
-			base_logger_util:msg("~p login successed userid=~p~n",[GmName,GmId]),
+			base_logger_util:info_msg("~p login successed userid=~p~n",[GmName,GmId]),
 			base_gm_client_fsm:auth_ok(FromNode, FromProc, GmId);
 		{error, Reason}-> 
-			base_logger_util:msg("~p login failed,Reason:~p ~n",[GmName, Reason]),
+			base_logger_util:info_msg("~p login failed,Reason:~p ~n",[GmName, Reason]),
 			base_gm_client_fsm:auth_failed(FromNode, FromProc, Reason)
 	end,
     {noreply, State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------

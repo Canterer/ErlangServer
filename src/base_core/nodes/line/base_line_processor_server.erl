@@ -40,7 +40,7 @@
 %% --------------------------------------------------------------------
 %%	TODO:this proc not need again!!!!!!!
 start_link({LineName, NamedProc})->
-	base_gen_server:start_link({local, LineName}, ?MODULE, {LineName, NamedProc}, []).
+	?base_gen_server:start_link({local, LineName}, ?MODULE, {LineName, NamedProc}, []).
 
 %% --------------------------------------------------------------------
 %%% Description: get the maps that belongs to this line server.
@@ -61,25 +61,25 @@ do_regist(regist_map_processor, Args, State) ->
 	{NodeName, LineId, MapId, MapName} = Args,
 	Key = make_map_id(LineId, MapId),
 	%% {key, nodename, mapname, lineid, mapid, rolecount}
-	%base_logger_util:msg("regist_map_processor ~p ~n ",[Args]),
-	ets_operater_behaviour:insert(?MAP_PROC_DB, {Key, NodeName, MapName, LineId, MapId}),
+	%base_logger_util:info_msg("regist_map_processor ~p ~n ",[Args]),
+	?base_ets:insert(?MAP_PROC_DB, {Key, NodeName, MapName, LineId, MapId}),
 	ok.
 
 do_regist(RegistType, Args) ->
 	%% unkonwn format
 	{LineId, MapId} = RegistType,
 	Id = make_map_id(LineId, MapId),
-	base_logger_util:msg("unknown regist type: ~s~n", [Id]).
+	base_logger_util:info_msg("unknown regist type: ~s~n", [Id]).
 
 unregist_by_node(NodeName)->
-	AllNodeMaps = ets:match(?MAP_PROC_DB, {'$1', NodeName, '_', '_', '_'}),
-	lists:foreach(fun(Key)-> ets_operater_behaviour:delete(?MAP_PROC_DB, Key) end, lists:append(AllNodeMaps)).
+	AllNodeMaps = ?base_ets:match(?MAP_PROC_DB, {'$1', NodeName, '_', '_', '_'}),
+	lists:foreach(fun(Key)-> ?base_ets:delete(?MAP_PROC_DB, Key) end, lists:append(AllNodeMaps)).
 	
 
 %% Description: get the map processor name by LineId and MapId
 lookup_map_name(LineId, MapId) ->
 	Key = make_map_id(LineId, MapId),
-	case ets:lookup(?MAP_PROC_DB, Key) of
+	case ?base_ets:lookup(?MAP_PROC_DB, Key) of
 		[{_, NodeName, ProcName, _, _}]->
 			{ok, {NodeName, ProcName}};
 		[] ->
@@ -103,25 +103,25 @@ get_role_num_by_mapId() ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init({LineName, NamedProc}) ->
-	base_logger_util:msg("~p:~p({LineName:~p, NamedProc:~p})~n",[?MODULE,?FUNCTION_NAME,LineName,NamedProc]),
+?init({LineName, NamedProc}) ->
+	base_logger_util:info_msg("~p:~p({LineName:~p, NamedProc:~p})~n",[?MODULE,?FUNCTION_NAME,LineName,NamedProc]),
 	base_line_manager_server:regist_to_manager(NamedProc,LineName),
 	{ok, #state{line_name = LineName}}.
 
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------

@@ -29,7 +29,7 @@
 %% ====================================================================
 start_link()->
 	?ZS_LOG(),
-	ets_operater_behaviour:new(?MAP_PROC_DB, [set, public, named_table]),
+	?base_ets:new(?MAP_PROC_DB, [set, public, named_table]),
 	supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 add_line({LineName, From}) ->
@@ -45,7 +45,7 @@ delete_line(LineName) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	{ok,{{one_for_one, 10, 10}, []}}.
 
 %% --------------------------------------------------------------------

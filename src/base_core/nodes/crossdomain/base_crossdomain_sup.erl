@@ -30,7 +30,7 @@ start_link()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	Worker = {base_crossdomain_server,{base_crossdomain_server,start_link,[]},
 					 	permanent,2000,worker,[base_crossdomain_server]},
 	{ok,{{one_for_one, 10, 10}, [Worker]}}.

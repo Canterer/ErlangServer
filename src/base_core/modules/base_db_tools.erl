@@ -58,7 +58,7 @@ config_disc_db_node(DbNode)->
 		_->
 			TablesList = mnesia:system_info(tables),
 			check_tables_disc_copies(TablesList),
-			base_logger_util:msg("This Node has been add to Mnesia as slave dbnode!\n")
+			base_logger_util:info_msg("This Node has been add to Mnesia as slave dbnode!\n")
 	end.
 
 config_ram_tables_type(RamTableList)->
@@ -76,13 +76,13 @@ config_ram_tables_type(RamTableList)->
 
 config_ram_db_node(TablesList)->
 	case base_node_util:get_dbnode() of
-		nonode -> base_logger_util:msg("DB Node havn't startd!\n");
+		nonode -> base_logger_util:info_msg("DB Node havn't startd!\n");
 		DbNode->
 			mnesia:start(),
 			case check_db_connected() of
 				false-> base_db_master_server:rpc_add_self_to_db_node(DbNode,TablesList);
 				_-> check_tables_ram_copies(base_db_tools:correct_need_config_tables(TablesList)),
-					base_logger_util:msg("This Node has been add to Mnesia as ram dbnode!\n")
+					base_logger_util:info_msg("This Node has been add to Mnesia as ram dbnode!\n")
 			end
 	end.
 
@@ -141,7 +141,7 @@ create_table_disc(Tab,Attributes,Indices,Type)->
 					 case mnesia:table_info(Tab,attributes) of
 						Attributes -> false;
 						_->  
-							base_logger_util:msg("table [~p] attributes are different\n",[Tab]),false
+							base_logger_util:info_msg("table [~p] attributes are different\n",[Tab]),false
 					 end
 				 catch
 					 _:_-> true
@@ -166,7 +166,7 @@ create_table_ram(Tab,Attributes,Indices,Type)->
 					 case mnesia:table_info(Tab,attributes) of
 						Attributes -> false;
 						_->  
-							base_logger_util:msg("table [~p] attributes are different\n",[Tab]),false
+							base_logger_util:info_msg("table [~p] attributes are different\n",[Tab]),false
 					 end
 				 catch
 					 _:_-> true
@@ -278,9 +278,9 @@ add_disc_tables(_TableList = [Table | T], NewNode) ->
 	add_disc_tables(T, NewNode).
 
 wait_for_tables_loop(_IsRemote,0,_TabList)->
-	base_logger_util:msg("wait_for_tables out of times~n");
+	base_logger_util:info_msg("wait_for_tables out of times~n");
 wait_for_tables_loop(IsRemote,N,TabList)->
-	base_logger_util:msg("~p:~p(IsRemote:~p,N:~p,TabList:~p)~n",[?MODULE,?FUNCTION_NAME,IsRemote,N,TabList]),
+	base_logger_util:info_msg("~p:~p(IsRemote:~p,N:~p,TabList:~p)~n",[?MODULE,?FUNCTION_NAME,IsRemote,N,TabList]),
 	F = if IsRemote =:= local -> 
 			   fun()-> wait_for_tables_norpc(TabList, ?DB_WAIT_TABLE_TIMEOUT) end;
 		   true->
@@ -290,25 +290,25 @@ wait_for_tables_loop(IsRemote,N,TabList)->
 	case F() of
 		ok-> ok;
 		Reason->
-			base_logger_util:msg("wait_for_tables failed IsRemote ~p Reason ~p  TabList ~p ~n",[IsRemote,Reason,TabList]),
+			base_logger_util:info_msg("wait_for_tables failed IsRemote ~p Reason ~p  TabList ~p ~n",[IsRemote,Reason,TabList]),
 			timer:sleep(1000),
 			wait_for_tables_loop(IsRemote,N-1,TabList)
-%%		{timeout,BadTabList}->  base_logger_util:msg("wait_for_tables timeout ~p~n",[BadTabList]);
+%%		{timeout,BadTabList}->  base_logger_util:info_msg("wait_for_tables timeout ~p~n",[BadTabList]);
 %%		{error, Reason}-> case Reason of
 %%							  {node_not_running,_CurNode}->
 %%								  timer:sleep(1000),
-%%								  base_logger_util:msg("mnesia error :node_not_running try again~n"),
+%%								  base_logger_util:info_msg("mnesia error :node_not_running try again~n"),
 %%								  wait_for_tables_loop(IsRemote,N-1,TabList);
-%%							  _ -> base_logger_util:msg("wait_for_tables error ~p~n",[Reason])
+%%							  _ -> base_logger_util:info_msg("wait_for_tables error ~p~n",[Reason])
 %%						  end;
-%%		Any-> base_logger_util:msg("wait_for_tables failed:~p~n",[Any])
+%%		Any-> base_logger_util:info_msg("wait_for_tables failed:~p~n",[Any])
 	end.
 	
 wait_ets_init()->
 	wait_for_all_db_tables(),
-	base_logger_util:msg("wait_for_all_db_tables ~n"),
+	base_logger_util:info_msg("wait_for_all_db_tables ~n"),
 	EtsInit = get_ets_table_mods(node()),
-	base_logger_util:msg("EtsInit ~p ~n",[EtsInit]),
+	base_logger_util:info_msg("EtsInit ~p ~n",[EtsInit]),
 	config_ets_init(EtsInit).
 
 wait_ets_init_fliter(EtsFliter)->
@@ -316,9 +316,9 @@ wait_ets_init_fliter(EtsFliter)->
 	try
 		EtsFliter:init()
 	catch
-		E:R->base_logger_util:msg("init ets ~p except(~p:~p)! check the app configs\n",[EtsFliter,E,R])
+		E:R->base_logger_util:info_msg("init ets ~p except(~p:~p)! check the app configs\n",[EtsFliter,E,R])
 	end,
-	base_logger_util:msg("ets ~p are ok now!\n",[EtsFliter]).
+	base_logger_util:info_msg("ets ~p are ok now!\n",[EtsFliter]).
 
 %%[Modules]/all
 get_ets_table_mods(Node)->
@@ -347,13 +347,13 @@ config_ets_create(CreateMods)->
 						try
 							M:create_ets()
 						catch
-							_:_->base_logger_util:msg("create ets ~p except! check the app configs\n",[M])
+							_:_->base_logger_util:info_msg("create ets ~p except! check the app configs\n",[M])
 						end				  
 				end, CreateMods),
 	case CreateMods of
 		[]-> ignor;
 		_->
-			base_logger_util:msg("ets ~p are created now!\n",[CreateMods])
+			base_logger_util:info_msg("ets ~p are created now!\n",[CreateMods])
 	end.
 
 config_ets_init(all)->
@@ -363,10 +363,10 @@ config_ets_init(InitMods)->
 						try
 							M:init_ets()
 						catch
-							E:R->base_logger_util:msg("init ets ~p except(~p:~p)! check the app configs\n",[M,E,R])
+							E:R->base_logger_util:info_msg("init ets ~p except(~p:~p)! check the app configs\n",[M,E,R])
 						end				  
 				end, InitMods),
-	base_logger_util:msg("ets ~p are ok now!\n",[InitMods]).
+	base_logger_util:info_msg("ets ~p are ok now!\n",[InitMods]).
 
 wait_for_tables_rpc(TableList,TimeOut)->
 	?ZS_LOG(),
@@ -386,13 +386,13 @@ wait_for_all_db_tables_in_db_node()->
 		ok->
 			ok;
 		Reason->
-			base_logger_util:msg("wait_for_all_db_tables_in_db_node ERROR ~p ~n",[Reason]),
+			base_logger_util:info_msg("wait_for_all_db_tables_in_db_node ERROR ~p ~n",[Reason]),
 			error
 	end.
 	
 wait_for_all_db_tables()->	
 	wait_tables_in_dbnode(),	
-	base_logger_util:msg("wait_tables_in_dbnode end ~n"),
+	base_logger_util:info_msg("wait_tables_in_dbnode end ~n"),
 	wait_for_local_ram_tables().
 
 wait_tables_in_dbnode()->
@@ -401,7 +401,7 @@ wait_tables_in_dbnode()->
 		ok->
 			ok;
 		Reason-> 
-			base_logger_util:msg("wait_for_all_db_tables ERROR ~p ~n",[Reason]),
+			base_logger_util:info_msg("wait_for_all_db_tables ERROR ~p ~n",[Reason]),
 			timer:sleep(1000),
 			wait_for_all_db_tables()
 	end.
@@ -409,7 +409,7 @@ wait_tables_in_dbnode()->
 wait_for_local_ram_tables()->
 	case is_need_ram_table(node()) of
 		true->
-			base_logger_util:msg("db_operater_behaviour:get_all_ram_table :~p~n",[db_operater_behaviour:get_all_ram_table()]),
+			base_logger_util:info_msg("db_operater_behaviour:get_all_ram_table :~p~n",[db_operater_behaviour:get_all_ram_table()]),
 			wait_for_tables_loop(local,1000,db_operater_behaviour:get_all_ram_table());
 		_->
 			nothing
@@ -423,7 +423,7 @@ get_node_ram_tables(Node)->
 	ShareTypes = base_env_ets:get(nodes_ram_table,[]),
 	?ZS_LOG("Node:~p ShareTypes:~p",[Node,ShareTypes]),
 	Res = lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes),
-	base_logger_util:msg("#####db_operater_behaviour:get_all_ram_table :~p~n",[Res]),
+	base_logger_util:info_msg("#####db_operater_behaviour:get_all_ram_table :~p~n",[Res]),
 	?ZS_LOG("Res:~p",Res),
 	case lists:filter(fun({ShareType,_})->base_node_util:check_node_allowable(ShareType,Node) end, ShareTypes) of
 		[]->

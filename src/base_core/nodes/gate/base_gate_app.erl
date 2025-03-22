@@ -46,7 +46,7 @@
 start(_Type, _StartArgs) ->
 	%gs_prof:support(),
 	case base_node_util:get_argument('-line') of
-		[]->  base_logger_util:msg("Missing --line argument input the nodename");
+		[]->  base_logger_util:info_msg("Missing --line argument input the nodename");
 		[CenterNode|_]->
 			% ?RELOADER_RUN,	
 			base_ping_util:wait_all_nodes_connect(),
@@ -76,13 +76,13 @@ start()->
 	base_application_server:start(?MODULE).
 
 start_base_tcp_listener_sup() ->	
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	SName = base_node_util:get_node_sname(node()),
 	?ZS_LOG("node:~p SName:~p",[node(),SName]),
 	Port = base_env_ets:get2(gateport, SName, 0),
 	?ZS_LOG("Port:~p",[Port]),
 	case Port of
-		0-> base_logger_util:msg("start gate error ,can not find listen port~n"),error;
+		0-> base_logger_util:info_msg("start gate error ,can not find listen port~n"),error;
 		Port->
 			AcceptorCount = base_env_ets:get2(gate,acceptor_count,1),
 			OnStartup = {?MODULE,tcp_listener_started,[]},
@@ -97,7 +97,7 @@ start_base_tcp_listener_sup() ->
 	end.
 
 start_base_tcp_client_sup() ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	Client_Plugin = socket_callback:get_client_mod(),
 	base_tcp_client_sup:start_link(Client_Plugin).
 
@@ -113,14 +113,14 @@ stop(_State) ->
 %% Returns: any
 %% --------------------------------------------------------------------
 tcp_listener_started(IPAddress, Port) ->
-	base_logger_util:msg("Game Gate Started at ~p : ~p\n", [IPAddress, Port]).
+	base_logger_util:info_msg("Game Gate Started at ~p : ~p\n", [IPAddress, Port]).
 
 
 tcp_listener_stopped(IPAddress, Port) ->
-	base_logger_util:msg("Game Gate Stopped at ~p : ~p\n", [IPAddress, Port]).
+	base_logger_util:info_msg("Game Gate Stopped at ~p : ~p\n", [IPAddress, Port]).
 
 start_client(Sock,Pid)->
-	base_logger_util:msg("start one client process pid = ~p sock = ~p\n",[Pid,Sock]).
+	base_logger_util:info_msg("start one client process pid = ~p sock = ~p\n",[Pid,Sock]).
 
 %% ====================================================================
 %% Internal functions

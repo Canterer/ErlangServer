@@ -47,23 +47,23 @@ start(Application,Type)->
 
 force_start()->
 	case erlang:whereis(?SERVER) of
-		?ERLNULL->	base_gen_server:start_link({local,?SERVER},?MODULE, [], []);
+		?ERLNULL->	?base_gen_server:start_link({local,?SERVER},?MODULE, [], []);
 		_->ignor
 	end.
 
 wait_ets_init()->
-	base_gen_server:call(?SERVER, {wait_ets_init},infinity).
+	?base_gen_server:call(?SERVER, {wait_ets_init},infinity).
 
 wait_ets_init_fliter(EtsFliter)->
-	base_gen_server:call(?SERVER, {wait_ets_init_fliter,{EtsFliter}},infinity).
+	?base_gen_server:call(?SERVER, {wait_ets_init_fliter,{EtsFliter}},infinity).
 
 sp_call(M,F,A)->
-	base_gen_server:call(?SERVER, {sp_call,M,F,A},infinity).
+	?base_gen_server:call(?SERVER, {sp_call,M,F,A},infinity).
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(_Args) ->
+?init(_Args) ->
 	filelib:ensure_dir("../log/"),
 	FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ "_node.log", 
 	error_logger:logfile({open, FileName}),
@@ -74,38 +74,38 @@ do_init(_Args) ->
 	base_db_tools:wait_ets_create(),
 	{ok, #state{}}.
 
-do_handle_call({wait_ets_init}, _From, State) ->
+?handle_call({wait_ets_init}, _From, State) ->
 	% env_ets:fresh(),
 	base_db_tools:wait_ets_init(),
 	Reply = ok,
 	{reply, Reply, State};
-do_handle_call({wait_ets_init_fliter,{EtsFliter}}, _From, State) ->
+?handle_call({wait_ets_init_fliter,{EtsFliter}}, _From, State) ->
 	% env_ets:fresh(),
 	base_db_tools:wait_ets_init_fliter(EtsFliter),
 	Reply = ok,
 	{reply, Reply, State};
-do_handle_call({sp_call,M,F,A},_From,State)->
+?handle_call({sp_call,M,F,A},_From,State)->
 	try
 		apply(M,F,A)
 	catch
-		E:R-> base_logger_util:msg("~p : ~p~n",[E,R])
+		E:R-> base_logger_util:info_msg("~p : ~p~n",[E,R])
 	end,
 	Reply = ok,
 	{reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------

@@ -1,9 +1,7 @@
 %% Description: TODO: Add description to base_dp_dmp_util
 -module(base_db_dmp_util).
+-include("base_define_min.hrl").
 
-%%
-%% Include files
-%%
 
 -define(DATA_MODIFY_RECORDS_0,'$data_for_modify_record_0$').
 -define(DATA_MODIFY_RECORDS_1,'$data_for_modify_record_1$').
@@ -39,16 +37,16 @@
 
 init()->
 	try 
-		ets_operater_behaviour:new(?DATA_MODIFY_RECORDS_0, [set,named_table,public]) 
+		?base_ets:new(?DATA_MODIFY_RECORDS_0, [set,named_table,public]) 
 	catch 
 		E:R-> 
-			base_logger_util:msg("init_local_modify Exception(~p:~p)~n", [E,R])
+			?base_logger_util:info_msg("init_local_modify Exception(~p:~p)~n", [E,R])
 	end,
 	try 
-		ets_operater_behaviour:new(?DATA_MODIFY_RECORDS_1, [set,named_table,public]) 
+		?base_ets:new(?DATA_MODIFY_RECORDS_1, [set,named_table,public]) 
 	catch 
 		E2:R2-> 
-			base_logger_util:msg("init_local_modify Exception(~p:~p)~n", [E2,R2])
+			?base_logger_util:info_msg("init_local_modify Exception(~p:~p)~n", [E2,R2])
 	end.
 
 write(BundleId,Object)->
@@ -57,21 +55,21 @@ write(BundleId,Object)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
 	clear_deletekey(EtsName,NotUseEtsName,BundleId,Table,Key),
-	ets_operater_behaviour:insert(EtsName, {{w,BundleId,Table,Key},BundleId,Object}).
+	?base_ets:insert(EtsName, {{w,BundleId,Table,Key},BundleId,Object}).
 
 write(BundleId,Table,TableKey,FieldIndex,FieldValue)->
 	EtsName = get_using_ets(),
-	ets_operater_behaviour:insert(EtsName, {{wf,BundleId,Table,TableKey,FieldIndex},BundleId,FieldValue}).
+	?base_ets:insert(EtsName, {{wf,BundleId,Table,TableKey,FieldIndex},BundleId,FieldValue}).
 
 write(BundleId,Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 	EtsName = get_using_ets(),
-	ets_operater_behaviour:insert(EtsName, {{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey},BundleId,FieldTupleValue}).
+	?base_ets:insert(EtsName, {{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey},BundleId,FieldTupleValue}).
 
 delete(BundleId,Table,Key)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
 	clear_writekey(EtsName,NotUseEtsName,BundleId,Table,Key),
-	ets_operater_behaviour:insert(EtsName, {{del,BundleId,Table,Key},BundleId,Key}).
+	?base_ets:insert(EtsName, {{del,BundleId,Table,Key},BundleId,Key}).
 
 async_write(BundleId,Object)-> write(BundleId,Object).
 async_write(BundleId,Table,TableKey,FieldIndex,FieldValue)->
@@ -87,51 +85,51 @@ sync_write(BundleId,Object)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
 	clear_deletekey(EtsName,NotUseEtsName,BundleId,Table,Key),	
-	ets_operater_behaviour:delete(EtsName,{w,BundleId,Table,Key}),
-	ets_operater_behaviour:delete(NotUseEtsName,{w,BundleId,Table,Key}),
+	?base_ets:delete(EtsName,{w,BundleId,Table,Key}),
+	?base_ets:delete(NotUseEtsName,{w,BundleId,Table,Key}),
 	flush_data_rpc({{w,BundleId,Table,Key},BundleId,Object}).
 
 sync_write(BundleId,Table,TableKey,FieldIndex,FieldValue)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
-	ets_operater_behaviour:delete(EtsName,{wf,BundleId,Table,TableKey,FieldIndex}),
-	ets_operater_behaviour:delete(NotUseEtsName,{wf,BundleId,Table,TableKey,FieldIndex}),
+	?base_ets:delete(EtsName,{wf,BundleId,Table,TableKey,FieldIndex}),
+	?base_ets:delete(NotUseEtsName,{wf,BundleId,Table,TableKey,FieldIndex}),
 	flush_data_rpc({{wf,BundleId,Table,TableKey,FieldIndex},BundleId,FieldValue}).
 
 sync_write(BundleId,Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
-	ets_operater_behaviour:delete(EtsName,{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey}),
-	ets_operater_behaviour:delete(NotUseEtsName,{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey}),
+	?base_ets:delete(EtsName,{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey}),
+	?base_ets:delete(NotUseEtsName,{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey}),
 	flush_data_rpc({{wfk,BundleId,Table,TableKey,FieldIndex,FieldKey},BundleId,FieldTupleValue}).
 
 sync_delete(BundleId,Table,Key)->
 	EtsName = get_using_ets(),
 	NotUseEtsName = get_noinuse_ets(),
 	clear_writekey(EtsName,NotUseEtsName,BundleId,Table,Key),
-	ets_operater_behaviour:delete(EtsName,{del,BundleId,Table,Key}),
-	ets_operater_behaviour:delete(NotUseEtsName,{del,BundleId,Table,Key}),
+	?base_ets:delete(EtsName,{del,BundleId,Table,Key}),
+	?base_ets:delete(NotUseEtsName,{del,BundleId,Table,Key}),
 	flush_data_rpc({{del,BundleId,Table,Key},BundleId,Key}).
 
 flush_not_using()->
 	NotUseEtsName = get_noinuse_ets(),
-	BundldObjects = ets:tab2list(NotUseEtsName),
+	BundldObjects = ?base_ets:tab2list(NotUseEtsName),
 	Len = length(BundldObjects),
 	if
-		Len >0-> base_logger_util:msg("flush_not_using size =~p~n",[Len]);
+		Len >0-> ?base_logger_util:info_msg("flush_not_using size =~p~n",[Len]);
 		true-> ignor
 	end,
-	ets_operater_behaviour:delete_all_objects(NotUseEtsName),
+	?base_ets:delete_all_objects(NotUseEtsName),
 	flush_data_rpc(BundldObjects).
 
 flush_all()->
 	NotUseEtsName = get_noinuse_ets(),
-	BundldObjects1 = ets:tab2list(NotUseEtsName),
-	ets_operater_behaviour:delete_all_objects(NotUseEtsName),
+	BundldObjects1 = ?base_ets:tab2list(NotUseEtsName),
+	?base_ets:delete_all_objects(NotUseEtsName),
 	
 	UseEtsName = get_using_ets(),
-	BundldObjects2 = ets:tab2list(UseEtsName),
-	ets_operater_behaviour:delete_all_objects(UseEtsName),
+	BundldObjects2 = ?base_ets:tab2list(UseEtsName),
+	?base_ets:delete_all_objects(UseEtsName),
 	
 	flush_data_rpc(BundldObjects1 ++ BundldObjects2).
 
@@ -139,24 +137,24 @@ flush_all()->
 flush_bundle(BundleId)->
 	{Tab1,BundldObjects1} = get_using_bundle(BundleId),
 	{Tab2,BundldObjects2} = get_notinuse_bundle(BundleId),
-	lists:foreach(fun(X)-> ets_operater_behaviour:delete_object(Tab1, X) end, BundldObjects1),
-	lists:foreach(fun(X)-> ets_operater_behaviour:delete_object(Tab2, X) end, BundldObjects2),
+	lists:foreach(fun(X)-> ?base_ets:delete_object(Tab1, X) end, BundldObjects1),
+	lists:foreach(fun(X)-> ?base_ets:delete_object(Tab2, X) end, BundldObjects2),
 	flush_data_rpc(BundldObjects2 ++ BundldObjects1).
 
 get_using_bundle(BundleId)->
 	EtsName = get_using_ets(),
-	BundldObjects = ets:match_object(EtsName, {'_',BundleId,'_'}),
+	BundldObjects = ?base_ets:match_object(EtsName, {'_',BundleId,'_'}),
 	{EtsName,BundldObjects}.
 
 get_notinuse_bundle(BundleId)->
 	EtsName = get_noinuse_ets(),
-	BundldObjects = ets:match_object(EtsName, {'_',BundleId,'_'}),
+	BundldObjects = ?base_ets:match_object(EtsName, {'_',BundleId,'_'}),
 	{EtsName,BundldObjects}.
 
 flush_data_rpc(DataOperates) when is_list(DataOperates)->
-	base_rpc_util:asyn_call(node_util:get_dbnode(),?MODULE,flush_data_batch,[DataOperates]);
+	base_rpc_util:asyn_call(base_node_util:get_dbnode(),?MODULE,flush_data_batch,[DataOperates]);
 flush_data_rpc(DataOperate)->
-	base_rpc_util:asyn_call(node_util:get_dbnode(),?MODULE,flush_data,[DataOperate]).
+	base_rpc_util:asyn_call(base_node_util:get_dbnode(),?MODULE,flush_data,[DataOperate]).
 
 flush_data_batch(DataOperates)->
 	lists:foreach(fun(DataOp)-> flush_data(DataOp) end, DataOperates).
@@ -175,11 +173,11 @@ flush_data({{del,_,Table,Key},_,_})->
 %%
 
 clear_writekey(EtsName,NotUseEtsName,BundleId,Table,Key)->
-	ets_operater_behaviour:delete(EtsName,{w,BundleId,Table,Key}),
-	ets_operater_behaviour:delete(NotUseEtsName,{w,BundleId,Table,Key}).
+	?base_ets:delete(EtsName,{w,BundleId,Table,Key}),
+	?base_ets:delete(NotUseEtsName,{w,BundleId,Table,Key}).
 clear_deletekey(EtsName,NotUseEtsName,BundleId,Table,Key)->
-	ets_operater_behaviour:delete(EtsName,{del,BundleId,Table,Key}),
-	ets_operater_behaviour:delete(NotUseEtsName,{del,BundleId,Table,Key}).
+	?base_ets:delete(EtsName,{del,BundleId,Table,Key}),
+	?base_ets:delete(NotUseEtsName,{del,BundleId,Table,Key}).
 	
 
 get_using_ets()->

@@ -34,7 +34,7 @@ start_link(OnReceiveData,OnClientClose)->
 	base_fsm_util:start_link(?MODULE, [OnReceiveData,OnClientClose], []).
 
 init([OnReceiveData,OnClientClose]) ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	base_timer_server:start_at_process(),
 	process_flag(trap_exit, true),
 	% put(on_receive_data, OnReceiveData),
@@ -54,7 +54,7 @@ send_data(GMPid, Data) ->
 		end			
 	catch
 		Error ->
-			base_logger_util:msg("~p~n", [erlang:get_stacktrace()])
+			base_logger_util:info_msg("~p~n", [erlang:get_stacktrace()])
 	end.
 
 send_data(GMPid, GMProc, Data) ->
@@ -156,7 +156,7 @@ authing({auth_ok,GMId}, StateData) ->
 		{ok,JsonBin}->
 			send_data(self(),JsonBin);
 		{error, Reason}->
-			base_logger_util:msg("util:json_encode ~p error:~p~n",[AuthOk,Reason])
+			base_logger_util:info_msg("util:json_encode ~p error:~p~n",[AuthOk,Reason])
 	end,
 	{next_state,managing,StateData};
 authing(Event, State) ->
@@ -256,11 +256,11 @@ handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 handle_info({shutdown},StateName,StateData)->
 	{stop, normal, StateData};
 handle_info({kick_client},StateName,StateData)->
-	base_logger_util:msg("receive need kick client, maybe error client!\n"),
+	base_logger_util:info_msg("receive need kick client, maybe error client!\n"),
 	inet:tcp_close(get(clientsock)),
 	{next_state, StateName, StateData};	
 handle_info({kick_client,KickInfo},StateName,StateData)->
-	base_logger_util:msg("receive need kick client, Reason:~p!\n",[KickInfo]),
+	base_logger_util:info_msg("receive need kick client, Reason:~p!\n",[KickInfo]),
 	inet:tcp_close(get(clientsock)),
 	{next_state, StateName, StateData};	
 handle_info(_Info, StateName, StateData) ->

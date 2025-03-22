@@ -30,7 +30,7 @@ start_checker()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([DbType]) ->
+?init([DbType]) ->
 	case DbType of
 		checker->
 			AChildList = [{base_global_proc_checker_server,{base_global_proc_checker_server,start_link,[]}, transient,2000,worker,[base_global_proc_checker_server]}];

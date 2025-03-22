@@ -66,7 +66,7 @@ read_emakefile(Emakefile,Opts) ->
 		Mods = [filename:rootname(F) ||  F <- filelib:wildcard("*.erl")],
 		[{Mods, Opts}];
 	{error,Other} ->
-		base_logger_util:msg("make: Trouble reading 'Emakefile':~n~p~n",[Other]),
+		base_logger_util:info_msg("make: Trouble reading 'Emakefile':~n~p~n",[Other]),
 		error
 	end.
 
@@ -121,7 +121,7 @@ get_opts_from_emakefile(Mods,Emakefile,Opts) ->
 	{error,enoent} ->
 		[{Mods, Opts}];
 	{error,Other} ->
-		base_logger_util:msg("make: Trouble reading 'Emakefile':~n~p~n",[Other]),
+		base_logger_util:info_msg("make: Trouble reading 'Emakefile':~n~p~n",[Other]),
 		error
 	end.
 
@@ -183,7 +183,7 @@ process([], _Worker, _NoExec, _Load) ->
 %% use worker compile
 do_worker(L, Opts, NoExec, Load, Worker) ->
 	WorkerList = do_split_list(L, Worker),
-	%base_logger_util:msg("worker:~p worker list(~p)~n", [Worker, length(WorkerList)]),
+	%base_logger_util:info_msg("worker:~p worker list(~p)~n", [Worker, length(WorkerList)]),
 	% å¯åŠ¨è¿›ç¨‹
 	Ref = make_ref(),
 	Pids =
@@ -204,7 +204,7 @@ do_wait_worker(N, Ref) ->
 		{'EXIT', _P, _Reason} ->
 			do_wait_worker(N, Ref);
 		_Other ->
-			base_logger_util:msg("receive unknown msg:~p~n", [_Other]),
+			base_logger_util:info_msg("receive unknown msg:~p~n", [_Other]),
 			do_wait_worker(N, Ref)
 	end.
 
@@ -288,15 +288,15 @@ include_opt([]) ->
 %% Where load can be netload | load | noload
 
 recompile(File, true, _Load, _Opts) ->
-	base_logger_util:msg("Out of date: ~s\n",[File]);
+	base_logger_util:info_msg("Out of date: ~s\n",[File]);
 recompile(File, false, noload, Opts) ->
-	base_logger_util:msg("Recompile: ~s\n",[File]),
+	base_logger_util:info_msg("Recompile: ~s\n",[File]),
 	compile:file(File, [report_errors, report_warnings, error_summary |Opts]);
 recompile(File, false, load, Opts) ->
-	base_logger_util:msg("Recompile: ~s\n",[File]),
+	base_logger_util:info_msg("Recompile: ~s\n",[File]),
 	c:c(File, Opts);
 recompile(File, false, netload, Opts) ->
-	base_logger_util:msg("Recompile: ~s\n",[File]),
+	base_logger_util:info_msg("Recompile: ~s\n",[File]),
 	c:nc(File, Opts).
 
 exists(File) ->
@@ -380,8 +380,8 @@ copy_app(SrcFile,DstFile)->
 	   true->
 		   case file:copy(SrcFile, DstFile) of
 			   {ok,_}->
-				   base_logger_util:msg("copy :~s\n",[DstFile]);
+				   base_logger_util:info_msg("copy :~s\n",[DstFile]);
 			   _->
-				   base_logger_util:msg("copy fail:~s\n",[DstFile])
+				   base_logger_util:info_msg("copy fail:~s\n",[DstFile])
 		   end
 	end.

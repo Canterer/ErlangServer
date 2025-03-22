@@ -30,7 +30,7 @@ start_link()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	Worker = {base_timer_server,{base_timer_server,start_link,[]},
 					 	permanent,2000,worker,[base_timer_server]},
 	{ok,{{one_for_all, 10, 10}, [Worker]}}.

@@ -20,7 +20,7 @@ compile_mmake()->
 
 	% make:files系统调用
 	case make:files([MMake],[{outdir, "../ebin"}]) of
-		error-> base_logger_util:msg("can not compile mmake.erl\n"),
+		error-> base_logger_util:info_msg("can not compile mmake.erl\n"),
 				halt(1);
 		_->	
 			ok
@@ -64,7 +64,7 @@ get_cpu_cores()->
 % 		-export([make_version/0,version/0]).\n",
 % 	Fun1 = 
 % 		"make_version()->
-% 			login_pb:encode_server_version_s2c(#server_version_s2c{v = \"" 
+% 			login_pb:encode_proto_msg(server_version_s2c,#server_version_s2c{v = \"" 
 % 			++ VersionString ++
 % 			"\"}).\n",
 % 	Fun2 = 
@@ -81,7 +81,7 @@ get_cpu_cores()->
 % 		{ok,F}->
 % 			file:write(F,Code),
 % 			file:close(F);
-% 		{_,_}-> base_logger_util:msg("cann't open ~p \n",[VersionBeamFilePath])
+% 		{_,_}-> base_logger_util:info_msg("cann't open ~p \n",[VersionBeamFilePath])
 % 	end.
 	
 	

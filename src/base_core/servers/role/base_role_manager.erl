@@ -1,5 +1,5 @@
 -module(base_role_manager).
-
+-include("base_define_min.hrl").
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% Include files
@@ -34,11 +34,11 @@
 %% External functions
 %% ====================================================================
 start_link(RoleDB)->
-	base_gen_server:start_link({local,?ROLE_MANAGER},?MODULE,[RoleDB],[]).
+	?base_gen_server:start_link({local,?ROLE_MANAGER},?MODULE,[RoleDB],[]).
 
 init([RoleDB]) ->
 	base_timer_server:start_at_process(),
-	ets_operater_behaviour:new(role_profile, [set, public, named_table]),
+	?base_ets:new(role_profile, [set, public, named_table]),
 	{ok, #state{roles_db=RoleDB}}.
 
 %% ====================================================================
@@ -63,15 +63,15 @@ start_one_role(GS_system_map_info, GS_system_role_info, GS_system_gate_info,Othe
 start_copy_role(GS_map_info, GS_role_info, GS_gate_info,X,Y,AllInfo)->	
 	MapMgr_Node = get_node_from_mapinfo(GS_map_info),
 	try
-		base_gen_server:call({?ROLE_MANAGER,MapMgr_Node}, {start_copy_role, {GS_map_info, GS_role_info, GS_gate_info,X,Y,AllInfo}},50000)
+		?base_gen_server:call({?ROLE_MANAGER,MapMgr_Node}, {start_copy_role, {GS_map_info, GS_role_info, GS_gate_info,X,Y,AllInfo}},50000)
 	catch
 		E:R->
-			base_logger_util:msg("start_copy_role ~p ~p  ~p ~n",[E,R,erlang:get_stacktrace()]),
+			base_logger_util:info_msg("start_copy_role ~p ~p  ~p ~n",[E,R,erlang:get_stacktrace()]),
 			error
 	end.		
 
 stop_role_processor(RoleNode, RoleId, RolePid,Tag) when is_pid(RolePid) ->
-	base_logger_util:msg("base_role_manager:stop_role_processor:~p,~p,~p~n", [RoleNode, RoleId, RolePid]),
+	base_logger_util:info_msg("base_role_manager:stop_role_processor:~p,~p,~p~n", [RoleNode, RoleId, RolePid]),
 	case base_role_processor:stop_role_processor(RolePid,Tag,RoleId) of
 		{error,Reason}->
 			{error,Reason};
@@ -80,7 +80,7 @@ stop_role_processor(RoleNode, RoleId, RolePid,Tag) when is_pid(RolePid) ->
 	end;
 	
 stop_role_processor(RoleNode, RoleId, RoleProc,Tag) ->
-	base_logger_util:msg("base_role_manager:stop_role_processor:~p,~p,~p~n", [RoleNode, RoleId, RoleProc]),
+	base_logger_util:info_msg("base_role_manager:stop_role_processor:~p,~p,~p~n", [RoleNode, RoleId, RoleProc]),
 	case base_role_processor:stop_role_processor(RoleNode, RoleProc,Tag,RoleId) of
 		{error,Reason}->
 			{error,Reason};
@@ -95,11 +95,11 @@ stop_self_process(GS_map_info,RoleNode,RoleId)->
 
 %% 获取和调用者处于同一Node的Role信息
 get_role_info(undefined) ->
-	base_logger_util:msg("undefined role info~n");
+	base_logger_util:info_msg("undefined role info~n");
 
 get_role_info(RoleId) ->
 	try
-		Role = ets:lookup(local_roles_datatbase, RoleId),
+		Role = ?base_ets:lookup(local_roles_datatbase, RoleId),
 		case Role  of
 			[] ->
 				undefined;
@@ -108,13 +108,13 @@ get_role_info(RoleId) ->
 		end
 	catch
 		_:_->
-		base_logger_util:msg("get_role_info ets:lookup RoleId error:~p~n",[RoleId]),
+		base_logger_util:info_msg("get_role_info ets:lookup RoleId error:~p~n",[RoleId]),
 		undefined
 	end.
 
 get_role_remote_info(RoleId)->
 	try
-		Role = ets:lookup(local_roles_datatbase, RoleId),
+		Role = ?base_ets:lookup(local_roles_datatbase, RoleId),
 		case Role  of
 			[] ->
 				undefined;
@@ -123,7 +123,7 @@ get_role_remote_info(RoleId)->
 		end
 	catch
 		_:_->
-		base_logger_util:msg("get_role_info ets:lookup RoleId error:~p~n",[RoleId]),
+		base_logger_util:info_msg("get_role_info ets:lookup RoleId error:~p~n",[RoleId]),
 		undefined
 	end.
 	
@@ -136,7 +136,7 @@ get_role_remoteinfo_by_node(Node,RoleId)->
 			try			 
 				base_rpc_util:asyn_call(Node,?MODULE,get_role_remote_info,[RoleId])
 			catch
-				E:R-> base_logger_util:msg("get_role_info_by_node"),undefined
+				E:R-> base_logger_util:info_msg("get_role_info_by_node"),undefined
 			end
 	end.
 	
@@ -144,7 +144,7 @@ get_role_remoteinfo_by_node(Node,RoleId)->
 %% 向该节点的RoleManager,注册Role信息
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 regist_role_info(RoleId, RoleInfo) ->
-	ets_operater_behaviour:insert(local_roles_datatbase, {RoleId, RoleInfo}).
+	?base_ets:insert(local_roles_datatbase, {RoleId, RoleInfo}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 反注册角色信息TODO:时间
@@ -171,7 +171,7 @@ handle_call({start_copy_role,{_, GS_role_info,_,_,_,_}=AllCopyInfo},_From,State)
 		{ok,_Role_pid} -> 					
 			ok;
 		AnyInfo ->
-			base_logger_util:msg("base_role_manager:handle_info:start_copy_role:error:~p~n",[AnyInfo]),
+			base_logger_util:info_msg("base_role_manager:handle_info:start_copy_role:error:~p~n",[AnyInfo]),
 			error			
 	end,
 	{reply, Reply, State};
@@ -194,8 +194,8 @@ handle_cast(Msg, State) ->
 %% 处理消息
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_info({unregist_role_info,RoleId},State)->
-	base_logger_util:msg("base_role_manager:unregist_role_info:~p~n",[RoleId]),
-	ets_operater_behaviour:delete(local_roles_datatbase, RoleId),
+	base_logger_util:info_msg("base_role_manager:unregist_role_info:~p~n",[RoleId]),
+	?base_ets:delete(local_roles_datatbase, RoleId),
 	{noreply, State};
 
 %%GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo
@@ -220,32 +220,32 @@ handle_info({start_one_role, {_, GS_system_role_info, GS_system_gate_info,_} = S
 				true->
 					BlockTime = LeftTime
 			end
-	end,				 
+	end,
 	if
-		BlockTime =:= -1->											
+		BlockTime =:= -1->
 			case base_role_processor:whereis_role(Role_id) of
 				undefined->
 					nothing;
 				_DeadProc->	%% 在本节点上已经有该进程,应该是僵死进程.直接关掉进程.
-					base_logger_util:msg("start_one_role but has a processor,stop it ~n"),
+					base_logger_util:info_msg("start_one_role but has a processor,stop it ~n"),
 					base_role_sup:stop_role(node(), Role_id)
-			end,					
+			end,
 			case base_role_sup:start_role({start_one_role,StartInfo}, Role_id) of
 				{ok,_Role_pid} ->
 					ok;
 				AnyInfo ->
 					Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_UNKNOWN),
-					tcp_client:send_data(Gate_proc, Message),											
-					base_logger_util:msg("role_manager:handle_info:start_one_role:error:~p~n",[AnyInfo])			
+					tcp_client:send_data(Gate_proc, Message),
+					base_logger_util:info_msg("role_manager:handle_info:start_one_role:error:~p~n",[AnyInfo])
 			end;
-		true->	%% 发送角色封禁				
+		true->	%% 发送角色封禁
 			Message = role_packet:encode_block_s2c(?GM_BLOCK_TYPE_LOGIN,BlockTime),
 			tcp_client:send_data(Gate_proc, Message)
 	end,	
 	{noreply, State};
 	
-handle_info({stop_role, {RoleNode,RoleId}},#state{roles_db = Role_db} = State)-> 	
-	base_role_sup:stop_role(RoleNode, RoleId),	
+handle_info({stop_role, {RoleNode,RoleId}},#state{roles_db = Role_db} = State)->
+	base_role_sup:stop_role(RoleNode, RoleId),
 	{noreply, State};
 	
 handle_info(Info, State) ->

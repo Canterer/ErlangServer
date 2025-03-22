@@ -48,7 +48,7 @@ init([{start_copy_role,{MapInfo, RoleInfo, GateInfo, X, Y,AllInfo}},RoleId,_Role
 	{ok, NextState, #state{}};
 
 %% zhangting  
-init([{start_one_role,{GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo}},RoleId,_RoleProc]) ->	
+init([{start_one_role,{GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo}},RoleId,_RoleProc]) ->
 	base_init(RoleId),
 	New_gs_system_roleinfo = GS_system_role_info#gs_system_role_info{role_pid=self()},
 	base_role_op:init(GS_system_map_info, GS_system_gate_info, New_gs_system_roleinfo,OtherInfo),
@@ -64,13 +64,13 @@ base_init(RoleId)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 外部函数
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-account_charge(Node,ProcName,{account_charge,IncGold,NewGold})->	 
+account_charge(Node,ProcName,{account_charge,IncGold,NewGold})->
 	try
 		base_fsm_util:sync_send_all_state_event({ProcName,Node}, {account_charge,IncGold,NewGold},20000)
 	catch
-		E:R -> base_logger_util:msg("account_charge ~p E ~p Reason:~p ~n",[ProcName,E,R]),error
+		E:R -> base_logger_util:info_msg("account_charge ~p E ~p Reason:~p ~n",[ProcName,E,R]),error
 	end.
-	   	
+	
 %% 查询角色是否存在
 whereis_role(ProcName) when is_atom(ProcName)->
 	case whereis(ProcName) of
@@ -104,7 +104,7 @@ stop_role_processor(RolePid,Tag,RoleId)->
 		base_fsm_util:sync_send_all_state_event(RolePid, {stop_role_processor,Tag,RoleId},10000)
 	catch
 		E:Reason->
-			base_logger_util:msg("stop_role_processor RolePid RoleId error ~p E ~p R ~p Tag ~p ~n ",[RoleId,E,Reason,Tag]),
+			base_logger_util:info_msg("stop_role_processor RolePid RoleId error ~p E ~p R ~p Tag ~p ~n ",[RoleId,E,Reason,Tag]),
 			{error,Reason}
 	end.
 		
@@ -113,7 +113,7 @@ stop_role_processor(RoleNode, RoleProc,Tag,RoleId)->
 		base_fsm_util:sync_send_all_state_event({RoleProc, RoleNode}, {stop_role_processor,Tag,RoleId},10000)
 	catch
 		E:Reason->
-			base_logger_util:msg("stop_role_processor RoleId error ~p E ~p R ~p Tag ~p ~n ",[RoleId,E,Reason,Tag]),
+			base_logger_util:info_msg("stop_role_processor RoleId error ~p E ~p R ~p Tag ~p ~n ",[RoleId,E,Reason,Tag]),
 			{error,Reason}
 	end.
 
@@ -130,14 +130,14 @@ accept_quest_request(RolePid,QuestId)->
 	RolePid	!{accept_quest,QuestId}.
 
 %% 事件：角色请求放弃（删除）任务
-quit_quest_request_c2s(RolePid,QuestId)->	
+quit_quest_request_c2s(RolePid,QuestId)->
 	RolePid	!{quit_quest,QuestId}.
 
 %% 事件：角色请求提交任务
 submit_quest_request(RolePid,QuestId,ChoiceItem)->
 	RolePid	!{submit_quest,QuestId,ChoiceItem}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 					成就系统
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %achieve_open_c2s(RolePid)->
@@ -178,10 +178,10 @@ answer_question_c2s(RolePid,Id,Answer,Flag)->
 			
 use_item(RolePid,SrcSlot)->
 	base_fsm_util:send_state_event(RolePid,{use_item,SrcSlot}).
-	%%RolePid ! {use_item,SrcSlot}.	
+	%%RolePid ! {use_item,SrcSlot}.
 	
-chat_message(RolePid,Msg)->	
-	RolePid ! {chat_c2s,Msg}.	
+chat_message(RolePid,Msg)->
+	RolePid ! {chat_c2s,Msg}.
 	
 chat_loudspeaker_queue_num_c2s(RolePid)->
 	RolePid ! {chat_loudspeaker_queue_num_c2s}.
@@ -261,7 +261,7 @@ other_role_congratulations_you(Node,RolePid,Info)->
 	try
 		base_fsm_util:sync_send_all_state_event({RolePid,Node}, {other_role_congratulations_you,Info})
 	catch
-		E:R->base_logger_util:msg("other_role_congratulations_you Error ~p : ~p ~n",[E,R]),error
+		E:R->base_logger_util:info_msg("other_role_congratulations_you Error ~p : ~p ~n",[E,R]),error
 	end.
 
 set_leader_to_you(Node,RolePid,GroupInfo)->
@@ -275,23 +275,23 @@ set_group_to_you(Node,RolePid,GroupId)->
 	try
 		base_fsm_util:sync_send_all_state_event({RolePid,Node}, {set_group_to_you,GroupId})
 	catch
-		E:R->base_logger_util:msg("set_group_to_you Error ~p : ~p ~n",[E,R]),false
+		E:R->base_logger_util:info_msg("set_group_to_you Error ~p : ~p ~n",[E,R]),false
 	end.
 
 
 %% 交易
-trade_finish(RolePid,TradeItems)->	
+trade_finish(RolePid,TradeItems)->
 	try
 		base_fsm_util:sync_send_all_state_event(RolePid, {trade_finish,TradeItems})
 	catch
-		E:R->base_logger_util:msg("trade_finish Error ~p : ~p ~n",[E,R]),error
+		E:R->base_logger_util:info_msg("trade_finish Error ~p : ~p ~n",[E,R]),error
 	end.
-%% 交易,别人成交	
+%% 交易,别人成交
 other_deal(RolePid)->
 	try
 		base_fsm_util:sync_send_all_state_event(RolePid, {other_deal})
 	catch
-		E:R->base_logger_util:msg("other_deal Error ~p : ~p ~n",[E,R]),error
+		E:R->base_logger_util:info_msg("other_deal Error ~p : ~p ~n",[E,R]),error
 	end.
 	
 %%	双修
@@ -299,7 +299,7 @@ companion_sitdown_with_me(RolePid,RoleId)->
 	try
 		base_fsm_util:sync_send_event(RolePid,{add_companion_sitdown,RoleId}, 1000)
 	catch
-		E:R->base_logger_util:msg("companion_sitdown_with_me Error ~p : ~p ~n",[E,R]),error
+		E:R->base_logger_util:info_msg("companion_sitdown_with_me Error ~p : ~p ~n",[E,R]),error
 	end.
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -310,13 +310,13 @@ set_pkmodel_c2s(RolePid,PkModel)->
 	RolePid ! {set_pkmodel_c2s,PkModel}.
 
 clear_crime_c2s(RolePid,Type)->
-	RolePid ! {clear_crime_c2s,Type}.		
+	RolePid ! {clear_crime_c2s,Type}.
 		
 %% 进入战场
 battle_join_c2s(RolePid,Type)->
 	RolePid ! {battle_join_c2s,Type}.
 
-%% 离开战场	
+%% 离开战场
 battle_leave_c2s(RolePid)->
 	RolePid ! {battle_leave_c2s}.
 	
@@ -370,11 +370,11 @@ gift_card_apply_c2s(RolePid,Key)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 事件: 角色初始化		修改为同步在init里调用
 %%gaming({init_role, {GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo}}, StateData) ->
-%%	base_role_op:init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,OtherInfo),	
+%%	base_role_op:init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,OtherInfo),
 %%	{next_state, gaming, StateData};
 
 %% 事件: 角色移动请求
-gaming({role_move_request,MoveInfo}, StateData) ->	
+gaming({role_move_request,MoveInfo}, StateData) ->
 	%%1. 去MapDB服务器查询路径数据是否合法;
 	case get(is_in_world) of
 		true->
@@ -386,25 +386,25 @@ gaming({role_move_request,MoveInfo}, StateData) ->
 	end,		
 	{next_state, moving, StateData};
 
-gaming({stop_move_c2s,MoveInfo}, StateData) ->	
+gaming({stop_move_c2s,MoveInfo}, StateData) ->
 	%%1. 去MapDB服务器查询路径数据是否合法;
 	case get(is_in_world) of
 		true->
 			base_role_op:stop_move_c2s(MoveInfo);
 		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, gaming, StateData};
 
 
 gaming({start_attack, {SkillID, TargetID}}, State) ->
 	%% 移动请求
 	NextState = case get(is_in_world) of
-		true->					
+		true->
 			base_role_op:start_attack(SkillID, TargetID);
 		_ ->
 			gaming
-	end,			
+	end,
 	{next_state, NextState, State};
 
 gaming({use_item,SrcSlot}, State) ->%%使用物品
@@ -422,7 +422,7 @@ gaming({sitdown_c2s,RoleId},StateData) ->
 	end,			
 	{next_state, State, StateData};
 	
-gaming(_Event, StateData) ->		
+gaming(_Event, StateData) ->
 	{next_state, gaming, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -451,39 +451,39 @@ moving({role_move_request, Path}, StateData) ->
 			base_role_op:move_request(RoleInfo, MapInfo, Path, role_op:can_move(RoleInfo));
 		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, moving, StateData};
 
-moving({stop_move_c2s,MoveInfo}, StateData) ->	
+moving({stop_move_c2s,MoveInfo}, StateData) ->
 	%%1. 去MapDB服务器查询路径数据是否合法;
 	case get(is_in_world) of
 		true->
 			base_role_op:stop_move_c2s(MoveInfo);
 		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, gaming, StateData};
 
 moving({start_attack, {SkillID, TargetID}}, State) ->
 	%% 移动请求
 	NextState = case get(is_in_world) of
-		true->					
+		true->
 			base_role_op:start_attack(SkillID, TargetID);
 		_ ->
 			gaming
-	end,			
+	end,
 	{next_state, NextState, State};
 
 moving({use_item,SrcSlot}, State) ->
 	NextState = case get(is_in_world) of
-		true->					
+		true->
 			base_role_op:handle_use_item(SrcSlot);
 		_ ->
-			nothing	
+			nothing
 	end,	
 	{next_state,moving, State};
 
-moving({sitdown_c2s,RoleId},StateData) ->		
+moving({sitdown_c2s,RoleId},StateData) ->
 	case role_sitdown_op:can_sitdown() of
 		true->
 			role_sitdown_op:handle_start_sitdown_with_role(RoleId),
@@ -491,7 +491,7 @@ moving({sitdown_c2s,RoleId},StateData) ->
 		_->
 			State = moving,
 			nothing
-	end,			
+	end,
 	{next_state, State, StateData};
 	
 moving(Event, State) ->
@@ -504,12 +504,12 @@ moving(Event, State) ->
 singing({sing_complete, TargetID, SkillID, SkillLevel, FlyTime}, State) ->
 	%% 进入施法阶段
 	case get(is_in_world) of
-		true->			
+		true->
 			RoleInfo = get(creature_info),
 			base_role_op:process_sing_complete(RoleInfo, TargetID, SkillID, SkillLevel, FlyTime);
-		_ ->			
+		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, gaming, State};
 
 singing({role_move_request, Path}, State) ->
@@ -521,10 +521,10 @@ singing({role_move_request, Path}, State) ->
 			base_fsm_util:send_state_event(self(), {role_move_request, Path});
 		_ ->
 			nothing
-	end,			
+	end,
 	{next_state, gaming, State};
 
-singing({stop_move_c2s,MoveInfo}, StateData) ->	
+singing({stop_move_c2s,MoveInfo}, StateData) ->
 	%%1. 去MapDB服务器查询路径数据是否合法;
 	case get(is_in_world) of
 		true->
@@ -533,12 +533,12 @@ singing({stop_move_c2s,MoveInfo}, StateData) ->
 			base_fsm_util:send_state_event(self(), {stop_move_c2s, MoveInfo});
 		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, gaming, StateData};
 
 singing({start_attack, {SkillID, TargetID}}, State) ->
 	%% 移动请求
-	%%base_logger_util:msg("combat_op:get_singing_skill() ~p SkillID ~p ~n ",[combat_op:get_singing_skill(),SkillID]),
+	%%base_logger_util:info_msg("combat_op:get_singing_skill() ~p SkillID ~p ~n ",[combat_op:get_singing_skill(),SkillID]),
 	case get(is_in_world) of
 		true->
 			case combat_op:get_singing_skill() of
@@ -548,22 +548,22 @@ singing({start_attack, {SkillID, TargetID}}, State) ->
 					SelfId = get(roleid),
 					base_role_op:process_cancel_attack(SelfId, move),
 					NextState = base_role_op:start_attack(SkillID, TargetID)
-			end;	
+			end;
 		_ ->
 			NextState = gaming
-	end,			
+	end,
 	{next_state, NextState, State};
 
 singing({use_item,SrcSlot}, State) ->
 	SelfId = get(roleid),
-	base_role_op:process_cancel_attack(SelfId, move),					
+	base_role_op:process_cancel_attack(SelfId, move),
 	base_fsm_util:send_state_event(self(),{use_item,SrcSlot}),
 	{next_state,gaming, State};
 	
 singing({interrupt_by_buff},State) ->
 	SelfId = get(roleid),
 	base_role_op:process_cancel_attack(SelfId, interrupt_by_buff),
-	{next_state, gaming, State};	
+	{next_state, gaming, State};
 
 singing(Event, State) ->
 	{next_state, singing, State}.
@@ -572,7 +572,7 @@ singing(Event, State) ->
 %%			打坐状态
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sitting({use_item,SrcSlot}, State) ->
-	role_sitdown_op:interrupt_sitdown_with_processor_state_change(),			
+	role_sitdown_op:interrupt_sitdown_with_processor_state_change(),
 	base_fsm_util:send_state_event(self(),{use_item,SrcSlot}),
 	{next_state,gaming, State};
 	
@@ -584,10 +584,10 @@ sitting({role_move_request, Path}, State) ->
 			base_fsm_util:send_state_event(self(), {role_move_request, Path});
 		_ ->
 			nothing
-	end,			
+	end,
 	{next_state, gaming, State};
 
-sitting({stop_move_c2s,MoveInfo}, StateData) ->	
+sitting({stop_move_c2s,MoveInfo}, StateData) ->
 	%%1. 去MapDB服务器查询路径数据是否合法;
 	case get(is_in_world) of
 		true->
@@ -595,7 +595,7 @@ sitting({stop_move_c2s,MoveInfo}, StateData) ->
 			base_fsm_util:send_state_event(self(), {stop_move_c2s, MoveInfo});
 		_ ->
 			nothing
-	end,		
+	end,
 	{next_state, gaming, StateData};
 
 sitting({start_attack, {SkillID, TargetID}}, State) ->
@@ -607,7 +607,7 @@ sitting({start_attack, {SkillID, TargetID}}, State) ->
 		_ ->
 			NextState = gaming,
 			nothing
-	end,			
+	end,
 	{next_state, NextState, State};
 
 sitting({interrupt_by_buff},State) ->
@@ -649,7 +649,7 @@ deading(Event, State) ->
 	{next_state, deading, State}.
 
 cleanuping(Event, State) ->
-	{next_state, cleanuping, State}.	
+	{next_state, cleanuping, State}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -668,7 +668,7 @@ handle_sync_event({other_deal}, From, StateName, StateData) ->
 		trade_role:trade_role(other_deal),
 		ok
 	catch
-		E:R-> base_logger_util:msg("handle_sync_event trade_finish error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+		E:R-> base_logger_util:info_msg("handle_sync_event trade_finish error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 		error
 	end,
 	{reply, Replay, StateName, StateData};
@@ -678,7 +678,7 @@ handle_sync_event({trade_finish,TradeItems}, From, StateName, StateData) ->
 	try
 		{ok,trade_role:self_finish(TradeItems)}
 	catch
-		E:R-> base_logger_util:msg("handle_sync_event trade_finish error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+		E:R-> base_logger_util:info_msg("handle_sync_event trade_finish error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 		error
 	end,
 	{reply, Replay, StateName, StateData};
@@ -688,7 +688,7 @@ handle_sync_event({set_leader_to_you,GroupInfo},From, StateName, StateData) ->
 	try
 		group_op:set_me_leader(GroupInfo)
 	catch
-		E:R-> base_logger_util:msg("handle_sync_event set_leader_to_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+		E:R-> base_logger_util:info_msg("handle_sync_event set_leader_to_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 		error
 	end,
 	{reply, Replay, StateName, StateData};
@@ -698,7 +698,7 @@ handle_sync_event({set_group_to_you,GroupId},From, StateName, StateData) ->
 	try
 		group_op:set_group_to_you(GroupId)
 	catch
-		E:R-> base_logger_util:msg("handle_sync_event set_group_to_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+		E:R-> base_logger_util:info_msg("handle_sync_event set_group_to_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 		false
 	end,
 	{reply, Replay, StateName, StateData};
@@ -710,35 +710,35 @@ handle_sync_event({stop_role_processor,Tag,RoleId}, From, StateName, StateData) 
 			base_role_op:handle_other_login(RoleId);
 		uninit->
 			base_role_op:kick_out(RoleId);
-		_->			
-			base_role_op:do_cleanup(Tag,RoleId)			
+		_->
+			base_role_op:do_cleanup(Tag,RoleId)
 	end,
 	{reply, ok, cleanuping, StateData};
 	
-handle_sync_event({account_charge,IncGold,NewGold}, From, StateName, StateData) ->	
+handle_sync_event({account_charge,IncGold,NewGold}, From, StateName, StateData) ->
 	base_role_op:account_charge(IncGold,NewGold),
 	vip_op:add_sum_gold_of_pid(IncGold),
 	{reply, ok, StateName, StateData};
 	
-handle_sync_event({first_charge_gift,State}, From, StateName, StateData) ->	
+handle_sync_event({first_charge_gift,State}, From, StateName, StateData) ->
 	first_charge_gift_op:reinit(State),
 	{reply, ok, StateName, StateData};
 	
 handle_sync_event({get_state}, _From, StateName, StateData) ->
 	Reply = StateName,
-	{reply, Reply, StateName, StateData};		
+	{reply, Reply, StateName, StateData};
 
 handle_sync_event({other_role_congratulations_you,Info},From, StateName, StateData) ->
 	Replay = 
 	try
 		congratulations_op:other_role_congratulations_you(Info)
 	catch
-		E:R-> base_logger_util:msg("handle_sync_event other_role_congratulations_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
+		E:R-> base_logger_util:info_msg("handle_sync_event other_role_congratulations_you error ~p ~p ~p ~n",[E,R,erlang:get_stacktrace()]),
 		error
 	end,
 	{reply, Replay, StateName, StateData};
 	
-handle_sync_event({facebook_quest_update,MsgId},From, StateName, StateData) ->	
+handle_sync_event({facebook_quest_update,MsgId},From, StateName, StateData) ->
 	quest_special_msg:proc_specail_msg({facebook_quest_state,MsgId}),
 	{reply, ok, StateName, StateData};
 	
@@ -759,7 +759,7 @@ handle_sync_event(Event, From, StateName, StateData) ->
 %% 处理其他进程消息
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_info({get_state}, StateName, StateData) ->
-	base_logger_util:msg("role_processor get_state RoleId ~p state ~p~n",[get(roleid),StateName]),
+	base_logger_util:info_msg("role_processor get_state RoleId ~p state ~p~n",[get(roleid),StateName]),
 	{next_state, StateName, StateData};
 
 handle_info(Event, cleanuping, StateData) ->
@@ -783,7 +783,7 @@ handle_info({be_add_buffer, Buffers,CasterInfo}, StateName, StateData) ->
 		true->
 			nothing
 	end,
-	{next_state, StateName, StateData};	
+	{next_state, StateName, StateData};
 
 handle_info({timer_check ,NowTime}, StateName, StateData)->
 	RoleInfo = get(creature_info),
@@ -832,7 +832,7 @@ handle_info({feedback_info_c2s,Type,Title,Message,ContactWay}, StateName, StateD
 	CurInfo = get(creature_info),
 	RoleID = get_id_from_roleinfo(CurInfo),
   	RoleName = get_name_from_roleinfo(CurInfo),
-  	feedback_op:submit_feedback(RoleName,RoleID,Type, Title,Message,ContactWay),	
+  	feedback_op:submit_feedback(RoleName,RoleID,Type, Title,Message,ContactWay),
 	{next_state, StateName, StateData};
 	
 	
@@ -861,7 +861,7 @@ handle_info({process_mall,Message},StateName, State) ->
 	
 %%%%%%%%%%%%%%%%%%
 %% 好友
-%%%%%%%%%%%%%%%%%	
+%%%%%%%%%%%%%%%%%
 handle_info({friend,Message},StateName, State) ->
 	friend_packet:process_friend(Message),
 	{next_state, StateName, State};
@@ -871,12 +871,12 @@ handle_info({friend,Message},StateName, State) ->
 %%%%%%%%%%%%%%%%%
 handle_info({equipment,Message},StateName,State)->
 	equipment_packet:process_equipment(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 %%SPA
 handle_info({spa,Message},StateName,State)->
 	spa_packet:process_spa(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 handle_info({spa_apply_stop_player},StateName,State)->
 	spa_op:spa_apply_stop_player(),
 	{next_state, StateName, State};
@@ -898,8 +898,8 @@ handle_info({battle_reward_honor_exp,Battle,Honor,Exp},StateName,State)->
 
 %%双修
 handle_info({companion_sitdown,Msg},StateName,State)->
-	role_sitdown_op:handle_companion_sitdown(Msg),		
-	{next_state, StateName, State};		
+	role_sitdown_op:handle_companion_sitdown(Msg),
+	{next_state, StateName, State};
 	
 %%%%%%%%%%%%%%%%%%
 %% 成就开始
@@ -909,10 +909,10 @@ handle_info({achieve_init_c2s},StateName, State)->	%%@@wb20130228
 	{next_state, StateName, State};
 %%handle_info({achieve_open_c2s},StateName, State) ->
 %%	achieve_op:achieve_open(),
-%%	{next_state, StateName, State};	
+%%	{next_state, StateName, State};
 handle_info({achieve_reward_c2s,{Id}},StateName, State) ->
 	achieve_op:achieve_reward(Id),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 %%雪域目标
 handle_info({goals,Message},StateName,State)->
@@ -922,16 +922,16 @@ handle_info({goals,Message},StateName,State)->
 %%loop tower
 handle_info({loop_tower_enter_c2s,{Layer,Enter,Convey}},StateName, State) ->
 	loop_tower_op:loop_tower_enter(Layer,Enter,Convey),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 handle_info({loop_tower_challenge_c2s,{Type}},StateName, State) ->
 	loop_tower_op:loop_tower_challenge(Type),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 handle_info({loop_tower_reward_c2s,{Bonus}},StateName, State) ->
 	loop_tower_op:loop_tower_reward(Bonus),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 handle_info({loop_tower_challenge_again_c2s,{Type,Again}},StateName, State) ->
 	loop_tower_op:loop_tower_challenge_again(Type,Again),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 handle_info({loop_tower_masters_c2s,{Master}},StateName, State) ->
 	loop_tower_op:loop_tower_masters_c2s(Master),
 	{next_state, StateName, State};
@@ -960,38 +960,38 @@ handle_info({exchange_item_c2s, NpcID, ItemClsid, Count, Slots}, StateName, Stat
 		true->
 			exchange_op:exchange_item(get(creature_info), ItemClsid, Count, NpcID, Slots);
 		_ ->
-			nothing		
-	end,	
+			nothing
+	end,
 	{next_state, StateName, StateData};
 
 %%answer activity
 handle_info({answer_sign_request_c2s}, StateName, StateData) ->
-	answer_op:answer_sign_request_c2s(),	
+	answer_op:answer_sign_request_c2s(),
 	{next_state, StateName, StateData};
 handle_info({answer_question_c2s,Id,Answer,Flag}, StateName, StateData) ->
-	answer_op:answer_question_c2s(Id,Answer,Flag),	
+	answer_op:answer_question_c2s(Id,Answer,Flag),
 	{next_state, StateName, StateData};
 	
 
 %% 事件:	 掉落删除{delete_loot, }
 handle_info({delete_loot,{PacketId,Statu}}, StateName, State) ->
 	base_role_op:delete_loot(PacketId,Statu),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%染红怪物被我杀死
 handle_info({creature_killed,{NpcId,ProtoId,DeadPos,QuestShareRoles}}, StateName, State) ->
 	base_role_op:on_creature_killed(NpcId,ProtoId,DeadPos,QuestShareRoles),
 	{next_state, StateName, State};
 
-%%aoi队友杀死怪物,分享	
+%%aoi队友杀死怪物,分享
 handle_info({teamate_killed,{NpcId,ProtoId,Pos,Money,Exp}}, StateName, State) ->
 	base_role_op:teams_loot(NpcId,ProtoId,Pos,Money,Exp),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%aoi怪物任务分享
 handle_info({death_share_killed,{NpcId,ProtoId}}, StateName, State) ->
 	base_role_op:death_share_killed(NpcId,ProtoId),
-	{next_state, StateName, State};			
+	{next_state, StateName, State};
 
 handle_info({other_inspect_you,RoldId}, StateName, State) ->
 	base_role_op:handle_other_inspect_you(RoldId),
@@ -1003,7 +1003,7 @@ handle_info({other_inspect_you,RoldId}, StateName, State) ->
 
 handle_info({other_inspect_your_pet,{MyServerId,MyRoldId,PetId}}, StateName, State) ->
 	base_role_op:handle_other_inspect_your_pet({MyServerId,MyRoldId,PetId}),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({other_friend_inspect_you,{RoldId,Ntype}}, StateName, State) ->
 	friend_op:handle_other_inspect_you(RoldId,Ntype),
@@ -1037,9 +1037,9 @@ handle_info( {buffer_interval, BufferInfo}, StateName, State) ->
 			case effect:proc_buffer_function_effects(BuffChangeAttrs) of
 				[]->
 					StateName;
-				ChangedAttrs->	
+				ChangedAttrs->
 					RoleID = get(roleid),
-					base_role_op:update_role_info(RoleID,get(creature_info)),						
+					base_role_op:update_role_info(RoleID,get(creature_info)),
 					base_role_op:self_update_and_broad(ChangedAttrs),
 					%%广播当前buff影响
 					BuffChangesForSend = lists:map(fun({AttrTmp,ValueTmp})-> role_attr:to_role_attribute({AttrTmp,ValueTmp}) end,BuffChangeAttrs),
@@ -1052,16 +1052,16 @@ handle_info( {buffer_interval, BufferInfo}, StateName, State) ->
 							if
 								HPNew =< 0 ->
 									{EnemyId,EnemyName} = buffer_op:get_buff_casterinfo(BufferId),
-									%% 被杀害了	
+									%% 被杀害了
 									base_role_op:player_be_killed(EnemyId,EnemyName),
-									deading;																		
-								true->					
-									StateName					
+									deading;
+								true->
+									StateName
 							end;
 						_->
 							StateName
 					end
-			end;									
+			end;
 		_Any -> 
 			NextState = StateName
 	end,
@@ -1079,7 +1079,7 @@ handle_info({hprecover_interval,HpRecInt}, StateName, State)->
 				CurHp > 0->					%%死亡状态不能进行回复,虽然有cancel,为了防止cancel失败,此处多判断一次
 					HP = CurHp + ChangeValue,
 					put(creature_info, set_life_to_roleinfo(get(creature_info), HP)),
-					base_role_op:update_role_info(RoleID,get(creature_info)),		
+					base_role_op:update_role_info(RoleID,get(creature_info)),
 					base_role_op:self_update_and_broad([{hp,HP}]);
 				true->
 					nothing
@@ -1107,8 +1107,8 @@ handle_info({mprecover_interval,MpRecInt}, StateName, State)->
 	{next_state, StateName, State};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%				组队相关的内部通信信息			
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+%%				组队相关的内部通信信息
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_info({group_invite_you,InviterInfo}, StateName, State)->
 	group_handle:handle_group_invite_you(InviterInfo),
 	{next_state, StateName, State};
@@ -1119,11 +1119,11 @@ handle_info({group_apply_you,RemoteRoleInfo}, StateName, State)->
 	
 handle_info({group_apply_to_leader,RemoteRoleInfo}, StateName, State)->
 	group_handle:handle_group_apply_to_leader(RemoteRoleInfo),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({group_accept_you,RemoteRoleInfo}, StateName, State)->
 	group_handle:handle_group_accept_you(RemoteRoleInfo),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({insert_new_teamer,RoleInfo}, StateName, State)->
 	group_handle:handle_insert_new_teamer(RoleInfo),
@@ -1143,7 +1143,7 @@ handle_info({group_destroy,GroupId}, StateName, State)->
 
 handle_info({regist_member_info,{Roleid,Info}}, StateName, State)->
 	group_handle:handle_regist_member_info(Roleid,Info),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({group_update_timer}, StateName, State)->
 	group_op:update_by_timer(),
@@ -1151,33 +1151,33 @@ handle_info({group_update_timer}, StateName, State)->
 
 handle_info({delete_invite,Roleid}, StateName, State)->
 	group_handle:handle_delete_invite(Roleid),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%招募
 handle_info({group_instance_start,Info}, StateName, State)->
 	group_handle:handle_group_instance_start(Info),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
 handle_info({instance_leader_join_c2s}, StateName, State)->
 	group_handle:handle_group_instance_join(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({instance_exit_c2s}, StateName, State)->
 	instance_op:proc_player_instance_exit(),
 	{next_state, StateName, State};
 	
-handle_info({chat_c2s,Msg}, StateName, State) ->	
+handle_info({chat_c2s,Msg}, StateName, State) ->
 	chat_op:proc_chat_msg(Msg),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
-%%handle_info({chat_interview,Msg}, StateName, State) ->	
+%%handle_info({chat_interview,Msg}, StateName, State) ->
 %%	chat_interview:chat_interview(Msg),
-%%	{next_state, StateName, State};	
+%%	{next_state, StateName, State};
 
-handle_info({chat_loudspeaker_queue_num_c2s}, StateName, State) ->	
+handle_info({chat_loudspeaker_queue_num_c2s}, StateName, State) ->
 	RoleId = get(roleid),
 	loudspeaker_manager:loudspeaker_queue_num(RoleId),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 		
 handle_info({fatigue,Msg}, StateName, State) ->
 	case get(is_adult) of
@@ -1191,49 +1191,49 @@ handle_info({fatigue_ver2,Msg}, StateName, State) ->
 		false->	fatigue_ver2:fatigue_message(Msg);
 		true-> ignor
 	end,
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
 %%任务
-handle_info({questgiver_accept_quest_c2s,NpcId,QuestId}, StateName, State) ->	
+handle_info({questgiver_accept_quest_c2s,NpcId,QuestId}, StateName, State) ->
 	quest_handle:handle_questgiver_accept_quest_c2s(NpcId,QuestId),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
-handle_info({questgiver_hello_c2s,NpcId}, StateName, State) ->	
+handle_info({questgiver_hello_c2s,NpcId}, StateName, State) ->
 	quest_handle:handle_questgiver_hello_c2s(NpcId),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
-handle_info({quest_quit_c2s,QuestId}, StateName, State) ->	
+handle_info({quest_quit_c2s,QuestId}, StateName, State) ->
 	quest_handle:handle_quest_quit_c2s(QuestId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
-handle_info({questgiver_complete_quest_c2s,Npcid,QuestId,ChoiceItem}, StateName, State) ->	
+handle_info({questgiver_complete_quest_c2s,Npcid,QuestId,ChoiceItem}, StateName, State) ->
 	quest_handle:handle_questgiver_complete_quest_c2s(QuestId,Npcid,ChoiceItem),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
-handle_info({quest_details_c2s,QuestId}, StateName, State) ->	
+handle_info({quest_details_c2s,QuestId}, StateName, State) ->
 	quest_handle:handle_quest_details_c2s(QuestId),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
-handle_info( {questgiver_states_update_c2s,Npcids}, StateName, State) ->	
+handle_info( {questgiver_states_update_c2s,Npcids}, StateName, State) ->
 	quest_handle:handle_questgiver_states_update_c2s(Npcids),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
-handle_info( {quest_timeover,QuestId}, StateName, State) ->	
+handle_info( {quest_timeover,QuestId}, StateName, State) ->
 	quest_handle:handle_quest_timeover(QuestId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 	
-handle_info( {update_quest_state,Info}, StateName, State) ->	
+handle_info( {update_quest_state,Info}, StateName, State) ->
 	quest_special_msg:proc_specail_msg(Info),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 
-handle_info({quest_script_msg,Mod,Args}, StateName, State)->	
+handle_info({quest_script_msg,Mod,Args}, StateName, State)->
  	apply(Mod,proc_script_msg,Args),
 	{next_state, StateName, State};
 
-handle_info( {role_game_timer}, StateName, State) ->	
+handle_info( {role_game_timer}, StateName, State) ->
 	base_role_op:do_role_game_interval(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 
 %%
@@ -1243,13 +1243,13 @@ handle_info( {role_game_timer}, StateName, State) ->
 handle_info({guild_message,Message},StateName, State)->
 	guild_packet:process_message(Message),
 	{next_state, StateName, State};
-handle_info({guildmanager_msg,Message},StateName, State)->													
+handle_info({guildmanager_msg,Message},StateName, State)->
 	guild_packet:process_proc_message(Message),
 	{next_state, StateName, State};
-					
+
 handle_info({other_login,RoleId}, StateName, State) ->
 	base_role_op:handle_other_login(RoleId),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%GM接口 
 handle_info({gm_kick_you}, StateName, State) ->
@@ -1266,7 +1266,7 @@ handle_info({gm_block_talk,Duration}, StateName, State) ->
 	
 handle_info({gm_set_attr}, StateName, State) ->			%%for crash_test
 	todo,
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({power_gather}, StateName, State) ->			%%for crash_test
 	Power = get_power_from_roleinfo(get(creature_info)),
@@ -1276,7 +1276,7 @@ handle_info({power_gather}, StateName, State) ->			%%for crash_test
 
 handle_info({line_change,LineId}, StateName, State) ->
 	base_role_op:change_line(LineId),
-	{next_state, StateName, State};					
+	{next_state, StateName, State};
 %%  
 %%完成注册
 %%  
@@ -1289,11 +1289,11 @@ handle_info({finish_visitor,AccountName}, StateName, State) ->
 	base_db_dal_util:write_rpc(NewAccount),
 	gm_logger_role:role_visitor_register(RoleId,AccountName),
 	put(account_id,AccountName),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 					
 handle_info({kick_from_instance,MapProcName}, StateName, State) ->
-	instance_op:back_home(MapProcName),		
-	{next_state, StateName, State};				
+	instance_op:back_home(MapProcName),
+	{next_state, StateName, State};
 
 handle_info({kick_instance_by_reason,Creation}, StateName, State) ->
 	instance_op:kick_instance_by_reason(Creation),
@@ -1305,19 +1305,19 @@ handle_info({block_training_c2s}, StateName, State) ->
 			block_training_op:start_training();
 		_->
 			nothing
-	end,			
-	{next_state, StateName, State};		
+	end,
+	{next_state, StateName, State};
 
 handle_info({block_training,Info}, StateName, State) ->
-	block_training_op:training_heartbeat(Info),		
-	{next_state, StateName, State};				
+	block_training_op:training_heartbeat(Info),
+	{next_state, StateName, State};
 %%邮件	
 handle_info(#mail_status_query_c2s{},StateName,State)->
 	mail_op:mail_status_query_c2s(),
-	{next_state, StateName, State};				
+	{next_state, StateName, State};
 handle_info(#mail_query_detail_c2s{mailid=MailId},StateName,State)->
 	mail_op:mail_query_detail_c2s(MailId),
-	{next_state, StateName, State};				
+	{next_state, StateName, State};
 handle_info(#mail_send_c2s{toi=ToId,
 						   title=Title,
 						   content=Content,
@@ -1325,52 +1325,52 @@ handle_info(#mail_send_c2s{toi=ToId,
 						   add_item=Add_Item
 						   },StateName,State)->
 	mail_op:mail_send_c2s(ToId,Title,Content,Add_Item,Add_Silver),
-	{next_state, StateName, State};				
+	{next_state, StateName, State};
 handle_info(#mail_get_addition_c2s{mailid=MailId},StateName,State)->
 	mail_op:mail_get_addition_c2s(MailId),
-	{next_state, StateName, State};				
+	{next_state, StateName, State};
 handle_info(#mail_delete_c2s{mailid=MailId},StateName,State)->
 	mail_op:mail_delete_c2s(MailId),
-	{next_state, StateName, State};				
-						
+	{next_state, StateName, State};
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%						交易
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%						
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_info({trade_role_apply_c2s,RoleId},StateName,State)->
 	trade_role_handle:handle_trade_role_apply_c2s(RoleId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 	
 handle_info({trade_role_accept_c2s,RoleId},StateName,State)->
 	trade_role_handle:handle_trade_role_accept_c2s(RoleId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 	
 handle_info({trade_role_decline_c2s,RoleId},StateName,State)->
 	trade_role_handle:handle_trade_role_decline_c2s(RoleId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 	
 handle_info({set_trade_money_c2s,MoneyType,MoneyCount},StateName,State)->
 	trade_role_handle:handle_set_trade_money_c2s(MoneyType,MoneyCount),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 	
 handle_info({set_trade_item_c2s,Trade_slot,Package_slot},StateName,State)->
 	trade_role_handle:handle_set_trade_item_c2s(Trade_slot,Package_slot),
-	{next_state, StateName, State};						
+	{next_state, StateName, State};
 
 handle_info({trade_role_lock_c2s},StateName,State)->
 	trade_role_handle:handle_trade_role_lock_c2s(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({trade_role_dealit_c2s},StateName,State)->
 	trade_role_handle:handle_trade_role_dealit_c2s(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({cancel_trade_c2s},StateName,State)->
 	trade_role_handle:handle_cancel_trade_c2s(),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
 handle_info({trade_role_apply,RoleId},StateName,State)->
 	trade_role_handle:handle_trade_role_apply(RoleId),
-	{next_state, StateName, State};		
+	{next_state, StateName, State};
 
 handle_info({trade_role_accept,RoleId},StateName,State)->
 	trade_role_handle:handle_trade_role_accept(RoleId),
@@ -1402,7 +1402,7 @@ handle_info({change_role_crime,Msg},StateName,State)->
 	
 handle_info({set_pkmodel_c2s,PkModel},StateName,State)->
 	pvp_handle:handle_set_pkmodel_c2s(PkModel),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({quest_get_adapt_c2s}, StateName, State) ->
 	quest_op:quest_get_adapt_c2s(),
@@ -1421,7 +1421,7 @@ handle_info({npc_everquests_enum_c2s,NpcId}, StateName, State) ->
 	{next_state, StateName, State};
 
 handle_info({refresh_everquest_c2s,EverId,Type, MaxQuality, MaxTimes}, StateName, State) ->
-	everquest_handle:handle_refresh_everquest(EverId,Type, MaxQuality, MaxTimes),	
+	everquest_handle:handle_refresh_everquest(EverId,Type, MaxQuality, MaxTimes),
 	{next_state, StateName, State};
 	
 handle_info({identify_verify_result,Code},StateName, State) ->
@@ -1430,17 +1430,17 @@ handle_info({identify_verify_result,Code},StateName, State) ->
 			put(is_adult,true),
 			fatigue:set_adult(),
 			Msg = #identify_verify_s2c{code=Code},
-			MsgBin = login_pb:encode_identify_verify_s2c(Msg),
+			MsgBin = login_pb:encode_proto_msg(identify_verify_s2c,Msg),
 			base_role_op:send_data_to_gate(MsgBin);
 		_-> 
 			Msg = #identify_verify_s2c{code=Code},
-			MsgBin = login_pb:encode_identify_verify_s2c(Msg),
+			MsgBin = login_pb:encode_proto_msg(identify_verify_s2c,Msg),
 			base_role_op:send_data_to_gate(MsgBin)
 	end,
 	{next_state, StateName, State};
 	
 handle_info({battle_join_c2s,Type}, StateName, State) ->
-	battle_ground_op:handle_join(Type),	
+	battle_ground_op:handle_join(Type),
 	{next_state, StateName, State};
 
 handle_info({tangle_records_c2s,Date,Class}, StateName, State) ->
@@ -1452,8 +1452,8 @@ handle_info({tangle_more_records_c2s}, StateName, State) ->
 	{next_state, StateName, State};
 
 handle_info({battle_leave_c2s}, StateName, State) ->
-	battle_ground_op:handle_battle_leave(),	
-	{next_state, StateName, State};			
+	battle_ground_op:handle_battle_leave(),
+	{next_state, StateName, State};
 
 handle_info({battle_reward_c2s}, StateName, State) ->
 	battle_ground_op:handle_battle_reward(),
@@ -1485,7 +1485,7 @@ handle_info({notify_to_join_yhzq,Camp,Node,Proc,MapProc},StateName,State) ->
 	{next_state, StateName, State};
 	
 handle_info({leave_yhzq_c2s},StateName,State) ->
-	%%base_logger_util:msg(" ~p leave_yhzq_c2s ~n",[?MODULE]),
+	%%base_logger_util:info_msg(" ~p leave_yhzq_c2s ~n",[?MODULE]),
 	battle_ground_op:handle_leave_yhzq_c2s(),
 	{next_state, StateName, State};
 	
@@ -1498,21 +1498,21 @@ handle_info({yhzq_award_c2s},StateName,State)->
 	{next_state, StateName, State};
 
 handle_info({get_instance_log_c2s}, StateName, State) ->
-	instance_op:get_my_instance_count(),	
+	instance_op:get_my_instance_count(),
 	{next_state, StateName, State};
 
 handle_info({call_test,NpcId}, StateName, State) ->
 	creature_op:call_creature_spawns(NpcId,{?CREATOR_LEVEL_BY_SYSTEM,?CREATOR_BY_SYSTEM}),
 	{next_state, StateName, State};
 	
-handle_info({remove_test,NpcId}, StateName, State) ->	
+handle_info({remove_test,NpcId}, StateName, State) ->
 	creature_op:unload_npc_from_map(get_proc_from_mapinfo(get(map_info)),NpcId),
 	{next_state, StateName, State};
 
 %% treasure_chest_v2
 handle_info({treasure_chest_v2,{Type,Times,ConsumeType}},StateName,State)->
 	treasure_chest_v2_op:process_treasure_chest(Type,Times,ConsumeType),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%congratulations
 handle_info({congratulations,Message},StateName,State)->
@@ -1527,7 +1527,7 @@ handle_info({congratulations,Message},StateName,State)->
 %%offline_exp
 handle_info({offline_exp,Message},StateName,State)->
 	offline_exp_packet:process_offline_exp(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 
 handle_info({other_role_levelup,Info},StateName,State)->
@@ -1579,10 +1579,10 @@ handle_info({furnace_packet,Message},StateName,State)->
 	furnace_handle:handle(Message),
 	{next_state, StateName, State};
 handle_info({pill_time_is_up,RoleId,Queueid},StateName,State)->
-	base_logger_util:msg("~p ~n",[erlang:apply(furnace_op,pill_time_is_up,[RoleId,Queueid])]),
+	base_logger_util:info_msg("~p ~n",[erlang:apply(furnace_op,pill_time_is_up,[RoleId,Queueid])]),
 	{next_state, StateName, State};
 handle_info({queue_time_is_up,RoleId,Queueid},StateName,State)->
-	base_logger_util:msg("~p ~n",[erlang:apply(furnace_op,queue_time_is_up,[RoleId,Queueid])]),
+	base_logger_util:info_msg("~p ~n",[erlang:apply(furnace_op,queue_time_is_up,[RoleId,Queueid])]),
 	{next_state, StateName, State};
 
 %%占星
@@ -1604,21 +1604,21 @@ handle_info({dragon_fight_num_c2s,NpcId},StateName,State)->
 handle_info({dragon_fight_faction_c2s,NpcId},StateName,State)->
 	Mapid = get_mapid_from_mapinfo(get(map_info)), 
 	npc_function_frame:do_action(Mapid,get(creature_info),NpcId,npc_dragon_fight_action,[change_faction,NpcId]),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info(dragon_fight_join_c2s,StateName,State)->
 	role_dragon_fight:handle_dragon_fight_join(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({dragon_fight_stop,Info},StateName,State)->
 	role_dragon_fight:dragon_fight_stop(Info),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({npc_chess_spirit,Info},StateName,State)->
 	role_chess_spirits:handle_message(Info),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
-%% venation	
+%% venation
 handle_info({venation,Message},StateName,State)->
 	venation_op:process_message(Message),
 	{next_state, StateName, State};
@@ -1628,7 +1628,7 @@ handle_info({designation,Message},StateName,State)->
 	designation_op:process_message(Message),
 	{next_state, StateName, State};
 	
-%%ridepet_identify	
+%%ridepet_identify
 handle_info({item_identify,Message},StateName,State)->
 	item_identify_op:process_message(Message),
 	{next_state, StateName, State};
@@ -1643,7 +1643,7 @@ handle_info({ride_opt_c2s,Op},StateName,State)->
 			role_ride_op:proc_role_ride(Op);
 		_->
 			nothing
-	end,		
+	end,
 	{next_state, StateName, State};
 	
 %%
@@ -1672,49 +1672,49 @@ handle_info({active_board,Mod,Message},StateName,State)->
 	
 handle_info({role_game_rank,Info},StateName,State)->
 	role_game_rank:handle_info(Info),
-	{next_state, StateName, State};	
-	
+	{next_state, StateName, State};
+
 handle_info({treasure_storage,Message},StateName,State)->
 	treasure_storage_op:process_message(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%facebook 
 handle_info({facebook_bind_check},StateName,State)->
 	facebook:facebook_bind_check(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 %%welfare_activity
 handle_info({welfare_activity,Msg},StateName,State)->
 	welfare_activity_packet:handle_message(Msg),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%添加宠物升级<枫少>
 handle_info({pet_levelup,Msg},StateName,State)->
 	pet_level_op:pet_level_up(Msg),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 %%检测是否重置祝福值
 handle_info({reset_advance_time},StateName,State)->
 	pet_op:send_reset_advance_lucky_time(),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 handle_info({pet_base_msg,Message},StateName,State)->
 	pet_handle:process_base_message(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 
 %%chat_private
 handle_info({chat_private,Msg},StateName,State)->
 	chat_private:process_message(Msg),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 %%refine_system
 handle_info({refine_system,Message},StateName,State)->
 	refine_system_packet:handle_message(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 %%golden_plume_awards
 handle_info({serialnumber_activity_result,Message},StateName,State)->
 	welfare_activity_op:serialnumber_activity_result(Message),
-	{next_state, StateName, State};	
+	{next_state, StateName, State};
 	
 handle_info({treasure_transport,Message},StateName,State)->
 	treasure_transport_packet:handle_message(Message),
@@ -1752,11 +1752,11 @@ handle_info({open_service_activities,Message},StateName,State)->
 	{next_state, StateName, State};
 
 handle_info({update_num_info_to_ets,GuildId,RoleId},StateName,State)->
-	base_logger_util:msg("~p ~n",[erlang:apply(guild_proto_db,update_num_info_to_ets,[GuildId,RoleId,0,false])]),
+	base_logger_util:info_msg("~p ~n",[erlang:apply(guild_proto_db,update_num_info_to_ets,[GuildId,RoleId,0,false])]),
 	{next_state, StateName, State};
 
 handle_info({join_guild_instance,Type},StateName,State)->
-	base_logger_util:msg("~p ~n",[erlang:apply(guild_instance,on_join_instance,[Type])]),
+	base_logger_util:info_msg("~p ~n",[erlang:apply(guild_instance,on_join_instance,[Type])]),
 	{next_state, StateName, State};
 %%festival 
 handle_info({festival_msg,Message},StateName,State)->
@@ -1782,16 +1782,16 @@ handle_info({battle_ground,Message},StateName,State)->
 	battle_ground_packet:process_msg(Message),
 	{next_state,StateName,State};
 	
-%%honor store	
+%%honor store
 handle_info({honor_stores_msg,Message},StateName,State)->
 	honor_stores_packet:process_msg(Message),
 	{next_state,StateName,State};
 	
-%%quest	
+%%quest
 handle_info({quest_scripts,Message},StateName,State)->
 	quest_packet:process_msg(Message),
 	{next_state,StateName,State};
-%%	
+%%
 %% just for test 
 %%
 handle_info({test_designation,DesigationId},StateName,State)->
@@ -1799,7 +1799,7 @@ handle_info({test_designation,DesigationId},StateName,State)->
 	{next_state, StateName, State};
 
 handle_info({test_function,Module,Func,ParamList},StateName,State)->
-	base_logger_util:msg("~p ~n",[erlang:apply(Module,Func,ParamList)]),
+	base_logger_util:info_msg("~p ~n",[erlang:apply(Module,Func,ParamList)]),
 	{next_state, StateName, State};
 
 %%充值
@@ -1813,7 +1813,7 @@ handle_info({role_wing_message,Message},StateName,State)->
 	{next_state, StateName, State};
 
 handle_info(Info, StateName, State) ->
-	base_logger_util:msg("role_process:receive unkonwn message:(~p,~p,~p)~n", [Info, StateName, State]),
+	base_logger_util:info_msg("role_process:receive unkonwn message:(~p,~p,~p)~n", [Info, StateName, State]),
 	{next_state, StateName, State}.
 
 %% --------------------------------------------------------------------
@@ -1821,8 +1821,8 @@ handle_info(Info, StateName, State) ->
 %% Purpose: Shutdown the fsm
 %% Returns: any
 %% --------------------------------------------------------------------
-terminate(Reason, StateName,StateData) ->	
-	base_logger_util:msg("terminate Reason ~p ~n",[Reason]),  
+terminate(Reason, StateName,StateData) ->
+	base_logger_util:info_msg("terminate Reason ~p ~n",[Reason]),  
 	base_role_op:crash_store(),
 	{ok, StateName, StateData}.
 

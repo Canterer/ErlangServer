@@ -30,7 +30,7 @@ start_link()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	AChild = {base_map_manager_server,{base_map_manager_server,start_link,[]},
 		  		permanent,2000,worker,[base_map_manager_server]},
 	{ok,{{one_for_one,10,10}, [AChild]}}.

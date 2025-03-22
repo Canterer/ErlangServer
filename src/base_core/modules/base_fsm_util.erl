@@ -4,11 +4,6 @@
 
 -compile(export_all).
 
-% -define(SEND_EVENT, gen_fsm:send_event).
-% -define(SEND_EVENT, gen_statem:cast).
-% -define(SYNC_SEND_EVENT, gen_fsm:sync_send_event).
-% -define(SYNC_SEND_EVENT, gen_statem:cast).
-
 start_link(Mod, Args, Options) ->
     gen_fsm:start_link(Mod, Args, Options).
 
@@ -55,5 +50,5 @@ sync_send_all_state_event(Name, Event, Timeout)->
 	gen_fsm:sync_send_all_state_event(Name, Event, Timeout).
 
 send_event_after(Time, Event) ->
-	base_logger_util:msg("gen_fsm:send_event_after(Time=~p, Event=~p)~n",[Time, Event]),
+	base_logger_util:info_msg("gen_fsm:send_event_after(Time=~p, Event=~p)~n",[Time, Event]),
 	gen_fsm:send_event_after(Time, Event).

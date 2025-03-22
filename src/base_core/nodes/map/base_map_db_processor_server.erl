@@ -38,7 +38,7 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link(MapFile,MapId)->
-	base_gen_server:start_link(?MODULE ,[MapFile,MapId], []).
+	?base_gen_server:start_link(?MODULE ,[MapFile,MapId], []).
 
 whereis(MapId)->
 	MapDbProc = base_map_db_util:make_db_proc(MapId),
@@ -48,14 +48,14 @@ whereis(MapId)->
 	end.
 
 query_db_name(MapDbProc)->
-	Reply = base_gen_server:call(MapDbProc, {query_db_name}),
+	Reply = ?base_gen_server:call(MapDbProc, {query_db_name}),
 	case Reply of
 		{ok,DbName}->DbName;
 		_->undefined
 	end.
 
 query_safe_grid(MapDb,{GridX,GridY})->
-	case ets:lookup(MapDb, {sg,GridX,GridY}) of
+	case ?base_ets:lookup(MapDb, {sg,GridX,GridY}) of
 		[]->
 			0;
 		[{_,Value}]->
@@ -63,7 +63,7 @@ query_safe_grid(MapDb,{GridX,GridY})->
 	end.
 	
 query_born_pos(MapDb)->
-	case ets:lookup(MapDb, born_pos) of
+	case ?base_ets:lookup(MapDb, born_pos) of
  		[PosInfo] ->
  			{born_pos,BornInfo} = PosInfo,
 			BornInfo;
@@ -72,7 +72,7 @@ query_born_pos(MapDb)->
  	end.
  	
 query_map_stand(MapDbName,{X,Y})->
- 	case ets:lookup(MapDbName, Y) of
+ 	case ?base_ets:lookup(MapDbName, Y) of
  		[{Y,MaxX,StandBin}] ->
 			if
 				X>=MaxX->
@@ -89,43 +89,43 @@ query_map_stand(MapDbName,{X,Y})->
 get_map_data(Map_id) ->
 	MapDbProc = ?MODULE:whereis(Map_id),
 	MapDbName = query_db_name(MapDbProc),
-	[{_,Data}] = ets:lookup(MapDbName, map_data),
+	[{_,Data}] = ?base_ets:lookup(MapDbName, map_data),
 	Data.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([MapFile,MapId]) ->
+?init([MapFile,MapId]) ->
 %%	case {ok,{{0,0},true}} of % file:consult(MapFile)
 %%		{error,Reson}-> {stop,Reson};
 
 %%		{ok,L}-> 
 			MapDB = base_map_db_util:make_db_name(MapId),
-			ets_operater_behaviour:new(MapDB, [set,named_table]),	%% first new the database, and then register proc
-			base_logger_util:msg("base_map_db_util:load_map_file MapId ~p MapDB~p ~n",[MapId,MapDB]),
+			?base_ets:new(MapDB, [set,named_table]),	%% first new the database, and then register proc
+			base_logger_util:info_msg("base_map_db_util:load_map_file MapId ~p MapDB~p ~n",[MapId,MapDB]),
 			base_map_db_util:load_map_file(MapId,MapDB),
 			register(base_map_db_util:make_db_proc(MapId),self()),
 			{true, Tree} = build_quadtree(MapFile),
-			ets_operater_behaviour:insert(MapDB, {map_data, Tree}),
+			?base_ets:insert(MapDB, {map_data, Tree}),
 			{ok, #state{mapdb=MapDB}}.
 %%	end.
 
-do_handle_call(Request, {From, Tag}, State) ->
+?handle_call(Request, {From, Tag}, State) ->
 	case Request of
 		{query_db_name}-> {reply, {ok,State#state.mapdb}, State};
 		_ -> {reply, ok, State}
 	end.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------

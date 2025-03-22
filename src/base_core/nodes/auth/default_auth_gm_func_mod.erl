@@ -16,7 +16,7 @@
 %% API Functions
 %%
 validate_gm(GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut)->
-	%%base_logger_util:msg("validate_gm ~p ~p ~p ~p ~p ~p~n",[GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut]),
+	%%base_logger_util:info_msg("validate_gm ~p ~p ~p ~p ~p ~p~n",[GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut]),
 	{MegaSec,Sec,_} = timer_center:get_correct_now(),
 	Seconds = MegaSec*1000000 + Sec,
 	DiffTim = erlang:abs(Seconds-Time),
@@ -40,11 +40,11 @@ validate_gm(GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut)->
 							{error,20000}
 					end;
 				true->
-					%%base_logger_util:msg("failed AuthResult =~p AuthStr=~p Md5Str=~p",[AuthResult,AuthStr,Md5Str]),
+					%%base_logger_util:info_msg("failed AuthResult =~p AuthStr=~p Md5Str=~p",[AuthResult,AuthStr,Md5Str]),
 					{error,20000}
 			end
 	end.
 
 validate_gm_test(_GmName, GmId,_Time,_AuthResult,_SecretKey,_CfgTimeOut)->
-	base_logger_util:msg("validate_gm_test"),
+	base_logger_util:info_msg("validate_gm_test"),
 	{ok,GmId}.

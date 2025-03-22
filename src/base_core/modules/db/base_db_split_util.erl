@@ -21,16 +21,16 @@
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
-% -include("base_ets_operater_shared.hrl").
 -define(ETS_OPERATER_BEHAVIOUR,true).
+% -define(DB_OPERATER_BEHAVIOUR,true).
 -include("base_all_behaviour_shared.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_create_ets()->
-	ets_operater_behaviour:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
+?create_ets()->
+	?base_ets:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
 
-do_init_ets()->
+?init_ets()->
 	nothing.
 %% --------------------------------------------------------------------
 %%% behaviour functions end
@@ -40,18 +40,18 @@ do_init_ets()->
 %% API Functions
 %%
 add_table_names(OriginalTable,SplittedTable)->
-	case ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
-		[]->ets_operater_behaviour:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable]});
+	case ?base_ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
+		[]->?base_ets:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable]});
 		[{_,OldTables}]->
 			case lists:member(SplittedTable, OldTables) of
 				true-> ignor;
 				_->
-					ets_operater_behaviour:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable|OldTables]})
+					?base_ets:insert(?SPLIT_TABLE_NAME_ETS, {OriginalTable,[SplittedTable|OldTables]})
 			end
 	end.
 
 get_table_names(OriginalTable)->
-	case ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
+	case ?base_ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
 		[]-> [];
 		[{_,SplittedTables}]->SplittedTables
 	end.
@@ -143,7 +143,7 @@ get_splitted_info(CurTable)->
 create_split_table_by_name(Table)->
 	case base_db_split_util:get_splitted_info(Table) of
 		false-> 
-			base_logger_util:msg("create_split_table_by_name error ! not split table! (~p)~n",[Table]),
+			?base_logger_util:info_msg("create_split_table_by_name error ! not split table! (~p)~n",[Table]),
 			error;
 		TableInfo->
 			CreateMod = get_table_mod(TableInfo),
@@ -202,9 +202,9 @@ make_table_name(BaseTable,HiValue,LowValue)->
 check_split_master_tables()->
 	?ZS_LOG(),
 	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
-	base_logger_util:msg("~p:~p SplitInfos:~p~n",[?MODULE,?FUNCTION_NAME,SplitInfos]),
+	?base_logger_util:info_msg("~p:~p SplitInfos:~p~n",[?MODULE,?FUNCTION_NAME,SplitInfos]),
 	TableBases = lists:map(fun(X)-> get_basetable(X) end, SplitInfos),
-	base_logger_util:msg("~p:~p TableBases:~p~n",[?MODULE,?FUNCTION_NAME,TableBases]),
+	?base_logger_util:info_msg("~p:~p TableBases:~p~n",[?MODULE,?FUNCTION_NAME,TableBases]),
 	lists:map(fun(TableBase)->
 					  Tables = get_splitted_tables(TableBase),
 					  lists:foreach(fun(Table)->

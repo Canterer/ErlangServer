@@ -32,19 +32,19 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link(Callback, LSock, AcceptorIndex) ->
-    base_gen_server:start_link(?MODULE, {Callback, LSock, AcceptorIndex}, []).
+    ?base_gen_server:start_link(?MODULE, {Callback, LSock, AcceptorIndex}, []).
 
 
 disable_connect(NamedProc)->
 	case erlang:whereis(NamedProc) of
 		undefined-> ignor;
-		Pid-> base_gen_server:call(Pid, {disable_connect})
+		Pid-> ?base_gen_server:call(Pid, {disable_connect})
 	end.
 
 enable_connect(NamedProc)->
 	case erlang:whereis(NamedProc) of
 		undefined-> ignor;
-		Pid-> base_gen_server:call(Pid, {enable_connect})
+		Pid-> ?base_gen_server:call(Pid, {enable_connect})
 	end.
 
 get_proc_name(AcceptorIndex)->
@@ -53,41 +53,41 @@ get_proc_name(AcceptorIndex)->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init({Callback, LSock, AcceptorIndex}) ->
+?init({Callback, LSock, AcceptorIndex}) ->
 	?ZS_LOG("{Callback:~p, LSock:~p, AcceptorIndex:~p}",[Callback,LSock,AcceptorIndex]),
 	%%make acceptor name
 	erlang:register(get_proc_name(AcceptorIndex), self()),
-    base_gen_server:cast(self(), accept),
+    ?base_gen_server:cast(self(), accept),
     {ok, #state{callback=Callback, sock=LSock,disable_connect=false}}.
 
-do_handle_call({disable_connect}, _From, State) ->
+?handle_call({disable_connect}, _From, State) ->
     Reply = State,
     {reply, Reply, State#state{disable_connect=true}};
-do_handle_call({enable_connect}, _From, State) ->
+?handle_call({enable_connect}, _From, State) ->
     Reply = State,
     {reply, Reply, State#state{disable_connect=false}};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(accept, State) ->
+?handle_cast(accept, State) ->
     accept(State);
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
+?handle_info({inet_async, LSock, Ref, {ok, Sock}},
             State = #state{callback={M,F,A}, sock=LSock, ref=Ref,disable_connect=Disable}) ->
-	base_logger_util:msg("~p:~p({inet_async ok}) Sock:~p~n",[?MODULE,?FUNCTION_NAME,Sock]),
+	base_logger_util:info_msg("~p:~p({inet_async ok}) Sock:~p~n",[?MODULE,?FUNCTION_NAME,Sock]),
 	inet:setopts(Sock, [{active, false}]),
 	{ok, Mod} = inet_db:lookup_socket(LSock),
 	inet_db:register_socket(Sock, Mod),
 	try
 		{Address, Port}         = inet_op(fun () -> inet:sockname(LSock) end),
 		{PeerAddress, PeerPort} = inet_op(fun () -> inet:peername(Sock) end),
-		base_logger_util:msg("accepted TCP connection on ~s:~p from ~s:~p~n",[inet_parse:ntoa(Address), Port,inet_parse:ntoa(PeerAddress), PeerPort]),
+		base_logger_util:info_msg("accepted TCP connection on ~s:~p from ~s:~p~n",[inet_parse:ntoa(Address), Port,inet_parse:ntoa(PeerAddress), PeerPort]),
 		{ok, ChildPid} = supervisor:start_child(base_tcp_client_sup, []),
 		ok = gen_tcp:controlling_process(Sock, ChildPid),
-		base_logger_util:msg("~p:~p({inet_async ok}) start_child base_tcp_client_sup:~p Disable:~p~n",[?MODULE,?FUNCTION_NAME,ChildPid,Disable]),
+		base_logger_util:info_msg("~p:~p({inet_async ok}) start_child base_tcp_client_sup:~p Disable:~p~n",[?MODULE,?FUNCTION_NAME,ChildPid,Disable]),
 		case Disable of
 			true->
 				base_tcp_client_fsm:socket_disable(node(),ChildPid,Sock);
@@ -103,19 +103,19 @@ do_handle_info({inet_async, LSock, Ref, {ok, Sock}},
 				base_logger_util:error_msg("unable to accept TCP connection: ~p~n",[EXP])
 	end,
 	accept(State);
-do_handle_info({inet_async, LSock, Ref, {error, closed}},
+?handle_info({inet_async, LSock, Ref, {error, closed}},
             State=#state{sock=LSock, ref=Ref}) ->
-	base_logger_util:msg("~p:~p({inet_async error})~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p({inet_async error})~n",[?MODULE,?FUNCTION_NAME]),
     %% It would be wrong to attempt to restart the acceptor when we
     %% know this will fail.
     {stop, normal, State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -131,7 +131,7 @@ throw_on_error(E, Thunk) ->
 inet_op(F) -> throw_on_error(inet_error, F).
 
 accept(State = #state{sock=LSock}) ->
-	base_logger_util:msg("~p:~p() try accept client tcp!!!~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p() try accept client tcp!!!~n",[?MODULE,?FUNCTION_NAME]),
     case prim_inet:async_accept(LSock, -1) of
         {ok, Ref} -> {noreply, State#state{ref=Ref}};
         Error     -> {stop, {cannot_accept, Error}, State}

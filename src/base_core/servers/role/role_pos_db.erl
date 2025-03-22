@@ -54,21 +54,21 @@
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_start()->
+?start()->
 	db_operater_behaviour:start_module(?MODULE,[]).
 
-do_create_mnesia_table(ram)->
+?create_mnesia_table(ram)->
 	base_db_tools:create_table_ram(role_pos, record_info(fields,role_pos),[],set);
-do_create_mnesia_table(disc)->
+?create_mnesia_table(disc)->
 	nothing.
 
-do_create_mnesia_split_table(_,_)->
+?create_mnesia_split_table(_,_)->
 	nothing.
 
-do_tables_info()->
+?tables_info()->
 	[{role_pos,ram}].
 
-do_delete_role_from_db(RoleId)->
+?delete_role_from_db(RoleId)->
 	nothing.
 
 %% --------------------------------------------------------------------
@@ -90,7 +90,7 @@ reg_role_pos_to_mnesia(Roleid, Lineid,MapId,RoleName,Rolenode,Roleproc,Gatenode,
 	try		
 		base_db_dal_util:write({role_pos,Roleid, Lineid,MapId,RoleName, Rolenode,Roleproc,Gatenode,Gateproc})
 	catch
-		E:R-> base_logger_util:msg("reg_role_pos_to_mnesia ~p:~p~n",[E,R]),error
+		E:R-> base_logger_util:info_msg("reg_role_pos_to_mnesia ~p:~p~n",[E,R]),error
 	end.
 
 unreg_role_pos_to_mnesia(RoleId)->
@@ -136,50 +136,50 @@ unreg_role_pos_to_mnesia_by_node(Mapnode)->
 			end,						
 		base_db_dal_util:run_transaction(S)		
 	catch
-		E:R-> base_logger_util:msg("unreg_role_pos_to_mnesia_by_node ~pR~p~n",[E,R])
+		E:R-> base_logger_util:info_msg("unreg_role_pos_to_mnesia_by_node ~pR~p~n",[E,R])
 	end.
 	
 get_role_pos_from_mnesia(RoleId)->
-	case ets:lookup(?ROLE_POS, RoleId) of
+	case ?base_ets:lookup(?ROLE_POS, RoleId) of
 		[]->[];
 		[RolePosInfo|_]->RolePosInfo
 	end.
 
 
 get_role_pos_from_mnesia_by_name(RoleName) when is_list(RoleName)->
-	case ets:match_object(?ROLE_POS, {'_','_','_','_',list_to_binary(RoleName),'_','_','_','_'}) of
+	case ?base_ets:match_object(?ROLE_POS, {'_','_','_','_',list_to_binary(RoleName),'_','_','_','_'}) of
 		[]->[];
 		[RolePosInfo|_]->RolePosInfo
 	end;
 get_role_pos_from_mnesia_by_name(RoleName) when is_binary(RoleName)->
-	case ets:match_object(?ROLE_POS, {'_','_','_','_',RoleName,'_','_','_','_'}) of
+	case ?base_ets:match_object(?ROLE_POS, {'_','_','_','_',RoleName,'_','_','_','_'}) of
 		[]->[];
 		[RolePosInfo|_]->RolePosInfo
 	end.
 	
 get_all_rolepos()->
-	ets:tab2list(?ROLE_POS).
+	?base_ets:tab2list(?ROLE_POS).
 
 get_role_info_by_map(MapId)->
-	case ets:match_object(?ROLE_POS, {'_','_','_',MapId,'_','_','_','_','_'}) of
+	case ?base_ets:match_object(?ROLE_POS, {'_','_','_',MapId,'_','_','_','_','_'}) of
 		[]->[];
 		RolePosInfo->RolePosInfo
 	end.
 
 get_role_info_by_line(LineId)->
-	case ets:match_object(?ROLE_POS, {'_','_',LineId,'_','_','_','_','_','_'}) of
+	case ?base_ets:match_object(?ROLE_POS, {'_','_',LineId,'_','_','_','_','_','_'}) of
 		[]->[];
 		RolePosInfo->RolePosInfo
 	end.
 
 get_role_info_by_map_line(MapId,LineId)->
-	case ets:match_object(?ROLE_POS, {'_','_',LineId,MapId,'_','_','_','_','_'}) of
+	case ?base_ets:match_object(?ROLE_POS, {'_','_',LineId,MapId,'_','_','_','_','_'}) of
 		[]->[];
 		RolePosInfo->RolePosInfo
 	end.
 
 get_online_count()->
-	case ets:info(?ROLE_POS,size) of
+	case ?base_ets:info(?ROLE_POS,size) of
 		undefined->
 			0;
 		Count->
@@ -214,10 +214,10 @@ foreach(InputFun)->
 	F  = fun(E,_Acc)->
 			InputFun(E),[]
 		 end,
-	ets:foldl(F, [], ?ROLE_POS).
+	?base_ets:foldl(F, [], ?ROLE_POS).
 
 foldl(F,A)->
-	ets:foldl(F, A, ?ROLE_POS).
+	?base_ets:foldl(F, A, ?ROLE_POS).
 
 foreach_by_map(InputFun,MapId)->
 	RolePos = get_role_info_by_map(MapId),

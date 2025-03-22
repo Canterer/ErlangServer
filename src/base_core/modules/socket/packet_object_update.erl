@@ -29,11 +29,11 @@ send_pending_update()->
 			Message = role_packet:encode_object_update_s2c(lists:reverse(get(object_create_info)),lists:reverse(get(object_update_info)),lists:reverse(get(object_delete_info))),
 			%%TODO
 			try erlang:binary_to_term(Message) of
-				Val-> base_logger_util:msg("send_to_role ~p~n",[erlang:binary_to_term(Message)])
+				Val-> base_logger_util:info_msg("send_to_role ~p~n",[erlang:binary_to_term(Message)])
 			catch
 				_:_->
 					<<ID:16, Data1/binary>> = Message
-					%base_logger_util:msg("send_to_role [~p] ~n",[ID])
+					%base_logger_util:info_msg("send_to_role [~p] ~n",[ID])
 			end,
 			erlang:port_command(get(clientsock), Message, [force]);
 		false->

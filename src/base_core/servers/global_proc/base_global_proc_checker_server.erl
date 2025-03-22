@@ -33,11 +33,11 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	?base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 is_ready()->
 	try
-		base_gen_server:call(?SERVER, is_global_proc_ready)
+		?base_gen_server:call(?SERVER, is_global_proc_ready)
 	catch
 		_:_->false
 	end.
@@ -45,33 +45,33 @@ is_ready()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(_Args) ->
+?init(_Args) ->
 	put(global_proc_ready,false),
 	do_wait(),
 	{ok, #state{}}.
 
-do_handle_call(is_global_proc_ready, _From, State) ->
+?handle_call(is_global_proc_ready, _From, State) ->
 	Reply = get(global_proc_ready),
 	{reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info( {check_global_proc},State)->
+?handle_info( {check_global_proc},State)->
 	do_wait(),
 	{noreply,State};
-do_handle_info({stop}, State) ->
+?handle_info({stop}, State) ->
 	{stop,normal,State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -107,7 +107,7 @@ do_wait()->
 
 
 wait_stop()->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	put(global_proc_ready,true),
 	self() ! {stop}.
 
@@ -117,13 +117,13 @@ is_all_node_waite_finish(MyWaitList)->
 		fun(ModuleName)-> 
 			not base_global_proc_ets:is_global_proc_registed(ModuleName) 
 		end, MyWaitList),
-	base_logger_util:msg("~p:~p MyWaitList:~p StillNotWaitedList:~p~n",[?MODULE,?FUNCTION_NAME,MyWaitList,StillNotWaitedList]),
+	base_logger_util:info_msg("~p:~p MyWaitList:~p StillNotWaitedList:~p~n",[?MODULE,?FUNCTION_NAME,MyWaitList,StillNotWaitedList]),
 	if
 		StillNotWaitedList=:=[]->
 			true;			%%wait finish
 		true->
 			AllNodes = base_node_util:get_all_nodes(),
-			base_logger_util:msg("TTTTT~p~n",[AllNodes]),
+			base_logger_util:info_msg("TTTTT~p~n",[AllNodes]),
 			lists:foreach(
 				fun(ProcNotWaited)-> 
 					wait_global_proc_regist(ProcNotWaited,AllNodes) 

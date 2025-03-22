@@ -43,7 +43,7 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({global,?SERVER}, ?MODULE, [], []).
+	?base_gen_server:start_link({global,?SERVER}, ?MODULE, [], []).
 
 
 send_file(CSock) ->
@@ -61,14 +61,14 @@ add_port(PortList)->
 	try
 		global:send(?MODULE,{add_port,PortList})
 	catch
-		E:R->base_logger_util:msg("add port ~p error E:~p R:~p ~n",[PortList,E,R])
+		E:R->base_logger_util:info_msg("add port ~p error E:~p R:~p ~n",[PortList,E,R])
 	end.
 
 del_port(PortList)->
 	try
 		global:send(?MODULE,{del_port,PortList})
 	catch
-		E:R->base_logger_util:msg("del port ~p error E:~p R:~p ~n",[PortList,E,R])
+		E:R->base_logger_util:info_msg("del port ~p error E:~p R:~p ~n",[PortList,E,R])
 	end.
 
 
@@ -84,7 +84,7 @@ make_normal_cross_file()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(Args) ->
+?init(Args) ->
 	process_flag(trap_exit, true),
 	OpenPortList = base_env_ets:get2(crossport,openport,?DEFAULT_OPENPORT),
 	put(openport,OpenPortList),
@@ -92,19 +92,19 @@ do_init(Args) ->
 	start_server().
 	% {ok, #state{}}.
 
-do_handle_call({get_crossfile}, _From, State) ->
+?handle_call({get_crossfile}, _From, State) ->
     Reply = get(cross_file),
     {reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({'EXIT', _Pid, normal}, State) ->
+?handle_info({'EXIT', _Pid, normal}, State) ->
 	{stop, normal, State};
-do_handle_info({'EXIT', _Pid, Reason}, State) ->
+?handle_info({'EXIT', _Pid, Reason}, State) ->
 	case erlang:is_port(State) of
 		true -> gen_tcp:close(State)
 	end,
@@ -113,19 +113,19 @@ do_handle_info({'EXIT', _Pid, Reason}, State) ->
 		{stop, Reason} -> {stop, Reason, State};
 		_->{stop,normal}
 	end;
-do_handle_info({add_port,PortList},State)->
+?handle_info({add_port,PortList},State)->
 	add_port_rpc(PortList),
 	{noreply, State};
-do_handle_info({del_port,PortList},State)->
+?handle_info({del_port,PortList},State)->
 	del_port_rpc(PortList),
 	{noreply, State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -161,9 +161,9 @@ loop(LSock) ->
 
 get_crossfile()->
 	try
-		base_gen_server:call({global,?MODULE},{get_crossfile})
+		?base_gen_server:call({global,?MODULE},{get_crossfile})
 	catch
-		E:R->base_logger_util:msg("get_crossfile error E:~p R:~p ~n",[E,R]),
+		E:R->base_logger_util:info_msg("get_crossfile error E:~p R:~p ~n",[E,R]),
 		[]
 	end.
 

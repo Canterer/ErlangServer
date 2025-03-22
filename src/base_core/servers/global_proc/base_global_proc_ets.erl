@@ -1,8 +1,6 @@
 -module(base_global_proc_ets).
+-include("base_define_min.hrl").
 
-%%
-%% Include files
-%%
 -define(GLOBAL_PROC_ETS,global_proc_ets).
 
 %%
@@ -13,16 +11,16 @@
 
 init()->
 	try
-		ets_operater_behaviour:new(?GLOBAL_PROC_ETS, [named_table,public,set])
+		?base_ets:new(?GLOBAL_PROC_ETS, [named_table,public,set])
 	catch
-		E:R-> base_logger_util:msg("base_global_proc_ets create error ~p ~p ~n",[E,R])
+		E:R-> base_logger_util:info_msg("base_global_proc_ets create error ~p ~p ~n",[E,R])
 	end.
 
 get_registed_global_procs()->
-	ets:tab2list(?GLOBAL_PROC_ETS).
+	?base_ets:tab2list(?GLOBAL_PROC_ETS).
 
 is_global_proc_registed(ModuleName)->
-	case ets:lookup(?GLOBAL_PROC_ETS,ModuleName)  of
+	case ?base_ets:lookup(?GLOBAL_PROC_ETS,ModuleName)  of
 		[] ->
 			false;
 		[_] ->
@@ -30,18 +28,18 @@ is_global_proc_registed(ModuleName)->
 	end.
 
 regist_global_proc(ModuleName,NodeName)->
-	base_logger_util:msg("regist_global_proc ModuleName:~p NodeName:~p ~n",[ModuleName,NodeName]),
-	ets_operater_behaviour:insert(?GLOBAL_PROC_ETS,{ModuleName,NodeName}).
+	base_logger_util:info_msg("regist_global_proc ModuleName:~p NodeName:~p ~n",[ModuleName,NodeName]),
+	?base_ets:insert(?GLOBAL_PROC_ETS,{ModuleName,NodeName}).
 
 get_global_proc_node(ModuleName)->
 	case get(proc_node_tuple_list) of
 		undefined->
-			case ets:lookup(?GLOBAL_PROC_ETS,ModuleName) of
+			case ?base_ets:lookup(?GLOBAL_PROC_ETS,ModuleName) of
 				[]->
-					base_logger_util:msg("ERROR global_proc Missed ModuleName ~p in ~p ~n",[ModuleName,node()]),
+					base_logger_util:info_msg("ERROR global_proc Missed ModuleName ~p in ~p ~n",[ModuleName,node()]),
 					case try_regist_proc(ModuleName) of
 						[]->
-							base_logger_util:msg("ERROR global error config module ~p in ~p ~n",[ModuleName,node()]),
+							base_logger_util:info_msg("ERROR global error config module ~p in ~p ~n",[ModuleName,node()]),
 							[];
 						Node->
 							put(proc_node_tuple_list,[{ModuleName,Node}|get(global_proc_node_map)])
@@ -54,10 +52,10 @@ get_global_proc_node(ModuleName)->
 				{_,Node}->
 					Node;
 				_->
-					base_logger_util:msg("ERROR global Missed ModuleName ~p in ~p nodes ~p ~n",[ModuleName,node(),nodes()]),
+					base_logger_util:info_msg("ERROR global Missed ModuleName ~p in ~p nodes ~p ~n",[ModuleName,node(),nodes()]),
 					case try_regist_proc(ModuleName) of
 						[]->
-							base_logger_util:msg("ERROR global error config module ~p in ~p ~n",[ModuleName,node()]),
+							base_logger_util:info_msg("ERROR global error config module ~p in ~p ~n",[ModuleName,node()]),
 							[];
 						Node->
 							put(proc_node_tuple_list,[{ModuleName,Node}|get(proc_node_tuple_list)])

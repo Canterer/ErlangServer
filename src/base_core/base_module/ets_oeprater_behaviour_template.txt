@@ -1,15 +1,16 @@
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
--include("base_ets_operater_shared.hrl").
-
+-define(ETS_OPERATER_BEHAVIOUR,true).
+% -define(DB_OPERATER_BEHAVIOUR,true).
+-include("base_all_behaviour_shared.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_create_ets()->
-	ets_operater_behaviour:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
+?create_ets()->
+	?base_ets:new(?SPLIT_TABLE_NAME_ETS,[set,public,named_table]).
 
-do_init_ets()->
+?init_ets()->
 	nothing.
 %% --------------------------------------------------------------------
 %%% behaviour functions end

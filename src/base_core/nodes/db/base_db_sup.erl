@@ -44,7 +44,7 @@ start_db_dmp_server()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([DbType]) ->
+?init([DbType]) ->
 	case DbType of
 		master->
 			AChildList = [{base_db_master_server,{base_db_master_server,start_link,[]}, permanent,2000,worker,[base_db_master_server]}];

@@ -1,6 +1,7 @@
 %%% Description : temp function
 
 -module(base_temp_util).
+-include("common_define.hrl").
 
 -compile(export_all).
 
@@ -134,3 +135,9 @@ make_int_str30(Int)->
 		29-> string:concat("0", Str);
 		_-> Str
 	end.
+
+get_serverid_by_roleid(RoleId)->
+	trunc(RoleId / ?SERVER_MAX_ROLE_NUMBER).
+
+term_to_record(Term,RecordName) ->
+	list_to_tuple([RecordName | tuple_to_list(Term)]).

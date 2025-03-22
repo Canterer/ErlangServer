@@ -1,5 +1,6 @@
 %% Description: TODO: Add description to data_gen
 -module(base_db_data_gen_util).
+-include("base_define_min.hrl").
 -compile(export_all).
 
 -include("mnesia_table_def.hrl").
@@ -19,14 +20,14 @@
 
 import_config(FileName)->
 	%%import creature_spwans first
-	% npc_db:import_creature_spawns("../config/creature_spawns.config"),	
+	% npc_db:import_creature_spawns("../config/creature_spawns.config"),
 	File = "../config/"++ FileName ++ ".config",
-	base_logger_util:msg("now clear table =========================~n"),
+	?base_logger_util:info_msg("now clear table =========================~n"),
 	case file:open(File, [read]) of
 		{ok,Fd}-> clear_table_loop([],Fd);
-		{error,Reason}-> base_logger_util:msg("open file error:~p~n",[Reason])
+		{error,Reason}-> ?base_logger_util:info_msg("open file error:~p~n",[Reason])
 	end,
-	base_logger_util:msg("now import config from file:~p~n",[File]),
+	?base_logger_util:info_msg("now import config from file:~p~n",[File]),
 	recovery(File).
 
 clear_table_loop(UsedTables,Fd)->
@@ -41,7 +42,7 @@ clear_table_loop(UsedTables,Fd)->
 						{atomic, ok}->
 							NewUsedTables = [TableName|UsedTables];
 						{aborted, R}->
-							base_logger_util:msg("clear table ~p error ~p ~n",[TableName,R]),
+							?base_logger_util:info_msg("clear table ~p error ~p ~n",[TableName,R]),
 							NewUsedTables = UsedTables
 					end
 			end,
@@ -49,11 +50,11 @@ clear_table_loop(UsedTables,Fd)->
 		eof->
 			file:close(Fd);
 		Error->
-			base_logger_util:msg("clear table loop error ~p ~n",[Error])	
+			?base_logger_util:info_msg("clear table loop error ~p ~n",[Error])
 	end.
 
 backup(File)->
-	base_logger_util:msg("now backup data to file:~p~n",[File]),
+	?base_logger_util:info_msg("now backup data to file:~p~n",[File]),
 	case file:open(File, [write,{encoding,utf8}]) of
 		{ok,F}->
 			NoTempTabs = get_backup_tablelist(),
@@ -64,18 +65,18 @@ backup(File)->
 %%								  lists:foreach(fun(Term) -> io:format(F,"~w.~n", [setelement(1, Term, T)]) end, All)
 						  end,NoTempTabs),
 			file:close(F),
-			base_logger_util:msg("Finish backup data to file:~p~n",[File]);
-		{_,_}-> base_logger_util:msg("dump to file failed: can not open file")
+			?base_logger_util:info_msg("Finish backup data to file:~p~n",[File]);
+		{_,_}-> ?base_logger_util:info_msg("dump to file failed: can not open file")
 	end.
 
 backup_ext(File)->
 	case mnesia:backup(File,[]) of
 		ok->
-			base_logger_util:msg("backup data success!!!  file ~p~n",[File]);
+			?base_logger_util:info_msg("backup data success!!!  file ~p~n",[File]);
 		{error,R}->
-			base_logger_util:msg("backup data faild!!! ~p~n",[R]);
+			?base_logger_util:info_msg("backup data faild!!! ~p~n",[R]);
 		Other->
-			base_logger_util:msg("backup data faild!!! ~p~n",[Other])
+			?base_logger_util:info_msg("backup data faild!!! ~p~n",[Other])
 	end.
 
 recovery(File)->
@@ -83,27 +84,27 @@ recovery(File)->
 	erlang:statistics(wall_clock),
 	case file:open(File,[read]) of
 		{ok,Fd}-> do_consult(Fd,[],0,[]);
-		{error,Reason}-> base_logger_util:msg("Consult error:~p~n",[Reason])
+		{error,Reason}-> ?base_logger_util:info_msg("Consult error:~p~n",[Reason])
 	end.
 
 recovery_ext(File)->
 	SkipTables = get_skip_tablelist(),
-	base_logger_util:msg("recovery_ext begin:~p~n",[File]),
+	?base_logger_util:info_msg("recovery_ext begin:~p~n",[File]),
 	RestoreFun = 
 			fun(Term,Acc)->
 				CheckKey = element(1,Term),
 				case lists:member(CheckKey,SkipTables) of 
 					true->
-						NewAcc = Acc;		
+						NewAcc = Acc;
 					_->
-						NewAcc = Acc ++ [Term]		
+						NewAcc = Acc ++ [Term]
 				end,
 				Length = length(NewAcc),
 				if
 					Length >= 300->
 						write_table_data(NewAcc),
 						{[Term],[]};
-					true->			
+					true->
 						{[Term],NewAcc}
 				end
 			end,
@@ -113,9 +114,9 @@ recovery_ext(File)->
 		{ok,Terms}->
 			write_table_data(Terms);
 		R->
-			base_logger_util:msg("recovery_ext ret ~p~n",[R])	
+			?base_logger_util:info_msg("recovery_ext ret ~p~n",[R])
 	end,
-	base_logger_util:msg("recovery_ext finish!!!~n").			
+	?base_logger_util:info_msg("recovery_ext finish!!!~n").
 
 get_skip_tablelist()->
 	db_operater_behaviour:get_backup_filter_tables()++[schema].
@@ -145,18 +146,18 @@ write_data_one(Term)->
 								mnesia:dirty_write(Term)
 							catch
 								_E:Error->
-									Error	
+									Error
 							end,
-							base_logger_util:msg("no table: ~p ,create and write ~p ~n",[Table,Re])
+							?base_logger_util:info_msg("no table: ~p ,create and write ~p ~n",[Table,Re])
 					end;
 				_->	
-					base_logger_util:msg("write_table_data ~p error ~p ~n",[Term,Reason]),
+					?base_logger_util:info_msg("write_table_data ~p error ~p ~n",[Term,Reason]),
 					ignor
 			end
 	end.
 
 is_miss_table_reason(Reason)->
-	case Reason of				
+	case Reason of
 		{no_exists,Table}->
 			{true,Table};
 		{bad_type,BadTerm}->
@@ -168,7 +169,7 @@ is_miss_table_reason(Reason)->
 					false
 			end;
 		_->
-			false	
+			false
 	end.
 
 is_table_no_exsit(Table)->
@@ -177,13 +178,13 @@ is_table_no_exsit(Table)->
 			true;
 		_->
 			false
-	end.	
+	end.
 
 do_consult(Fd,LastResult,TermCount,LastTable)->
 	case io:read(Fd,'') of
 		{error,Reason}->
-		 	base_logger_util:msg("reovery_from failed:~p ,rec no:~p~n",[Reason,TermCount+1]),
-		 	file:close(Fd);
+			?base_logger_util:info_msg("reovery_from failed:~p ,rec no:~p~n",[Reason,TermCount+1]),
+			file:close(Fd);
 		eof ->
 			%% do write!!!==========================
 			write_list_ets_hack(LastResult),
@@ -194,7 +195,7 @@ do_consult(Fd,LastResult,TermCount,LastTable)->
 					nothing
 			end,
 			{_, Duarion} = erlang:statistics(wall_clock),
-			base_logger_util:msg("Finish recovery cost time:~p recordcount:~p ~n",[Duarion,TermCount]),
+			?base_logger_util:info_msg("Finish recovery cost time:~p recordcount:~p ~n",[Duarion,TermCount]),
 			file:close(Fd);
 		{ok,Term}->
 			NewTable = element(1,Term),
@@ -208,13 +209,13 @@ do_consult(Fd,LastResult,TermCount,LastTable)->
 					safe_change_table_type(LastTable, node(), disc_copies),
 					safe_change_table_type(NewTable,node(),ram_copies),
 					do_consult(Fd,[Term],TermCount+1,NewTable);
-			   	length(LastResult) < 300->
+				length(LastResult) < 300->
 					do_consult(Fd,[Term|LastResult],TermCount+1,NewTable);
-			  	true->
-			  		%% do write!!!==========================
+				true->
+					%% do write!!!==========================
 					write_list_ets_hack([Term|LastResult]),
 					do_consult(Fd,[],TermCount+1,NewTable)
-			end	
+			end
 	end.
 
 write_list_ets_hack(LastResult)->
@@ -228,7 +229,7 @@ write_data_one_ets_hack(Term)->
 		{'EXIT',{aborted,Reason}}->
 			case is_miss_table_reason(Reason) of
 				{true,Table}->
-					base_logger_util:msg("no table Table ~p ,create~n",[Table]),
+					?base_logger_util:info_msg("no table Table ~p ,create~n",[Table]),
 					case base_db_split_util:create_split_table_by_name(Table) of
 						error -> 
 							ignor;
@@ -238,16 +239,16 @@ write_data_one_ets_hack(Term)->
 								mnesia:dirty_write(Term)
 							catch
 								_E:Error->
-									Error	
+									Error
 							end,
-							base_logger_util:msg("no table: ~p ,create and write ~p ~n",[Table,Re])
+							?base_logger_util:info_msg("no table: ~p ,create and write ~p ~n",[Table,Re])
 					end;
 				_->	
-					base_logger_util:msg("write_data_one_ets_hack ~p error ~p ~n",[Term,Reason]),
+					?base_logger_util:info_msg("write_data_one_ets_hack ~p error ~p ~n",[Term,Reason]),
 					ignor	
 			end;
 		Errno->	
-			base_logger_util:msg("write_data_one_ets_hack ~p error ~p ~n",[Term,Errno]),
+			?base_logger_util:info_msg("write_data_one_ets_hack ~p error ~p ~n",[Term,Errno]),
 			ignor
 	end.
 
@@ -256,15 +257,15 @@ safe_change_table_type(NewTable,Node,Type)->
 		{aborted,Reason}->
 			case is_miss_table_reason(Reason) of
 				{true,Table}->
-					base_logger_util:msg("no table Table ~p ,create~n",[Table]),
+					?base_logger_util:info_msg("no table Table ~p ,create~n",[Table]),
 					case base_db_split_util:create_split_table_by_name(Table) of
 						error -> 
 							ignor;
 						ok->
 							safe_change_table_type(NewTable,Node,Type)
-  					end;
+					end;
 				_->
-					base_logger_util:msg("mnesia:change_table_copy_type Error ~p Reason ~p ~n",[{NewTable,Node, Type},Reason])
+					?base_logger_util:info_msg("mnesia:change_table_copy_type Error ~p Reason ~p ~n",[{NewTable,Node, Type},Reason])
 			end;
 		{atomic, ok}->
 			nothing

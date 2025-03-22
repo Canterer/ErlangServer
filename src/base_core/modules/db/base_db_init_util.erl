@@ -63,7 +63,7 @@ db_init_line_master()->
 						end
 					catch
 						_:_-> 
-							base_logger_util:msg("~p:line:~p mnesia:table_info(Table:~p, ram_copies)~n",[?MODULE,?LINE,Table]),
+							?base_logger_util:info_msg("~p:line:~p mnesia:table_info(Table:~p, ram_copies)~n",[?MODULE,?LINE,Table]),
 							true
 					end
 				end, RamTables)	

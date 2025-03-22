@@ -1,7 +1,7 @@
 -module(base_robot_client_fsm).
 
 -behaviour(gen_fsm).
--define(ZS_LOG(), base_logger_util:msg("#####ZZZZZ##### ~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE])).
+-define(ZS_LOG(), base_logger_util:info_msg("#####ZZZZZ##### ~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE])).
 -define(PACKAGE_INDEX,1000).
 -define(ITEMNUM,10).
 -include("login_pb.hrl").
@@ -40,9 +40,10 @@
 -record(account,{username,roleids,gold,qq_gold,local_gold,nickname,gender,first_login_ip,first_login_time,last_login_ip,last_login_time,login_days,is_yellow_vip,is_yellow_year_vip,yellow_vip_level,first_login_platform,login_platform}).
 
 start(Id, Client_config)->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
-	base_logger_util:msg("Id:~p Client_config:~p~n", [Id, Client_config]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("Id:~p Client_config:~p~n", [Id, Client_config]),
 	% base_fsm_util:start_link({local,Id},?MODULE, [Client_config], []).
+	% gen_fsm:start_link({local,Id}, ?MODULE, [Client_config], []).
 	gen_fsm:start({local,Id},?MODULE, [Client_config], []).
 
 sendtoserver(Pid,Binary)->
@@ -50,16 +51,22 @@ sendtoserver(Pid,Binary)->
 	Pid ! {sendtoserver,Binary}.
 
 init([Client_config]) ->
-	?ZS_LOG(),
+	base_logger_util:info_msg("Current pid:~p~n",[self()]),
 	process_flag(trap_exit,true),
-	?ZS_LOG(),
+	try
+		% load_map_sup:start_link(),
+		login_pb:create_ets(),
+		login_pb:init_ets()
+	catch
+		_:_-> ignor
+	end,
+
 	{A,B,C} = os:timestamp(),
-	?ZS_LOG(),
 	rand:seed(exsplus,{A,B,C}),
 	?ZS_LOG(),
 	#robot_client_config{server_addr=Server_addr,server_port=Server_port} = Client_config,
 	{ok,Socket} = gen_tcp:connect(Server_addr, Server_port, [binary,{packet,2}]),
-	base_logger_util:msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),
+	base_logger_util:info_msg("~p:~p connect Socket:~p~n",[?MODULE,?FUNCTION_NAME,Socket]),
 	base_fsm_util:send_state_event(self(), {login}),
 	?ZS_LOG(),
 	% {ok,testing,#state{socket=Socket, role_info=B, map_info=C,client_config=Client_config}}.
@@ -67,16 +74,16 @@ init([Client_config]) ->
 	{ok,loging,#state{socket=Socket,client_config=Client_config}}.
 
 % testing({login1},StateData)->
-% 	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,{login1}]),
+% 	base_logger_util:info_msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,{login1}]),
 % 	base_fsm_util:send_state_event(self(), {login}),
 % 	{next_state, testing, StateData};
 % testing(Event,StateData)->
-% 	base_logger_util:msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,Event]),
+% 	base_logger_util:info_msg("~p:~p(Event:~p)~n",[?MODULE,?FUNCTION_NAME,Event]),
 % 	base_fsm_util:send_state_event(self(), {login}),
 % 	?ZS_LOG(),
 % 	{next_state,loging,StateData}.
 loging({login}, State) ->
-	base_logger_util:msg("~p:~p({login})~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p({login})~n",[?MODULE,?FUNCTION_NAME]),
 	#state{client_config=Client_config} = State,
 	?ZS_LOG(),
 	{A,B,C} = os:timestamp(),
@@ -120,7 +127,7 @@ loging(#user_auth_fail_s2c{reasonid = ReasonId}, State)->
 	{next_state, loging, State};
 
 loging(#init_random_rolename_s2c{bn=Bname,gn=Gname},State)->
-	base_logger_util:msg("~p:~p(init_random_rolename_s2c)~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p(init_random_rolename_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	%%io:format("a new player ~n"),
 	Gender = get(gender),
 	if
@@ -144,7 +151,7 @@ loging(#init_random_rolename_s2c{bn=Bname,gn=Gname},State)->
 
 
 loging(#player_role_list_s2c{roles=RoleList}, State)->
-	base_logger_util:msg("~p:~p(player_role_list_s2c)~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p(player_role_list_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	case RoleList of
 		[]->
 			nothing;
@@ -168,23 +175,23 @@ loging(#player_role_list_s2c{roles=RoleList}, State)->
 			end,
 			{A,B,C} = os:timestamp(),
 			rand:seed(exsplus,{A,B+RoleId,C}),
-			send_line_query(LastMapId)	
+			send_line_query(LastMapId)
 	end,
 	{next_state, loging, State};
  
 loging(#create_role_sucess_s2c{role_id=RoleId}, State)->
-	base_logger_util:msg("~p:~p(create_role_sucess_s2c) RoleId:~p~n",[?MODULE,?FUNCTION_NAME,RoleId]),
+	base_logger_util:info_msg("~p:~p(create_role_sucess_s2c) RoleId:~p~n",[?MODULE,?FUNCTION_NAME,RoleId]),
 	put(role_id,RoleId),
 	send_role_select(get(role_id),get(lineid)),
 	{next_state, loging, State};
 
 loging(#role_line_query_ok_s2c{lines = Lines}, State)->
-	base_logger_util:msg("~p:~p(role_line_query_ok_s2c)~n",[?MODULE,?FUNCTION_NAME]),
-	send_role_select(get(role_id),get(lineid)),	
+	base_logger_util:info_msg("~p:~p(role_line_query_ok_s2c)~n",[?MODULE,?FUNCTION_NAME]),
+	send_role_select(get(role_id),get(lineid)),
 	{next_state, loging, State};
 	
 loging(#learned_skill_s2c{skills = SkillsList}, State)->
-	base_logger_util:msg("~p:~p(learned_skill_s2c) SkillsList~p~n",[?MODULE,?FUNCTION_NAME,SkillsList]),
+	base_logger_util:info_msg("~p:~p(learned_skill_s2c) SkillsList~p~n",[?MODULE,?FUNCTION_NAME,SkillsList]),
 	Skills =
 		if
 			SkillsList =:= []->
@@ -199,7 +206,7 @@ loging(#learned_skill_s2c{skills = SkillsList}, State)->
 	{next_state, loging, State};
 	
 loging(#role_map_change_s2c{x=LX, y=LY,lineid = LastLineId,mapid =LastMapid}, State)->
-	base_logger_util:msg("~p:~p(role_map_change_s2c)~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p(role_map_change_s2c)~n",[?MODULE,?FUNCTION_NAME]),
 	send_map_complete(),
 	TargetMap = get(mapid),
 	TargetLine = get(lineid),
@@ -217,7 +224,7 @@ loging(#role_map_change_s2c{x=LX, y=LY,lineid = LastLineId,mapid =LastMapid}, St
 			self() ! {check_alive},
 			query_time_c2s(),
 			{next_state, gaming, State};
-		TargetMap =/= LastMapid->		
+		TargetMap =/= LastMapid->
 		%%	io:format("roleid:~p, loging TargetMap:~p,LastMapid:~p~n",[get(role_id),TargetMap,LastMapid]),
 			{Random_X,Random_Y} = path:random_pos(TargetMap),
 			put(pos,{Random_X,Random_Y}),
@@ -227,11 +234,11 @@ loging(#role_map_change_s2c{x=LX, y=LY,lineid = LastLineId,mapid =LastMapid}, St
 		%%	io:format("roleid:~p, loging TargetLine:~p,LastLineId:~p~n",[get(role_id),TargetLine,LastLineId]),
 			change_line(TargetLine),
 			{next_state, loging, State}
-	end;	
+	end;
 
 loging(_Other, State)->
-	base_logger_util:msg("~p:~p(_Other)~n",[?MODULE,?FUNCTION_NAME]),
-	ignor,	
+	base_logger_util:info_msg("~p:~p(_Other)~n",[?MODULE,?FUNCTION_NAME]),
+	ignor,
 	{next_state, loging, State}.
 
 gaming(#update_skill_s2c{skillid = SkillId},State)->
@@ -274,7 +281,7 @@ gaming(#query_time_s2c{time_async = ServerTime},State)->
 
 
 gaming(#add_item_s2c{item_attr = #i{slot = Slot}}, State)->	
-	Msg = login_pb:encode_auto_equip_item_c2s(#auto_equip_item_c2s{slot = Slot}),
+	Msg = login_pb:encode_proto_msg(auto_equip_item_c2s,#auto_equip_item_c2s{slot = Slot}),
 	sendtoserver(self(), Msg),
 	gm_randommap(),
 	{next_state, gaming, State};
@@ -287,14 +294,14 @@ gaming(#questgiver_states_update_s2c{npcid = Npcs,queststate = States}, State)->
 						if
 							Tmpre =/= 0->
 								Tmpre;
-							true->	
+							true->
 								case lists:nth(Index,Npcs) of
 									2010001->
 										lists:nth(Index,States);
 									_->
 										Tmpre 
 								end
-						end					 
+						end
 					end,0,lists:seq(1, erlang:length(Npcs)) ),
 			if
 				QuestState =:= ?QUEST_STATUS_COMPLETE->
@@ -303,11 +310,11 @@ gaming(#questgiver_states_update_s2c{npcid = Npcs,queststate = States}, State)->
 					put(path,[]);
 				true->
 					nothing
-			end;			 
+			end;
 		_->
 			nothing
 	end,
-	{next_state, gaming, State};	
+	{next_state, gaming, State};
 
 gaming(#be_killed_s2c{creatureid = CreatureId}, State)->
 	%%io:format("be_killed_s2c creatureid~p  get(role_id) ~p~n",[CreatureId, get(role_id)]),
@@ -318,20 +325,20 @@ gaming(#be_killed_s2c{creatureid = CreatureId}, State)->
 			put(target,0),
 			put(next_action,random_move),
 			start_random_move();
-		MyId->	
-			Msg = login_pb:encode_role_respawn_c2s(#role_respawn_c2s{type = 2}),			
+		MyId->
+			Msg = login_pb:encode_proto_msg(role_respawn_c2s,#role_respawn_c2s{type = 2}),
 			sendtoserver(self(), Msg),
 			put(target,0),
 			start_random_move();
 		_->
 			nothing
 	end,
-	{next_state, gaming , State};	
+	{next_state, gaming , State};
 	
 
 gaming(#object_update_s2c{create_attrs = NewCommers,change_attrs = _Change, deleteids = Deletes}, State)->
 	change_my_aoi(NewCommers,Deletes),
-	{next_state, gaming, State};	
+	{next_state, gaming, State};
 
 gaming(#role_move_fail_s2c{pos = #c{x=TmpX, y=TmpY} }, State)->
 	put(pos,{TmpX,TmpY}),
@@ -349,13 +356,13 @@ gaming(#battle_start_s2c{type = Type,lefttime = LeftTime},State)->
 			timer:send_after(rand:uniform(60)*1000,{join_battle})
 	end,
 	{next_state, gaming, State};
-		
+
 %%战场结束
 gaming(#battle_end_s2c{},State)->
 	case get(in_battle) of
 		true->
 			put(in_battle,false),
-			Msg = login_pb:encode_battle_leave_c2s(#battle_leave_c2s{}),			
+			Msg = login_pb:encode_proto_msg(battle_leave_c2s,#battle_leave_c2s{}),
 			sendtoserver(self(), Msg),
 %% 			put(last_random_move,os:timestamp()),
 			start_random_move();
@@ -367,17 +374,17 @@ gaming(#battle_end_s2c{},State)->
 gaming({move_heartbeat,ReqList},State)->
 	case ReqList =/= [] of 		%%寻路未跑完
 		true->
-			[#c{x = X,y=Y}|T] = ReqList,			
+			[#c{x = X,y=Y}|T] = ReqList,
 			put(pos,{X,Y}),
 			base_fsm_util:send_event_after(2000, {move_heartbeat, T}),
 %% 			base_fsm_util:send_event_after(?MOVE_SPEED*3, {move_heartbeat, T}),
 			NextState = gaming;
 		_->			%%格跑完
-			case get(path) of			
+			case get(path) of
 				[]->			%%路径跑完,做行动
 					{PosX,PosY} = get(pos),
 					%%io:format("stop_move_c2s ~p ~n",[get_now_time()]),
-					Msg = login_pb:encode_stop_move_c2s(#stop_move_c2s{posx = PosX,posy = PosY,time = get_now_time()}),
+					Msg = login_pb:encode_proto_msg(stop_move_c2s,#stop_move_c2s{posx = PosX,posy = PosY,time = get_now_time()}),
 					sendtoserver(self(),Msg), 
 					case get(next_action) of
 						random_move->
@@ -385,15 +392,15 @@ gaming({move_heartbeat,ReqList},State)->
 							NextState = gaming;%%战斗寻路或者继续随机寻路跑
 						Other->
 							case Other of
-								{com_quest,2010001}->								
+								{com_quest,2010001}->
 								case get(pos) of
-									{38,76}->										
+									{38,76}->
 										com_quest(2010001),
 										NextState = gaming;
-									_->											
+									_->
 										start_move({38,76}),
 										NextState = gaming
-								end;		
+								end;
 								{attack,Objectid,_}->
 									start_attack(Objectid),
 									NextState = attacking
@@ -402,8 +409,8 @@ gaming({move_heartbeat,ReqList},State)->
 				Path->				%%路径没跑完,继续跑
 					move_request(Path),
 					NextState = gaming
-			end		
-	end,			
+			end
+	end,
 	{next_state, NextState, State};
 	
 gaming(#other_role_move_s2c{other_id=OtherId,posx=X,posy=Y},State)->
@@ -412,14 +419,14 @@ gaming(#other_role_move_s2c{other_id=OtherId,posx=X,posy=Y},State)->
 
 gaming(#be_attacked_s2c{enemyid=EnemyId,skill=_Skill,units=_Units,flytime=_Flytime},State)->
 %% 	Msg = "你丫有毛病!见人就砍?哪里走,看招!",
-%% 	Message = login_pb:encode_chat_c2s(#chat_c2s{type = 1, desserverid = 1, desrolename = "", msginfo = Msg, details=[0],reptype=0}),
+%% 	Message = login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = 1, desserverid = 1, desrolename = "", msginfo = Msg, details=[0],reptype=0}),
 %% 	sendtoserver(self(), Message),
 	[Skill|_]=get(roleskill),
 	robot_attack(Skill,EnemyId),
 	{next_state,gaming, State};
 
 gaming(_Other, State)->
-%% 	io:format("gaming,Other:~p~n",[_Other]),	
+%% 	io:format("gaming,Other:~p~n",[_Other]),
 	{next_state, gaming, State}.
 
 attacking({attack_heartbeat,CreatureId}, State)->
@@ -427,7 +434,7 @@ attacking({attack_heartbeat,CreatureId}, State)->
 	SkillList = get(roleskill),
 	Random = rand:uniform(erlang:length(SkillList)),
 	SkillId = lists:nth(Random,SkillList),
-	Message = login_pb:encode_role_attack_c2s(#role_attack_c2s{creatureid=CreatureId, skillid=SkillId}),
+	Message = login_pb:encode_proto_msg(role_attack_c2s,#role_attack_c2s{creatureid=CreatureId, skillid=SkillId}),
 	sendtoserver(self(), Message),
 	base_fsm_util:send_event_after(1300,{attack_heartbeat,CreatureId}),
 	{next_state, attacking, State};
@@ -436,14 +443,14 @@ attacking(#be_killed_s2c{creatureid = CreatureId}, State)->
  	%%io:format("be_killed_s2c creatureid~p  get(role_id) ~p~n",[CreatureId, get(role_id)]),
 	MyId = get(role_id),
 	case CreatureId of
-		MyId->	
+		MyId->
 			my_respawn();
 		_Other->
-			nothing		 		
+			nothing
 	end,
 	put(target,0),
 	start_random_move(),
-	{next_state, gaming  , State};	
+	{next_state, gaming  , State};
 
 attacking(#role_attack_s2c{result = Result,enemyid = CastId}, State)->
 	%%io:format("role_attack_s2c Result:~p,curpos:~p~n",[Result,get(pos)]),
@@ -456,12 +463,12 @@ attacking(#role_attack_s2c{result = Result,enemyid = CastId}, State)->
 			%%start_random_move();
 		_->
 			NextState  = attacking
-	end,				 	 
+	end,
 	{next_state, NextState, State};
 
 
 attacking(_Other, State)->
-	ignor,	
+	ignor,
 	{next_state, attacking, State}.
 
 handle_info({quit},StateName, State) ->
@@ -504,7 +511,7 @@ handle_info({speek_loop},StateName,State)->
 
 handle_info({sendtoserver,Binary},StateName,#state{socket=Socket}=State)->
 	?ZS_LOG(),
-	base_logger_util:msg("~p:~p({sendtoserver,Binary=~p},StateName=~p,State=~p)~n)",[?MODULE,?FUNCTION_NAME,Binary,StateName,State]),
+	base_logger_util:info_msg("~p:~p({sendtoserver,Binary=~p},StateName=~p,State=~p)~n)",[?MODULE,?FUNCTION_NAME,Binary,StateName,State]),
 	gen_tcp:send(Socket, Binary),
 	{next_state, StateName, State};
 	
@@ -517,13 +524,13 @@ handle_info({tcp_closed, _Socket}, StateName, StateData) ->
 handle_info({tcp,Socket,Binary},StateName,State)->
 	?ZS_LOG(),
 	try
-		put(check_alive,os:timestamp()),	
+		put(check_alive,os:timestamp()),
 		%@@Term = erlang:binary_to_term(Binary),
 		%@@ID = element(2,Term),
 		%@@BinMsg = erlang:setelement(1,Term, login_pb:get_record_name(ID)),
 		<<ID:16, Binary0/binary>> = Binary,
 		RecordName = login_pb:get_record_name(ID),
-		base_logger_util:msg("~p:~p({tcp,Socket,Binary}) proto:~p~n",[?MODULE,?FUNCTION_NAME,RecordName]),
+		base_logger_util:info_msg("~p:~p({tcp,Socket,Binary}) proto:~p~n",[?MODULE,?FUNCTION_NAME,RecordName]),
 		case RecordName of
 			user_auth_fail_s2c ->
 				BinMsg = login_pb:decode_user_auth_fail_s2c(Binary0);
@@ -577,7 +584,7 @@ handle_info({join_battle},StateName,State)->
 			nothing;
 		_->
 			put(in_battle,true),
-			Msg = login_pb:encode_battle_join_c2s(#battle_join_c2s{type = ?TANGLE_BATTLE}),			
+			Msg = login_pb:encode_proto_msg(battle_join_c2s,#battle_join_c2s{type = ?TANGLE_BATTLE}),
 			sendtoserver(self(), Msg)
 	end,
 	{next_state, StateName, State};	
@@ -601,8 +608,8 @@ send_quest_compelete()->
 	todo.
 	
 move_to_target(NpcId)->
-	todo.	
-		
+	todo.
+
 change_my_aoi(NewCommers,Deletes)->
 	lists:foreach(fun(#o{objectid = Objectid,objecttype = _Type,attrs = _Attrs})->
 						put(aoi_list,lists:keydelete(Objectid,1,get(aoi_list)))
@@ -613,15 +620,15 @@ change_my_aoi(NewCommers,Deletes)->
 					case lists:keyfind(?ROLE_ATTR_CREATURE_FLAG,2,Attrs) of
 						false->
 							NpcTmps;
-						{_,_,CreatureType} ->	
+						{_,_,CreatureType} ->
 							put(aoi_list,[ {Objectid,CreatureType,{X,Y}}| get(aoi_list)]),
 							if
-								(Type =:= ?UPDATETYPE_NPC) and(CreatureType =:= ?CREATURE_NPC)->											
-									[ Objectid|NpcTmps ];							
+								(Type =:= ?UPDATETYPE_NPC) and(CreatureType =:= ?CREATURE_NPC)->
+									[ Objectid|NpcTmps ];
 								true->
 									NpcTmps
 							end
-					end		
+					end
 			end,[],NewCommers),
 	if
 		Npcs =/= []->
@@ -638,10 +645,10 @@ range_alert()->
 			MonsterAoi = lists:filter(fun({_,TypeTmp,_})->
 					TypeTmp =:= ?CREATURE_MONSTER
 				end,get(aoi_list)),
-			Length = erlang:length(MonsterAoi),	
+			Length = erlang:length(MonsterAoi),
 			if
-				Length > 0-> 	
-					Nth = rand:uniform(Length),	
+				Length > 0->
+					Nth = rand:uniform(Length),
 					{Objectid1,_,Pos1} = lists:nth(Nth,MonsterAoi),
 					case get(target) of
 						0->
@@ -661,10 +668,10 @@ range_alert()->
 					RoleAoi = lists:filter(fun({_,TypeTmp,_})->
 						TypeTmp =:= ?UPDATETYPE_ROLE
 					end,get(aoi_list)),
-					Length1 = erlang:length(RoleAoi),	
+					Length1 = erlang:length(RoleAoi),
 					if
-						Length1 > 0-> 	
-							Nth1 = rand:uniform(Length1),	
+						Length1 > 0-> 
+							Nth1 = rand:uniform(Length1),
 							{Objectid2,_,Pos2} = lists:nth(Nth1,RoleAoi),
 							case get(target) of
 								0->
@@ -680,10 +687,10 @@ range_alert()->
 					RoleAoi = lists:filter(fun({_,TypeTmp,_})->
 						TypeTmp =:= ?CREATURE_MONSTER
 					end,get(aoi_list)),
-					Length1 = erlang:length(RoleAoi),	
+					Length1 = erlang:length(RoleAoi),
 					if
-						Length1 > 0-> 	
-							Nth1 = rand:uniform(Length1),	
+						Length1 > 0-> 
+							Nth1 = rand:uniform(Length1),
 							{Objectid2,_,Pos2} = lists:nth(Nth1,RoleAoi),
 							case get(target) of
 								0->
@@ -696,9 +703,9 @@ range_alert()->
 							nothing
 					end
 %% 					nothing
-			end					
+			end
 	end,
-				
+
 	case get(target) of
 		0->				%%没有敌人,继续跑
 			case get(path) of
@@ -715,42 +722,42 @@ range_alert()->
  					start_move(Pos);
 				_->
 					put(target,0)
-			end															
-	end.	
+			end
+	end.
 	
 send_query_npc_state(NpcIds)->
-	Message = login_pb:encode_questgiver_states_update_c2s(#questgiver_states_update_c2s{npcid = NpcIds}),
+	Message = login_pb:encode_proto_msg(questgiver_states_update_c2s,#questgiver_states_update_c2s{npcid = NpcIds}),
 	sendtoserver(self(), Message).
 	
-send_create_role_request()->	
+send_create_role_request()->
 	Name = get(role_name),
 	Gender = get(gender),
 	Class = get(class),
 	%%io:format("send_create_role_request Gender ~p Class ~p ~n",[Gender,Class]),
-	Message = login_pb:encode_create_role_request_c2s(#create_role_request_c2s{role_name = Name,gender = Gender,classtype = Class}),
+	Message = login_pb:encode_proto_msg(create_role_request_c2s,#create_role_request_c2s{role_name = Name,gender = Gender,classtype = Class}),
 	sendtoserver(self(), Message).
 
 send_line_query(LastMapId)->
-	Message = login_pb:encode_role_line_query_c2s(#role_line_query_c2s{mapid = LastMapId}),
+	Message = login_pb:encode_proto_msg(role_line_query_c2s,#role_line_query_c2s{mapid = LastMapId}),
 	sendtoserver(self(), Message).
 
-send_role_select(RoleId,LineId)->	
-	Message = login_pb:encode_player_select_role_c2s(
+send_role_select(RoleId,LineId)->
+	Message = login_pb:encode_proto_msg(player_select_role_c2s,
 						#player_select_role_c2s{roleid = RoleId,lineid = LineId}),
 	sendtoserver(self(), Message).
 
 send_map_complete()->
-	Message = login_pb:encode_map_complete_c2s(#map_complete_c2s{}),	
+	Message = login_pb:encode_proto_msg(map_complete_c2s,#map_complete_c2s{}),
 	sendtoserver(self(), Message ).
 
 query_time_c2s()->
-	Message2 = login_pb:encode_query_time_c2s(#query_time_c2s{}),
+	Message2 = login_pb:encode_proto_msg(query_time_c2s,#query_time_c2s{}),
 	sendtoserver(self(), Message2 ),
 	put(target,0),
 	put(aoi_list,[]).
 
 change_line(TargetLine)->
-	Message = login_pb:encode_role_change_line_c2s(#role_change_line_c2s{lineid = TargetLine}),
+	Message = login_pb:encode_proto_msg(role_change_line_c2s,#role_change_line_c2s{lineid = TargetLine}),
 	sendtoserver(self(), Message).
 	
 	
@@ -773,7 +780,7 @@ start_random_move() ->
 					{NX,NY} = path:random_pos(get(mapid)),
 					put(pos,{NX,NY}),
 					gm_move(get(mapid),NX,NY)
-			end;			
+			end;
 		true->
 			Path = lists:map(fun({TmpX,TmpY})-> #c{x=TmpX, y=TmpY} end,TmpPath),
  			put(path,Path),
@@ -801,21 +808,21 @@ start_move(Pos) ->
 			move_request(Path1)
 	end.
 
-move_request(Path)->		
+move_request(Path)->
 	{ReqList,RemList} = lists:split(erlang:min(?MOVE_NUM,erlang:length(Path)),Path),
 	put(path,RemList),
 	if
-		Path =/= []->				
-			[NextPos|_RePath] =  ReqList,		
+		Path =/= []->
+			[NextPos|_RePath] =  ReqList,
 			{_,X,Y} = NextPos,
 			{NowX,NowY} = get(pos),
-			put(pos,{X,Y}),					
-			Message = login_pb:encode_role_move_c2s(#role_move_c2s{time = get_now_time(),posx = NowX,posy = NowY,path=ReqList}),
+			put(pos,{X,Y}),
+			Message = login_pb:encode_proto_msg(role_move_c2s,#role_move_c2s{time = get_now_time(),posx = NowX,posy = NowY,path=ReqList}),
 			sendtoserver(self(), Message);
 		true->
 			nothing
 	end,
-	base_fsm_util:send_state_event(self(), {move_heartbeat,ReqList}).		
+	base_fsm_util:send_state_event(self(), {move_heartbeat,ReqList}).
 
 get_now_time()->
 	{Now,ServerTime } = get(server_time),
@@ -823,7 +830,7 @@ get_now_time()->
 
 com_quest(2010001)->
 	%%io:format("com_quest 2010001~n"),
-	Message = login_pb:encode_questgiver_complete_quest_c2s(#questgiver_complete_quest_c2s{npcid = 2010001,questid = 31401000,choiceslot = 0}),
+	Message = login_pb:encode_proto_msg(questgiver_complete_quest_c2s,#questgiver_complete_quest_c2s{npcid = 2010001,questid = 31401000,choiceslot = 0}),
 	sendtoserver(self(), Message).
 
 start_attack(CreatureId) ->
@@ -846,12 +853,12 @@ begin_auth(AccountName,UserId,ServerId)->
 	Md5Str = base_auth_util:binary_to_hexstring(MD5Bin),
 	AuthTerm = #user_auth_c2s{username=AccountName,userid=UserId,time=Time,cm="1",serverid = ServerId,flag = Md5Str,userip = "",type = "",sid = "",openid="",openkey="",appid="",pf="",pfkey=""},
 	?ZS_LOG(),
-	Binary = login_pb:encode_user_auth_c2s(AuthTerm),
+	Binary = login_pb:encode_proto_msg(user_auth_c2s,AuthTerm),
 	?ZS_LOG(),
 	sendtoserver(self(), Binary).
 
 set_robot_gmaccount(RobotName)->
-	DbNodes = node_util:get_dbnodes(),
+	DbNodes = base_node_util:get_dbnode(),
 	case rpc:call(DbNodes,gm_op,gm_set_role_privilege_rpc,[RobotName,3]) of
 		{error,"norole"}->
 			nothing;
@@ -867,7 +874,7 @@ kick_robot(RobotAccount)->
 			nothing;
 		{ok,[Info]}->
 			[RobotId]=Info#account.roleids,
-			[MapNode |_] = node_util:get_mapnodes(),
+			[MapNode |_] = base_node_util:get_mapnodes(),
 			case rpc:call(MapNode,gm_order_op,kick_user,[RobotId]) of
 				{error,"notonline"}->
 					notonline;
@@ -933,11 +940,11 @@ call_robot(Index)->
 	end.
 
 set_pkmodel(Type)->
-	Message=login_pb:encode_set_pkmodel_c2s(#set_pkmodel_c2s{pkmodel=Type}),
+	Message=login_pb:encode_proto_msg(set_pkmodel_c2s,#set_pkmodel_c2s{pkmodel=Type}),
 	sendtoserver(self(), Message).
 
 robot_attack(Skill,TargetId)->
-	Message=login_pb:encode_role_attack_c2s(#role_attack_c2s{skillid=Skill,creatureid=TargetId}),
+	Message=login_pb:encode_proto_msg(role_attack_c2s,#role_attack_c2s{skillid=Skill,creatureid=TargetId}),
 	sendtoserver(self(), Message),
 	self()!{continue_attack,{Skill,TargetId}}.
 
@@ -945,33 +952,33 @@ gm_randommap()->
 	{MapId,X,Y} = lists:nth(rand:uniform(10),[{100,39,78},{200,64,122},{300,175,175},{500,81,89},{600,206,176},{700,82,128},{1000,88,101},{1300,64,56},{1400,71,133},{333,140,144}]),
 	put(mapid,MapId),
 	Msg = ".zymove "++erlang:integer_to_list(MapId)++" "++erlang:integer_to_list(X)++" "++erlang:integer_to_list(Y),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 gm_move(MapId,X,Y)->
 	Msg = ".zymove "++erlang:integer_to_list(MapId)++" "++erlang:integer_to_list(X)++" "++erlang:integer_to_list(Y),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 gm_levelup(Level)->
 	Msg = ".zylevelup "++erlang:integer_to_list(Level),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 gm_moneychange(Money)->
 	Msg = ".zymoney "++erlang:integer_to_list(Money),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 gm_goldchange(Gold)->
 	Msg = ".zygold "++erlang:integer_to_list(Gold),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 %%获得物品
 gm_getitem(ItemId)->
 	Msg = ".zyitem "++erlang:integer_to_list(ItemId),
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid=0, desrolename = "", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message).
 
 %%喊话
@@ -985,22 +992,22 @@ speek_to_world()->
 	end,
 	Msg = robot_speak:get_random_word(),
 %% 	Msg = "我是"++ get(role_name)++" ++好友 ",
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = Type , desserverid = 1, desrolename = "", msginfo = Msg, details=[0],reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = Type , desserverid = 1, desrolename = "", msginfo = Msg, details=[0],reptype=0}),
 	sendtoserver(self(), Message).
 
 
 my_respawn()->
 	Msg = ".zyitem 19000270",
-	Message =  login_pb:encode_chat_c2s(#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid = 1,desrolename ="", msginfo = Msg, details="",reptype=0}),
+	Message =  login_pb:encode_proto_msg(chat_c2s,#chat_c2s{type = ?CHAT_TYPE_INTHEVIEW, desserverid = 1,desrolename ="", msginfo = Msg, details="",reptype=0}),
 	sendtoserver(self(), Message),
-	Msg1 = login_pb:encode_role_respawn_c2s(#role_respawn_c2s{type = 2}),			
+	Msg1 = login_pb:encode_proto_msg(role_respawn_c2s,#role_respawn_c2s{type = 2}),
 	sendtoserver(self(), Msg1).
 
 %%学习技能
 learn_skill([])->
 	nothing;
 learn_skill([Skillid|ReMainSkill])->
-	Message = login_pb:encode_skill_learn_item_c2s(#skill_learn_item_c2s{skillid = Skillid}),
+	Message = login_pb:encode_proto_msg(skill_learn_item_c2s,#skill_learn_item_c2s{skillid = Skillid}),
 	sendtoserver(self(), Message),
 	learn_skill(ReMainSkill).
 
@@ -1010,7 +1017,7 @@ clear_package()->
 destroy_item(_PackageSlot,0)->
 	nothing;
 destroy_item(PackageSlot,ItemNum)->
-	Message = login_pb:encode_destroy_item_c2s(#destroy_item_c2s{slot = PackageSlot}),
+	Message = login_pb:encode_proto_msg(destroy_item_c2s,#destroy_item_c2s{slot = PackageSlot}),
 	sendtoserver(self(), Message),
 	destroy_item(PackageSlot+1,ItemNum-1).
 
@@ -1022,7 +1029,7 @@ destroy_item(PackageSlot,ItemNum)->
 %% Returns: any
 %% --------------------------------------------------------------------
 terminate(Reason, StateName, StateData) ->
-	base_logger_util:msg("process terminate Reason=~p StateName=~p StateData=~p~n",[Reason,StateName,StateData]),
+	base_logger_util:info_msg("process terminate Reason=~p StateName=~p StateData=~p~n",[Reason,StateName,StateData]),
     ok.
 
 %% --------------------------------------------------------------------
@@ -1031,13 +1038,13 @@ terminate(Reason, StateName, StateData) ->
 %% Returns: {ok, NewState, NewStateData}
 %% --------------------------------------------------------------------
 code_change(_OldVsn, StateName, StateData, _Extra) ->
-    {ok, StateName, StateData}.	
+    {ok, StateName, StateData}.
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 处理其他事件
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_event(Event, StateName, StateData) ->
-	base_logger_util:msg("handle_event Event=~p StateName=~p StateData=~p~n",[Event,StateName,StateData]),
+	base_logger_util:info_msg("handle_event Event=~p StateName=~p StateData=~p~n",[Event,StateName,StateData]),
 	{next_state, StateName, StateData}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1045,9 +1052,6 @@ handle_event(Event, StateName, StateData) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 handle_sync_event(Event, From, StateName, StateData) ->
-	base_logger_util:msg("handle_sync_event Event=~p From=~p StateName=~p StateData=~p~n",[Event,From,StateName,StateData]),
+	base_logger_util:info_msg("handle_sync_event Event=~p From=~p StateName=~p StateData=~p~n",[Event,From,StateName,StateData]),
 	Reply = ok,
-	{reply, Reply, StateName, StateData}.		
-		
-		
-
+	{reply, Reply, StateName, StateData}.

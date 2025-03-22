@@ -22,7 +22,7 @@ run()->
 	base_application_server:force_start(),
 
 	Node = base_node_util:get_node_sname(node()),
-	base_logger_util:msg("cur node name:~p~n",[Node]),
+	base_logger_util:info_msg("cur node name:~p~n",[Node]),
 
 
 	% 不同节点 check各自的运行	

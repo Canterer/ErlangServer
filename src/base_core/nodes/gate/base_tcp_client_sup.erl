@@ -36,7 +36,7 @@ get_client_count()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([OnReceiveData,OnClientClose]) ->
+?init([OnReceiveData,OnClientClose]) ->
 	{ok,{{simple_one_for_one,5, 60}, 
 		[
 			{base_tcp_client_fsm, 				%% target process noname

@@ -11,7 +11,6 @@
 -export([dispatch/4]).
 %%
 %%
--define(RECORD_DECODE(Proto_c2s), list_to_atom(atom_to_list(decode_) ++ atom_to_list(Proto_c2s))).
 
 %% dispatch(ID, Binary,FromProcName,RolePid)->
 %% 	case ID of
@@ -33,7 +32,7 @@
 %% 		25->
 %% 			Message = login_pb:decode_role_move_c2s(Binary),
 %% 			role_packet:handle(Message, RolePid);
-%% 		_UnknMsg -> base_logger_util:msg("get unknown message ~p\n",[ID])
+%% 		_UnknMsg -> base_logger_util:info_msg("get unknown message ~p\n",[ID])
 %% 	end.
 
 %%
@@ -41,10 +40,8 @@
 %%
 dispatch(ID, Binary,FromProcName,RolePid)->
 	RecordName = login_pb:get_record_name(ID),
-	Message = apply(login_pb,?RECORD_DECODE(RecordName),[Binary]),
-	base_logger_util:msg("dispatch client_packet (FromProcName:~p,RolePid:~p,MsgId:~p,MsgName:~p)~n", [FromProcName,RolePid,ID,RecordName]),
-	Str = login_pb:message_to_string(Message),
-	base_logger_util:msg("Message:~s",[Str]),
+	Message =login_pb:decode_proto_msg(RecordName,Binary),
+	base_logger_util:info_msg("dispatch client_packet (FromProcName:~p,RolePid:~p,MsgId:~p,MsgName:~p)~n", [FromProcName,RolePid,ID,RecordName]),
 	case RecordName of
 		user_auth_c2s->  
 			% Message = login_pb:decode_user_auth_c2s(Binary),
@@ -59,7 +56,7 @@ dispatch(ID, Binary,FromProcName,RolePid)->
 			end;
 		heartbeat_c2s->
 			% Message = login_pb:decode_heartbeat_c2s(Binary),
-			Msg = login_pb:encode_heartbeat_c2s(Message),
+			Msg = login_pb:encode_proto_msg(heartbeat_c2s,Message),
 			base_tcp_client_fsm:send_data(self(),Msg);
 		player_select_role_c2s->
 			% Message = login_pb:decode_player_select_role_c2s(Binary),
@@ -1435,5 +1432,5 @@ dispatch(ID, Binary,FromProcName,RolePid)->
 			% Message=login_pb:decode_astrology_unlock_c2s(Binary),
 			astrology_packet:handle(Message, RolePid);
 
-		_UnknMsg -> base_logger_util:msg("get unknown message ~p\n",[ID])
+		_UnknMsg -> base_logger_util:info_msg("get unknown message ~p\n",[ID])
 	end.

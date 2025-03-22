@@ -42,16 +42,16 @@
 %%		  {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, Arg) ->
-	base_logger_util:msg("_Type:~p Arg:~p~n", [_Type, Arg]),
-	base_logger_util:msg("~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE]),
+	base_logger_util:info_msg("_Type:~p Arg:~p~n", [_Type, Arg]),
+	base_logger_util:info_msg("~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE]),
 	{ok,Id} = application:get_env(?MODULE, id),
 	{ok,Client_config} = application:get_env(?MODULE, client_config),
-	base_logger_util:msg("Id:~p Client_config:~p~n", [Id, Client_config]),
+	base_logger_util:info_msg("Id:~p Client_config:~p~n", [Id, Client_config]),
 	base_robot_client_sup:start_link([Id, Client_config]).
 
 start(Id, Client_config, _)->
-	base_logger_util:msg("~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE]),
-	base_logger_util:msg("Id:~p Client_config:~p~n", [Id, Client_config]),
+	base_logger_util:info_msg("~p:~p:line:~p~n",[?MODULE,?FUNCTION_NAME,?LINE]),
+	base_logger_util:info_msg("Id:~p Client_config:~p~n", [Id, Client_config]),
 	application:set_env(?MODULE, id, Id),
 	application:set_env(?MODULE, client_config, Client_config),
 	application:start(?MODULE).

@@ -47,48 +47,48 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link(MapProcName,{MapId_line,Tag})->
-	base_gen_server:start_link({local,MapProcName},?MODULE,[MapProcName, {MapId_line,Tag}],[]).
+	?base_gen_server:start_link({local,MapProcName},?MODULE,[MapProcName, {MapId_line,Tag}],[]).
 
 join_grid(MapProcName,Grid,CreatureId)->
-	base_gen_server:call(MapProcName,{join_grid,Grid,CreatureId},infinity).
+	?base_gen_server:call(MapProcName,{join_grid,Grid,CreatureId},infinity).
 
 leave_grid(MapProcName,Grid,CreatureId)->
-	base_gen_server:call(MapProcName,{leave_grid,Grid,CreatureId}).
+	?base_gen_server:call(MapProcName,{leave_grid,Grid,CreatureId}).
 
 %%lefttime
 get_instance_details(MapProcName,Node)->
 	try
-		base_gen_server:call({MapProcName,Node},get_instance_details)
+		?base_gen_server:call({MapProcName,Node},get_instance_details)
 	catch
 		E:R->
-			base_logger_util:msg("get_instance_details error E ~p: R ~p",[E,R]),
+			base_logger_util:info_msg("get_instance_details error E ~p: R ~p",[E,R]),
 			[]
 	end.
 
 join_instance(RoleId,MapProcName,Node)->
 	try
-		base_gen_server:call({MapProcName,Node},{role_come,RoleId})
+		?base_gen_server:call({MapProcName,Node},{role_come,RoleId})
 	catch
 		E:R->
-			base_logger_util:msg("join_instance error E ~p: R ~p",[E,R]),
+			base_logger_util:info_msg("join_instance error E ~p: R ~p",[E,R]),
 			error
 	end.
 	
 leave_instance(RoleId,MapProcName)->
 	try
-		base_gen_server:call(MapProcName,{role_leave,RoleId})
+		?base_gen_server:call(MapProcName,{role_leave,RoleId})
 	catch
 		E:R->
-			base_logger_util:msg("leave_instance RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
+			base_logger_util:info_msg("leave_instance RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
 			nothing
 	end.
 	
 leave_instance(RoleId,MapProcName,offline)->
 	try
-		base_gen_server:call(MapProcName,{role_leave,RoleId,offline})
+		?base_gen_server:call(MapProcName,{role_leave,RoleId,offline})
 	catch
 		E:R-> 
-			base_logger_util:msg("leave_instance offline RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
+			base_logger_util:info_msg("leave_instance offline RoleId ~p MapProcName~p error ~p:~p ~n",[RoleId,MapProcName,E,R]),
 				nothing
 	end.
 
@@ -100,21 +100,21 @@ destroy_instance(Node,Proc,TimeMs)->
 
 get_instance_id(MapProcName)->
 	try
-		base_gen_server:call(MapProcName,{get_instance_id})
+		?base_gen_server:call(MapProcName,{get_instance_id})
 	catch
 		E:R-> 
-			base_logger_util:msg("get_instance_id MapProcName~p error ~p:~p ~n",[MapProcName,E,R]),
+			base_logger_util:info_msg("get_instance_id MapProcName~p error ~p:~p ~n",[MapProcName,E,R]),
 			[]
 	end.
 
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([MapProcName, {{LineId,MapId}, Tag}]) ->
+?init([MapProcName, {{LineId,MapId}, Tag}]) ->
 	process_flag(trap_exit, true),
-	AOIdb = ets_operater_behaviour:new(MapProcName, [set, public, named_table]),
+	AOIdb = ?base_ets:new(MapProcName, [set, public, named_table]),
 	% NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
-	% ets_operater_behaviour:new(NpcInfoDB, [set,public,named_table]),
+	% ?base_ets:new(NpcInfoDB, [set,public,named_table]),
 	% put(npcinfo_db,NpcInfoDB),	
 	% npc_sup:start_link(MapId,MapProcName,NpcInfoDB),
 	case Tag of
@@ -177,10 +177,10 @@ do_init([MapProcName, {{LineId,MapId}, Tag}]) ->
 	% end,
 	MapDb = base_map_db_util:make_db_name(MapId),
 	?ZS_LOG("MapDb:~p",[MapDb]),
-	case ets:info(MapDb) of
+	case ?base_ets:info(MapDb) of
 		undefined->
 			?ZS_LOG(),
-			ets_operater_behaviour:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
+			?base_ets:new(MapDb, [set,named_table]),	%% first new the database, and then register proc
 			case base_map_info_db:get_map_info(MapId) of
 				[]->
 					nothing;
@@ -199,7 +199,7 @@ do_init([MapProcName, {{LineId,MapId}, Tag}]) ->
 			put(instanceid,InstanceId),
 			case ProtoInfo of
 				[]->
-					base_logger_util:msg("error instance proto info ProtoId ~p,Del_Time default:60000 ~n",[ProtoId]),
+					base_logger_util:info_msg("error instance proto info ProtoId ~p,Del_Time default:60000 ~n",[ProtoId]),
 					DurationTime = 60000;
 				_->
 					DurationTime =	instance_proto_db:get_duration_time(ProtoInfo)
@@ -220,7 +220,7 @@ do_init([MapProcName, {{LineId,MapId}, Tag}]) ->
 
 
 %%lefttime
-do_handle_call(get_instance_details,_From,State) ->
+?handle_call(get_instance_details,_From,State) ->
 	Reply = 
 	case get(instanceid) of
 		[]->		%%not instance
@@ -230,15 +230,15 @@ do_handle_call(get_instance_details,_From,State) ->
 			trunc(timer:now_diff(base_timer_server:get_correct_now(),StartTime)/1000000)
 	end,
 	{reply, Reply,State};
-do_handle_call({get_instance_id}, _From,ProcState) ->
+?handle_call({get_instance_id}, _From,ProcState) ->
 	Reply = get(instanceid),
 	{reply, Reply,ProcState};
-do_handle_call({role_come,RoleId}, _From,ProcState) ->	
+?handle_call({role_come,RoleId}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
 			Reply = error;
 		InstanceId-> 
-			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of			
+			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
 				[]->
 					Reply = error;
 				{Id,Creation,StartTime,CanJoin,InstanceNode ,Pid,MapId,Protoid,Members}->
@@ -257,12 +257,12 @@ do_handle_call({role_come,RoleId}, _From,ProcState) ->
 			end
 	end,
 	{reply, Reply,ProcState};
-do_handle_call({role_leave,RoleId}, _From,ProcState) ->
+?handle_call({role_leave,RoleId}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
 			Reply = error;
 		InstanceId-> 
-			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of			
+			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
 				[]->
 					Reply = error;
 				{Id,Creation,StartTime,CanJoin,InstanceNode ,Pid,MapId,Protoid,Members}->
@@ -291,12 +291,12 @@ do_handle_call({role_leave,RoleId}, _From,ProcState) ->
 	end,
 	{reply, Reply, ProcState};
 %%if last one is offline ,not delete the instance
-do_handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
+?handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 	case  get(instanceid) of
 		[]->
 			Reply = error;
 		InstanceId-> 
-			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of			
+			case instance_pos_db:get_instance_pos_from_mnesia(InstanceId) of
 				[]->
 					Reply = error;
 				{Id,Creation,StartTime,CanJoin,InstanceNode ,Pid,MapId,Protoid,Members}->
@@ -324,57 +324,57 @@ do_handle_call({role_leave,RoleId,offline}, _From,ProcState) ->
 			end
 	end,
 	{reply, Reply,ProcState}; 
-do_handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
+?handle_call({join_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
 	case creature_op:what_creature(CreatureId) of
 		role->
-			case ets:lookup(MapProcName, Grid) of
-				[] ->										
-					ets_operater_behaviour:insert(MapProcName, {Grid, [],[CreatureId],true});			
+			case ?base_ets:lookup(MapProcName, Grid) of
+				[] ->
+					?base_ets:insert(MapProcName, {Grid, [],[CreatureId],true});
 				[{_, _,Roles,_}] ->			
 					case lists:member(CreatureId,Roles) of
 						false-> 
-							ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_ROLES,[CreatureId]++Roles});
+							?base_ets:update_element(MapProcName,Grid,{?ETS_POS_ROLES,[CreatureId]++Roles});
 						_->
 							nothing
-					end												
+					end
 			end;
 		npc->
-			case ets:lookup(MapProcName, Grid) of
-				[] ->						
-					ets_operater_behaviour:insert(MapProcName, {Grid, [CreatureId],[],false});			
-				[{_, Units,_,_}] ->	
+			case ?base_ets:lookup(MapProcName, Grid) of
+				[] ->
+					?base_ets:insert(MapProcName, {Grid, [CreatureId],[],false});
+				[{_, Units,_,_}] ->
 					case lists:member(CreatureId,Units) of
 						false-> 
-							ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_UNITS,[CreatureId]++Units});
+							?base_ets:update_element(MapProcName,Grid,{?ETS_POS_UNITS,[CreatureId]++Units});
 						_->
 							nothing
-					end															
+					end
 			end
 	end,	
   	Reply = ok,
 	{reply, Reply,ProcState}; 
-do_handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
-  	case ets:lookup(MapProcName, Grid) of
+?handle_call({leave_grid,Grid,CreatureId}, _From,#state{mapproc=MapProcName}=ProcState) ->
+  	case ?base_ets:lookup(MapProcName, Grid) of
 		[] ->
-			nothing;			
+			nothing;
 		[{_,Units,Roles,_}] ->
 			case creature_op:what_creature(CreatureId) of
-				role ->																												
-					ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_ROLES,lists:delete(CreatureId,Roles)});
+				role ->
+					?base_ets:update_element(MapProcName,Grid,{?ETS_POS_ROLES,lists:delete(CreatureId,Roles)});
 				npc->
-					ets_operater_behaviour:update_element(MapProcName,Grid,{?ETS_POS_UNITS,lists:delete(CreatureId,Units)})
-			end					
+					?base_ets:update_element(MapProcName,Grid,{?ETS_POS_UNITS,lists:delete(CreatureId,Units)})
+			end
 	end,
 	Reply = ok,
 	{reply, Reply, ProcState};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({on_destroy,WaitTime},ProcState)->
+?handle_info({on_destroy,WaitTime},ProcState)->
 	erlang:send_after(WaitTime,self(),{on_destroy}),
 	case  get(instanceid) of
 		[]->
@@ -390,7 +390,7 @@ do_handle_info({on_destroy,WaitTime},ProcState)->
 			end
 	end,
 	{noreply,ProcState};
-do_handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
+?handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
 			nothing;
@@ -413,7 +413,7 @@ do_handle_info({on_destroy},#state{mapproc=MapProcName}=ProcState)->
 			end
 	end,
 	{noreply,ProcState};
-do_handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
+?handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 	case  get(instanceid) of
 		[]->
 			nothing;
@@ -424,10 +424,10 @@ do_handle_info({destory_self},#state{mapproc=MapProcName}=ProcState)->
 			instanceid_generator:safe_turnback_proc(MapProcName)
 	end,
 	{stop,normal,ProcState};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason,#state{mapproc=MapProcName}=ProcState) ->
+?terminate(_Reason,#state{mapproc=MapProcName}=ProcState) ->
 	case  get(instanceid) of
 		[]->
 			nothing;
@@ -442,7 +442,7 @@ do_terminate(_Reason,#state{mapproc=MapProcName}=ProcState) ->
 	end,
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -452,5 +452,5 @@ send_kick_out(Proc,MapProcName)->
 	try
 		Proc ! {kick_from_instance,MapProcName}
 	catch
-		E:R->base_logger_util:msg("MapProcName~p send_kick_out Proc ~p ~p~p ~p ~n",[MapProcName,Proc,E,R,erlang:get_stacktrace()])
+		E:R->base_logger_util:info_msg("MapProcName~p send_kick_out Proc ~p ~p~p ~p ~n",[MapProcName,Proc,E,R,erlang:get_stacktrace()])
 	end.

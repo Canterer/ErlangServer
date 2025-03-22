@@ -1,26 +1,27 @@
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
--include("base_db_operater_shared.hrl").
-
+% -define(ETS_OPERATER_BEHAVIOUR,true).
+-define(DB_OPERATER_BEHAVIOUR,true).
+-include("base_all_behaviour_shared.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_start()->
+?start()->
 	db_operater_behaviour:start_module(?MODULE,[]).
 
 % TableType: ram/disc
-do_create_mnesia_table(_TableType)->
+?create_mnesia_table(_TableType)->
 	base_db_tools:create_table_disc(map_info, record_info(fields,map_info), [], set).
 
-do_create_mnesia_split_table(_BaseTable,_TrueTabName)->
+?create_mnesia_split_table(_BaseTable,_TrueTabName)->
 	nothing.
 
 % returns = [{DB,Type},...]  Type:disc_split/disc/ram/proto
-do_tables_info()->
+?tables_info()->
 	[{map_info,proto}].
 
-do_delete_role_from_db(_RoleId)->
+?delete_role_from_db(_RoleId)->
 	nothing.
 %% --------------------------------------------------------------------
 %%% behaviour functions end

@@ -80,7 +80,7 @@ stop(_State) ->
 %% ====================================================================
 
 start_lines_manager_sup() ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_line_manager_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};
@@ -89,7 +89,7 @@ start_lines_manager_sup() ->
 	end.
 
 start_line_processor_sup() ->
-	base_logger_util:msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_line_processor_sup:start_link() of
 		{ok, Pid} ->
 			{ok, Pid};

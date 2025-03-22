@@ -30,7 +30,7 @@ start_link()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init([]) ->
+?init([]) ->
 	Server_Control_Server = {base_server_control_server,{base_server_control_server,start_link,[]},
 	       permanent,2000,worker,[base_server_control_server]},
 	{ok,{{one_for_one, 10, 10}, [Server_Control_Server]}}.

@@ -1,12 +1,34 @@
 %% Description: 本文件内含函数定义, include时需放在其他属性定义的最后
 -include("base_define_shared.hrl").
 
--behaviour(gen_statem).
+% 自定义本模块宏定义 开启间接接口
+% -undef(init).
+% -undef(log_init).
+% -define(init, log_init).
+% -define(log_init, init).
+% -undef(handle_event).
+% -undef(log_handle_event).
+% -define(handle_event, log_handle_event).
+% -define(log_handle_event, handle_event).
+% -undef(terminate).
+% -undef(log_terminate).
+% -define(terminate, log_terminate).
+% -define(log_terminate, terminate).
+% -undef(code_change).
+% -undef(log_code_change).
+% -define(code_change, log_code_change).
+% -define(log_code_change, code_change).
+
+
+-ifndef(CALLBACK_MODE).
+-define(CALLBACK_MODE, 	handle_event_function).
+-endif.
 %% --------------------------------------------------------------------
 %% Internal exports
 %% --------------------------------------------------------------------
 %% gen_statem callbacks
 -export([init/1, callback_mode/0, handle_event/4, terminate/3, code_change/4]).
+-behaviour(gen_statem).
 
 %% --------------------------------------------------------------------
 %% Server functions
@@ -16,9 +38,9 @@
 %%          ignore                          |
 %%          {error, Reason}
 %% --------------------------------------------------------------------
-init(Args) ->
+?log_init(Args) ->
 	?OTP_FUNC_START("Args=~p",[Args]),
-	Returns = do_init(Args),
+	Returns = ?init(Args),
 	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
@@ -31,10 +53,7 @@ init(Args) ->
 %%		  [handle_event_function, state_enter] |
 %% --------------------------------------------------------------------
 callback_mode()	->
-	?OTP_FUNC_START("",[]),
-	Returns = do_callback_mode(),
-	?OTP_FUNC_END("Returns=~p",[Returns]),
-	Returns.
+	?CALLBACK_MODE.
 
 %% --------------------------------------------------------------------
 %% Function: user_state_name/3
@@ -46,7 +65,7 @@ callback_mode()	->
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
 do_handle_state_event(EventType, EventContent, StateName, StateData) ->
-	handle_event(EventType, EventContent, StateName, StateData).
+	?log_handle_event(EventType, EventContent, StateName, StateData).
 
 %% --------------------------------------------------------------------
 %% Function: handle_event/4
@@ -57,9 +76,9 @@ do_handle_state_event(EventType, EventContent, StateName, StateData) ->
 %%		  {noreply, State, Timeout} |
 %%		  {stop, Reason, State}			(terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_event(EventType, EventContent, StateName, StateData) ->
+?log_handle_event(EventType, EventContent, StateName, StateData) ->
 	?OTP_FUNC_START("EventType=~p, EventContent=~p, StateName=~p, StateData=~p",[EventType,EventContent,StateName,StateData]),
-	Returns = do_handle_event(EventType, EventContent, StateName, StateData),
+	Returns = ?handle_event(EventType, EventContent, StateName, StateData),
 	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
@@ -69,9 +88,9 @@ handle_event(EventType, EventContent, StateName, StateData) ->
 %% Description: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
-terminate(Reason, StateName, StateData) ->
+?log_terminate(Reason, StateName, StateData) ->
 	?OTP_FUNC_START("Reason=~p, StateName=~p, StateData=~p",[Reason,StateName,StateData]),
-	Returns = do_terminate(Reason, StateName, StateData),
+	Returns = ?terminate(Reason, StateName, StateData),
 	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 
@@ -80,9 +99,9 @@ terminate(Reason, StateName, StateData) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
-code_change(OldVsn, StateName, StateData, Extra) ->
+?log_code_change(OldVsn, StateName, StateData, Extra) ->
 	?OTP_FUNC_START("OldVsn=~p, StateName=~p, StateData=~p, Extra=~p",[OldVsn,StateName,StateData,Extra]),
-	Returns = do_code_change(OldVsn, StateName, StateData, Extra),
+	Returns = ?code_change(OldVsn, StateName, StateData, Extra),
 	?OTP_FUNC_END("Returns=~p",[Returns]),
 	Returns.
 %% ---------------------

@@ -48,7 +48,7 @@ start()->
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
 	case base_node_util:get_argument('-line') of
-		[]->  base_logger_util:msg("Missing --line argument input the nodename");
+		[]->  base_logger_util:info_msg("Missing --line argument input the nodename");
 		[CenterNode|_]->
 			% ?RELOADER_RUN,
 			base_ping_util:wait_all_nodes_connect(),

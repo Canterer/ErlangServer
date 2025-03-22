@@ -32,9 +32,9 @@ behaviour_info(_Other) ->
 %% @doc start gen_mod
 start() ->
 	?DB_OPERATER_START(),
-	?DB_MOD_TABLE = ets_operater_behaviour:new(?DB_MOD_TABLE,
+	?DB_MOD_TABLE = ?base_ets:new(?DB_MOD_TABLE,
 		[public, set, named_table, {keypos, 1}]),
-	?DB_SPLIT_TABLE = ets_operater_behaviour:new(?DB_SPLIT_TABLE,
+	?DB_SPLIT_TABLE = ?base_ets:new(?DB_SPLIT_TABLE,
 		[public, set, named_table, {keypos, 1}]),
 	base_mod_util:behaviour_apply(db_operater_behaviour,start,[]),
 	?DB_OPERATER_END(),
@@ -45,29 +45,29 @@ start_module(Module, Opts)->
 	lists:foreach(fun({Table,Type})-> 
 				case Type of
 					disc_split->
-						true = ets_operater_behaviour:insert(?DB_SPLIT_TABLE, {Table,Module});
+						true = ?base_ets:insert(?DB_SPLIT_TABLE, {Table,Module});
 					_->
 						nothing
 				end end, TablesInfo),
-	true = ets_operater_behaviour:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
+	true = ?base_ets:insert(?DB_MOD_TABLE, {Module, Opts,TablesInfo}).
 
 create_all_disc_table()->
 	?DB_OPERATER_START(),
-	ets:foldl(fun({Module,_,_},_)->
+	?base_ets:foldl(fun({Module,_,_},_)->
 				Module:create_mnesia_table(disc)	  
 			end,[], ?DB_MOD_TABLE),
 	?DB_OPERATER_END().
 
 delete_role_from_db(RoleId)->
 	?DB_OPERATER_START("RoleId:~p",[RoleId]),
-	ets:foldl(fun({Module,_,_},_)->
+	?base_ets:foldl(fun({Module,_,_},_)->
 				Module:delete_role_from_db(RoleId)	  
 			end,[], ?DB_MOD_TABLE),
 	?DB_OPERATER_END().
 
 create_all_ram_table()->
 	?DB_OPERATER_START(),
-	AllRamMod = ets:foldl(fun({Module,_,TablesInfo},AccMods)->
+	AllRamMod = ?base_ets:foldl(fun({Module,_,TablesInfo},AccMods)->
 					case lists:keymember(ram,2,TablesInfo) of
 						true->
 							[Module|AccMods];
@@ -80,7 +80,7 @@ create_all_ram_table()->
 	?DB_OPERATER_END().
 
 get_all_ram_table()->
-	ets:foldl(fun({_,_,TablesInfo},AccTables)->
+	?base_ets:foldl(fun({_,_,TablesInfo},AccTables)->
 					case lists:keyfind(ram,2,TablesInfo) of
 						{Table,ram}->
 							[Table|AccTables];
@@ -90,7 +90,7 @@ get_all_ram_table()->
 			end,[], ?DB_MOD_TABLE).
 
 get_split_table_and_mod(BaseTab)->
-	case ets:lookup(?DB_SPLIT_TABLE, BaseTab) of
+	case ?base_ets:lookup(?DB_SPLIT_TABLE, BaseTab) of
 		[]->
 			[];
 		[Info]->
@@ -99,10 +99,10 @@ get_split_table_and_mod(BaseTab)->
 	
 get_all_split_table_and_mod()->
 	?ZS_LOG(),
-	ets:tab2list(?DB_SPLIT_TABLE).
+	?base_ets:tab2list(?DB_SPLIT_TABLE).
 
 get_backup_filter_tables()->
-	ets:foldl(fun({_,_,TablesInfo},AccMods)->
+	?base_ets:foldl(fun({_,_,TablesInfo},AccMods)->
 					lists:foldl(fun({TableName,TableType},AccTables)->
 							case is_backup_filter_table({TableName,TableType}) of
 								true->
@@ -126,7 +126,7 @@ is_backup_filter_table(_)->
 
 init_ets(SourceDb,Ets,EtsKeyPosOrPoses) ->
 	?DB_OPERATER_START("SourceDb:~p,Ets:~p,EtsKeyPosOrPoses:~p",[SourceDb,Ets,EtsKeyPosOrPoses]),
-	ets_operater_behaviour:delete_all_objects(Ets),
+	?base_ets:delete_all_objects(Ets),
 	case base_db_dal_util:read_rpc(SourceDb) of
 		{ok,TermList} ->
 			lists:foreach(fun(Term) -> 
@@ -134,7 +134,7 @@ init_ets(SourceDb,Ets,EtsKeyPosOrPoses) ->
 					end,
 					TermList);
 		Error->
-			base_logger_util:msg("init_ets ~p failed from db ~p ~p ~p ~n",[Ets,SourceDb,Error])
+			?base_logger_util:info_msg("init_ets ~p failed from db ~p ~p ~p ~n",[Ets,SourceDb,Error])
 	end,
 	?DB_OPERATER_END().
 
@@ -145,8 +145,8 @@ add_term_to_ets(Term,Ets,KeyPoses)when is_list(KeyPoses)->
 			add_term_to_ets(Term,Ets,KeyPos);
 		_->
 			Key = erlang:list_to_tuple(Keyes),
-			true  = ets_operater_behaviour:insert(Ets,{Key,Term})
+			true  = ?base_ets:insert(Ets,{Key,Term})
 	end;
 add_term_to_ets(Term,Ets,KeyPos) ->
 	Key = erlang:element(KeyPos,Term),
-	true  = ets_operater_behaviour:insert(Ets,{Key,Term}).
+	true  = ?base_ets:insert(Ets,{Key,Term}).

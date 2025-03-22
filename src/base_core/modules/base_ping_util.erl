@@ -26,16 +26,16 @@ wait_node_connect(AppType)->
 	wait_nodes(NeedConNodes).
 	
 wait_nodes(AllNodes)->
-	base_logger_util:msg("need wait nodes ~p ~n",[AllNodes]),
+	base_logger_util:info_msg("need wait nodes ~p ~n",[AllNodes]),
 	lists:foreach(fun(Node)-> 
-		base_logger_util:msg("ping Node ~p ~n",[Node]),				  
-		ping(Node) end,AllNodes).			
+		base_logger_util:info_msg("ping Node ~p ~n",[Node]),
+		ping(Node) end,AllNodes).
 	
 ping(Node)->	
 	ping_loop(Node).
 
 ping_loop(Node)->
-	base_logger_util:msg("~p:~p(Node:~p)~n",[?MODULE,?FUNCTION_NAME,Node]),
+	base_logger_util:info_msg("~p:~p(Node:~p)~n",[?MODULE,?FUNCTION_NAME,Node]),
 	case net_adm:ping(Node) of
 		pong -> ok;
 		_->

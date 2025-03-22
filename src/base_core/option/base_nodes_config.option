@@ -175,7 +175,7 @@
 			%% {proc,all}代表寻找所有的Mod中定义-behaviour(xxx)
 			{map,all},	  					
 			{gate,
-				[base_role_db,login_pb,senswords,item_template_db,blackip,whiteip,system_chat_db,autoname_db,base_map_info_db]
+				[base_role_db,login_pb,senswords_util,item_template_db,blackip,whiteip,system_chat_db,autoname_db,base_map_info_db]
 			},
 			{line,
 				[base_map_info_db]

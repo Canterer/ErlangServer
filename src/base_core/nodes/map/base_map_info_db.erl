@@ -24,34 +24,32 @@
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
-% -include("base_ets_operater_shared.hrl").
-% -include("base_db_operater_shared.hrl").
 -define(ETS_OPERATER_BEHAVIOUR,true).
 -define(DB_OPERATER_BEHAVIOUR,true).
 -include("base_all_behaviour_shared.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
-do_create_ets()->	
-	ets_operater_behaviour:new(?MAP_INFO_ETS, [set,named_table]).
+?create_ets()->	
+	?base_ets:new(?MAP_INFO_ETS, [set,named_table]).
 
-do_init_ets()->
+?init_ets()->
 	% 从数据库读取 
 	db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid).
 
-do_start()->
+?start()->
 	db_operater_behaviour:start_module(?MODULE,[]).
 
-do_create_mnesia_table(disc)->
+?create_mnesia_table(disc)->
 	base_db_tools:create_table_disc(map_info, record_info(fields,map_info), [], set).
 
-do_create_mnesia_split_table(_,_)->
+?create_mnesia_split_table(_,_)->
 	nothing.
 
-do_tables_info()->
+?tables_info()->
 	[{map_info,proto}].
 
-do_delete_role_from_db(_)->
+?delete_role_from_db(_)->
 	nothing.
 
 %% --------------------------------------------------------------------
@@ -59,7 +57,7 @@ do_delete_role_from_db(_)->
 %% --------------------------------------------------------------------
 
 get_map_info(MapId)->
-	case ets:lookup(?MAP_INFO_ETS,MapId) of
+	case ?base_ets:lookup(?MAP_INFO_ETS,MapId) of
 		[]-> [];
 		[{_,MapInfo}]-> MapInfo
 	end.
@@ -96,7 +94,7 @@ get_pvptag(MapInfo)->
 
 get_maps_bylinetag(LineTag)->
 	?ZS_LOG(),
-	ets:foldl(fun({_,MapInfo},Acc)->
+	?base_ets:foldl(fun({_,MapInfo},Acc)->
 						?ZS_LOG("MapInfo:~p Acc:~p LineTag:~p",[MapInfo,Acc,LineTag]),
 						case get_linetag(MapInfo) of
 						  []->
@@ -112,12 +110,12 @@ get_maps_bylinetag(LineTag)->
 			  end, [], ?MAP_INFO_ETS).
 
 get_all_maps_and_serverdata()->		
-	ets:foldl(fun({_,MapInfo},Acc)->				 
+	?base_ets:foldl(fun({_,MapInfo},Acc)->
 					[{get_mapid(MapInfo),get_serverdataname(MapInfo)}|Acc]
 			  end, [], ?MAP_INFO_ETS).
 
 get_lonely_maps()->
-	ets:foldl(fun({_,MapInfo},Acc)->
+	?base_ets:foldl(fun({_,MapInfo},Acc)->
 						case length(get_linetag(MapInfo)) =:= 1 of
 							true->
 							  	[get_mapid(MapInfo)|Acc];

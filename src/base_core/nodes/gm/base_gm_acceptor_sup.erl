@@ -25,7 +25,7 @@ start_link(Callback)->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(Callback) ->
+?init(Callback) ->
 	{ok, {{simple_one_for_one, 10, 10},
 	      [{base_gm_acceptor_server, {base_gm_acceptor_server, start_link, [Callback]},
 		transient, brutal_kill, worker, [base_gm_acceptor_server]}]}}.

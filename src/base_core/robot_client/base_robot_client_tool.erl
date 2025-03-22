@@ -40,15 +40,8 @@
 %%base_robot_client_tool:start_robot_client_test("127.0.0.1", 1, 1).
 start_robot_client_test(Server,ServerId,Index)->
 	io:format("start_robot_client_test(Server=~p,ServerId=~p,Index=~p)~n",[Server,ServerId,Index]),
-	try
-		% load_map_sup:start_link(),
-		login_pb:create(),
-		login_pb:init()
-	catch
-		_:_-> ignor
-	end,
 	filelib:ensure_dir("../log/"),
-	FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ "_node.log",
+	FileName = "../log/"++atom_to_list(base_node_util:get_node_sname(node())) ++ ".log",
 	error_logger:logfile({open, FileName}),
 	start_robot_clients(Server,ServerId,Index,1).
 
@@ -63,7 +56,7 @@ start_robot_client(Server,ServerId,Index,LineId,Port,MapId,Level,SpeekRate)->
 						level = Level,
 						speekrate = SpeekRate,
 						serverid = ServerId},
-	base_logger_util:msg("start_client index:~p client_config:~p~n", [Index, Client_config]),
+	base_logger_util:info_msg("start_client index:~p client_config:~p~n", [Index, Client_config]),
 	% base_robot_client_app:start(list_to_atom(integer_to_list(Index)), Client_config).
 	base_robot_client_fsm:start(list_to_atom(integer_to_list(Index)), Client_config).
 
@@ -82,16 +75,17 @@ start_robot_clients(Server,ServerId,Index,Num,LineId,Port,MapId,Level)->
 
 start_robot_clients(Server,ServerId,Index,Num,LineId,Port,MapId,Level,SpeekRate)->
 	RealIndex = Index * ?BASE_MAX + 1,
-	try
-		% load_map_sup:start_link(),
-		login_pb:create(),
-		login_pb:init()
-	catch
-		_:_-> ignor
-	end,
-	base_logger_util:msg("start_robot_clients Indexs:~p~n",[lists:seq(RealIndex,RealIndex + Num -1)]),
+	process_flag(trap_exit,true),
+	base_logger_util:info_msg("Current pid:~p~n",[self()]),
+	% try
+	% 	% load_map_sup:start_link(),
+	% 	login_pb:create_ets(),
+	% 	login_pb:init_ets()
+	% catch
+	% 	_:_-> ignor
+	% end,
+	base_logger_util:info_msg("start_robot_clients Indexs:~w~n",[lists:seq(RealIndex,RealIndex + Num -1)]),
 	lists:foreach(fun(IndexTmp)-> start_robot_client(Server,ServerId,IndexTmp,LineId,Port,MapId,Level,SpeekRate) end,lists:seq(RealIndex,RealIndex + Num -1)).
-
 
 start_send()->
 	register(test_send,spawn(?MODULE,test_send,[])).

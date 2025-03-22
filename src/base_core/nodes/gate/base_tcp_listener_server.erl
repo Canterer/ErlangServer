@@ -46,12 +46,12 @@
 %% ====================================================================
 start_link(Port, AcceptorCount ,
 		   OnStartup, OnShutdown) ->
-	base_gen_server:start_link({local, ?SERVER}, ?MODULE, 
+	?base_gen_server:start_link({local, ?SERVER}, ?MODULE, 
 						  {Port, AcceptorCount  ,
 						   OnStartup, OnShutdown}, []).
 
 query_port()->
-	base_gen_server:call(?SERVER, {query_port} ,infinity).
+	?base_gen_server:call(?SERVER, {query_port} ,infinity).
 
 %%--------------------------------------------------------------------
 %% Function: disable_connect/0
@@ -60,7 +60,7 @@ query_port()->
 %%--------------------------------------------------------------------
 disable_connect()->
 	%%gen_server:send({local, ?SERVER}, {disable_connect}).
-%%	base_logger_util:msg("disable_connect ~p ~n",[?MODULE]),
+%%	base_logger_util:info_msg("disable_connect ~p ~n",[?MODULE]),
 	erlang:send_after(0,?SERVER,{disable_connect}).
 
 %%--------------------------------------------------------------------
@@ -75,8 +75,8 @@ enable_connect()->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init({Port,AcceptorCount,{M,F,A} = OnStartup, OnShutdown}) ->
-	base_logger_util:msg("~p:~p({Port:~p, AcceptorCount:~p, {M:~p,F:~p,A:~p}, OnShutdown:~p})~n",[?MODULE,?FUNCTION_NAME,Port,AcceptorCount,M,F,A,OnShutdown]),
+?init({Port,AcceptorCount,{M,F,A} = OnStartup, OnShutdown}) ->
+	base_logger_util:info_msg("~p:~p({Port:~p, AcceptorCount:~p, {M:~p,F:~p,A:~p}, OnShutdown:~p})~n",[?MODULE,?FUNCTION_NAME,Port,AcceptorCount,M,F,A,OnShutdown]),
 	process_flag(trap_exit, true),
 	Opts = ?TCP_OPTIONS,
 	case gen_tcp:listen(Port, Opts) of
@@ -102,44 +102,44 @@ do_init({Port,AcceptorCount,{M,F,A} = OnStartup, OnShutdown}) ->
 			{stop, Reason}
 	end.
 
-do_handle_call(reset_opt, _From, #state{listen_socket = Listen_socket} = State) ->
+?handle_call(reset_opt, _From, #state{listen_socket = Listen_socket} = State) ->
 	inet:setopts(Listen_socket,[{packet, 0}]),
-	base_logger_util:msg("inet:getopts active,packet ~p ~n",[inet:getopts(Listen_socket, [active,packet])]),
+	base_logger_util:info_msg("inet:getopts active,packet ~p ~n",[inet:getopts(Listen_socket, [active,packet])]),
     Reply = ok,
     {reply, Reply, State};
-do_handle_call({query_port}, _From, #state{listen_socket = LSock} = State) ->
+?handle_call({query_port}, _From, #state{listen_socket = LSock} = State) ->
 	 {ok, {_IPAddress, Port}} = inet:sockname(LSock),
     Reply = Port,
     {reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({disable_connect}, State = #state{acceptors=AccProcs}) ->
-%%	base_logger_util:msg("handle_info disable_connect ~p ~n",[?MODULE]),
+?handle_info({disable_connect}, State = #state{acceptors=AccProcs}) ->
+%%	base_logger_util:info_msg("handle_info disable_connect ~p ~n",[?MODULE]),
 	lists:foreach(fun(AcceptorName)->
 						  R = base_tcp_acceptor_server:disable_connect(AcceptorName),
-						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
+						  base_logger_util:info_msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
     {noreply, State};
-do_handle_info({enable_connect},State = #state{acceptors=AccProcs})->
+?handle_info({enable_connect},State = #state{acceptors=AccProcs})->
 	lists:foreach(fun(AcceptorName)->
 						  R = base_tcp_acceptor_server:enable_connect(AcceptorName),
-						  base_logger_util:msg("Acceptor Stat:~p~n",[R])
+						  base_logger_util:info_msg("Acceptor Stat:~p~n",[R])
 				  end, AccProcs),
 	{noreply, State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, #state{listen_socket=LSock, on_shutdown = {M,F,A}}) ->
+?terminate(_Reason, #state{listen_socket=LSock, on_shutdown = {M,F,A}}) ->
     {ok, {_IPAddress, Port}} = inet:sockname(LSock),
     gen_tcp:close(LSock),
     apply(M, F, A ++ [LSock, Port]).
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------

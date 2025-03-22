@@ -42,7 +42,7 @@
 %%% 进程字典是一个进程独有的、存储键值对的数据结构
 %% --------------------------------------------------------------------
 start_link()->
-	base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
+	?base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 hotshutdown()->
 	clear_flag_file(),
@@ -130,7 +130,7 @@ write_flag_file()->
 		{ok,F}->
 			file:close(F);
 		_->
-			base_logger_util:msg("can not open file ~p ~n",[File])
+			base_logger_util:info_msg("can not open file ~p ~n",[File])
 	end.
 
 clear_flag_file()->
@@ -199,22 +199,22 @@ format_data(Param)->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-do_init(Args) ->
+?init(Args) ->
 	put(last_shutdowncmd_id,0),
 	put(shutdowncmd_flag,false),
 	{ok, #state{}}.
 
-do_handle_call({query_time}, _From, State) ->
+?handle_call({query_time}, _From, State) ->
    Reply = os:timestamp(),
    {reply, Reply, State};
-do_handle_call(_Request, _From, State) ->
+?handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-do_handle_cast(_Msg, State) ->
+?handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-do_handle_info({hotshutdown_start,Time_s}, State) ->
+?handle_info({hotshutdown_start,Time_s}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
 			io:format("please cancel last cmd first ~n");
@@ -226,10 +226,10 @@ do_handle_info({hotshutdown_start,Time_s}, State) ->
 			hotshutdown_server(CmdId,Time_s)
 	end,
 	{noreply, State};
-do_handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
+?handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
-			base_logger_util:msg("please cancel last cmd first ~n");
+			base_logger_util:info_msg("please cancel last cmd first ~n");
 		_Other->
 			CmdId = get(last_shutdowncmd_id) + 1,
 			put(last_shutdowncmd_id,CmdId),		
@@ -238,7 +238,7 @@ do_handle_info({manage_hotshutdown_start,Time_s,FromProc}, State) ->
 			manage_hotshutdown_server(CmdId,Time_s,FromProc)
 	end,
 	{noreply,State};
-do_handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
+?handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
 	case get(shutdowncmd_flag) of
 		true->
 			io:format("please cancel last cmd first ~n");
@@ -250,31 +250,31 @@ do_handle_info({hotshutdown_start,Time_s,ShutDownReason}, State) ->
 			hotshutdown_server(CmdId,Time_s)
 	end,
 	{noreply, State};
-do_handle_info({hotshutdown, {CmdID,Time_s}}, State) ->
+?handle_info({hotshutdown, {CmdID,Time_s}}, State) ->
 	hotshutdown_server(CmdID,Time_s),
 	{noreply, State};
-do_handle_info({manage_hotshutdown,{CmdID,Time_s,FromProc}},State)->
+?handle_info({manage_hotshutdown,{CmdID,Time_s,FromProc}},State)->
 	manage_hotshutdown_server(CmdID,Time_s,FromProc),
 	{noreply,State};
-do_handle_info({cancelshutdowncmd},State)->
+?handle_info({cancelshutdowncmd},State)->
 	cancel_lastshutdowncmd(),
 	{noreply, State};
-do_handle_info({update_code},State)->
+?handle_info({update_code},State)->
 	handle_update_code(),
 	{noreply, State};
-do_handle_info({update_data},State)->
+?handle_info({update_data},State)->
 	handle_update_data(),
 	{noreply, State};
-do_handle_info({update_option},State)->
+?handle_info({update_option},State)->
 	handle_update_option(),
 	{noreply, State};
-do_handle_info(_Info, State) ->
+?handle_info(_Info, State) ->
 	{noreply, State}.
 
-do_terminate(_Reason, _State) ->
+?terminate(_Reason, _State) ->
 	ok.
 
-do_code_change(_OldVsn, State, _Extra) ->
+?code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 %% --------------------------------------------------------------------
@@ -342,7 +342,7 @@ hotshutdown_server(CmdID,Time_s)->
 manage_hotshutdown_server(CmdID,Time_s,FromProc)->
 	case (CmdID =:= get(last_shutdowncmd_id)) and (get(shutdowncmd_flag)) of
 		true->
-			base_logger_util:msg("hotshutdown_server ~p ~n",[Time_s]),
+			base_logger_util:info_msg("hotshutdown_server ~p ~n",[Time_s]),
 			if
 				Time_s > 15*60 ->
 					LastTime_s = 15*60,
@@ -379,7 +379,7 @@ manage_hotshutdown_server(CmdID,Time_s,FromProc)->
 					NextTime_s = 0,
 					closethedoor(),
 					kick_all_roles(),
-					base_logger_util:msg("manage_hotshutdown ok fromnode:~p~n",[FromProc]),
+					base_logger_util:info_msg("manage_hotshutdown ok fromnode:~p~n",[FromProc]),
 					base_rpc_util:cast(FromProc,{hotshutdown_ok}),
 					cancel_lastshutdowncmd()
 			end,
@@ -408,7 +408,7 @@ shutdown_server()->
 	closethedoor(),
 	kick_all_roles(),
 	write_flag_file(),
-	base_logger_util:msg("hot shutdown server complete!!!~n").
+	base_logger_util:info_msg("hot shutdown server complete!!!~n").
 
 waring_broadcast(Time_s)->
 	if
