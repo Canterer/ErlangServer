@@ -19,7 +19,11 @@ echo 源文件目录: %SRC_PATH%
 
 del ..\ebin\*.beam
 
+rem set PythonExePath=E://Softs//Python38//python.exe
+set PythonExePath=E://SystemSofts//Python38//python.exe
+echo PythonExePath: %PythonExePath%
+
 rem python erlc.py --I ../include --src %SRC_PATH% --output ../ebin --nowarning true --define debug --debug true
-E://SystemSofts//Python38//python.exe %script_path%erlc.py --src ../%SRC_PATH% --output ../ebin --nowarning true --define debug --debug true
+%PythonExePath% %script_path%erlc.py --src ../%SRC_PATH% --output ../ebin --nowarning true --define debug --debug true
 
 pause
