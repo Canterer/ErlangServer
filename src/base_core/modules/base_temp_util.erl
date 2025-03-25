@@ -2,8 +2,23 @@
 
 -module(base_temp_util).
 -include("common_define.hrl").
+-define(MAX_ROLE_COUNT,4294967295).	
 
--compile(export_all).
+-export([
+	make_int_str/1,
+	make_int_str2/1,
+	make_int_str3/1,
+	make_int_str4/1,
+	make_int_str5/1,
+	make_int_str6/1,
+	make_int_str7/1,
+	make_int_str8/1,
+	make_int_str20/1,
+	make_int_str30/1,
+	get_serverid_by_roleid/1,
+	term_to_record/2,
+	get_min_count_of_lines/1
+]).
 
 make_int_str(Int)->
 	integer_to_list(Int).
@@ -77,6 +92,7 @@ make_int_str8(Int)->
 		7-> string:concat("0", Str);
 		_-> Str
 	end.
+
 make_int_str20(Int)->
 	Str = integer_to_list(Int),
 	case string:len(Str) of
@@ -101,6 +117,7 @@ make_int_str20(Int)->
 		19-> string:concat("0", Str);
 		_-> Str
 	end.
+
 make_int_str30(Int)->
 	Str = integer_to_list(Int),
 	case string:len(Str) of
@@ -141,3 +158,15 @@ get_serverid_by_roleid(RoleId)->
 
 term_to_record(Term,RecordName) ->
 	list_to_tuple([RecordName | tuple_to_list(Term)]).
+
+get_min_count_of_lines(LineInfos)->
+	MinLineInfo = lists:foldl(fun(X,Min)-> 
+						  {_,RoleCount}=X,
+						  {_,MinRoleCount}=Min,
+						  if
+							  RoleCount < MinRoleCount -> X;
+							  true  -> Min
+						  end
+				  end,
+				  {0,?MAX_ROLE_COUNT}, LineInfos),
+	MinLineInfo.

@@ -86,7 +86,6 @@ check_list(Fun, [], Index) -> 0.
 % 返回节点SName列表 对于该Proc被启用的节点列表
 get_allowable_nodes(Key)->
 	AllowableNodeList = base_env_ets:get2(proc_allowed_nodes,Key,[]),
-	base_logger_util:info_msg("~p allowable_nodes:~p~n",[Key,AllowableNodeList]),
 	base_env_ets:get2(proc_allowed_nodes,Key,[]).
 % 返回Proc列表,其中Proc被启用的节点列表中需包含该Node
 get_node_procs(Node)->

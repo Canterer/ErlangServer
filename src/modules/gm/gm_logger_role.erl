@@ -1,0 +1,233 @@
+%% Description: TODO: Add description to gm_logger_role
+-module(gm_logger_role).
+
+%%
+%% Include files
+%%
+
+%%
+%% Exported Functions
+%%
+-compile(export_all).
+role_vip(RoleId,Type,RoleLevel)->
+	todo.
+role_exchange_item(RoleId,Level,ItemId,ItemCount,ConsumeItem,ConsumeCount)->
+	todo.
+role_offline_exp(RoleId,Level,Hours,Exp,Multi)->
+	todo.
+role_offline_everquest(RoleId,EverQuestId,Level,Multi)->
+	todo.
+role_venation(RoleId,Venation,Point,Opt,RoleLevel)->		
+	todo.
+role_venation_advanced(RoleId,Venation,Bone,Opt,UseItem,ConsumeItem,Money)->
+	todo.
+role_soulpower(RoleId,Consume,Remain,RoleLevel)->	
+	todo.
+pet_level_up(RoleId,PetId,PetProtoId,RoleLevel,PetLevel)->
+	todo.
+pet_advance(RoleId,PetId,PetProtoId,StepOld,StepNew)->
+	todo.
+pet_inherit(RoleId,PetId,PetProtoId,NewPetInfo,Pid)->
+	todo.
+pet_change(RoleId,FromPet,FromPetId,ToPet,ToPetId)->	
+	todo.
+pet_delete(RoleId,PetId,Flag,PetProto)->	
+	todo.
+pet_feed(RoleId,PetId,Happiness,PetProto)->
+	todo.
+role_trad_log(MyRoleId,ToRoleId,Money,PlayerItems)->
+	todo.
+role_new_trad_log(MyRoleId,OtherRoleId,MyMoney,MyPlayerItems,OtherMoney,OtherPlayerItems)->
+	todo.
+ever_quest_completed(RoleId,EverQuestId,QuestId,CurrentRound,CurrentCount,RoleLevel)->		
+	todo.
+ever_quest_accepted(RoleId,EverQuestId,QuestId,CurrentRound,CurrentCount,RoleLevel)->	
+	todo.
+refresh_ever_quest(RoleId,EverQuestId,RefreshType,Quality,RoleLevel)->	
+	todo.
+role_power_gather(RoleId,Power,Class,RoleLevel)->			
+	todo.
+role_batter(RoleId,Batter,RoleLevel)->		
+	todo.
+role_ranks_info(RankList)->
+	todo.
+
+create_role(UserName,UserId,RoleName,RoleId,Class,Gender,IpAddress,IsVisitor)->
+	todo.
+role_visitor_register(RoleId,NewUserName)->
+	todo.
+role_rename(RoleId,OldName,NewName,IpAddress)->
+	todo.
+role_login(RoleId,IpAddress,Level)->
+	todo.
+role_logout(RoleId,IpAddress,TimeOnLine,Level)->
+	todo.
+role_level_up(RoleId,NewLevel)->
+	todo.
+role_map_change(RoleId,FromMap,ToMap)->
+	todo.
+role_quest_log(RoleId,QuestId,Action,RoleLevel)->			
+	todo.
+role_skill_learn(RoleId,SkillId,SkillLevel,RoleLevel)-> 		
+	todo.
+role_ticket_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)-> 		
+	todo.
+role_gold_change(Account,RoleId,ChangeCount,NewCount,Reason)->   
+	todo.
+role_silver_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)->     
+	todo.
+role_boundsilver_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)->
+	todo.
+role_charge_integral_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)->     
+	todo.
+role_consume_integral_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)->     
+	todo.
+role_honor_change(RoleId,ChangeCount,NewCount,Reason,RoleLevel)->
+	todo.
+role_get_item(RoleId,ItemId,Count,ItemProto,Reason,RoleLevel)->	
+	todo.
+role_release_item(RoleId,ItemId,ProtoId,OtherRoleId,Reason,RoleLevel)->			
+	todo.
+role_enchantments_item(RoleId,ItemId,Type,ItemResult,RoleLevel)-> 
+	todo.
+role_petup(RoleId,PetId,Type,Start,End,RoleLevel)-> 
+	todo.
+role_join_guild(RoleId,GuildId)->
+	todo.
+role_leave_guild(RoleId,GuildId,Reason)->        
+	todo.
+role_consume_item(RoleId,ItemId,ProtoId,Count,LeftCount)->
+	todo.
+role_flush_items(RoleId,PlayerItems)->
+	todo.
+role_chat(RoleId,RoleName,ToRole,Channel,Content)->
+	todo.
+role_buy_mall_item(RoleId,ItemId,Price,Count,PriceType,RoleLevel)-> 	
+	todo.
+role_buy_guild_mall_item(RoleId,ItemId,Price,Count)->
+	todo.
+role_guild_contribution_change(RoleId,GuildId,Contribution,Reason)->
+	todo.
+role_loop_tower(RoleId,Layer,LayerTime)->		
+	todo.
+role_loop_tower_detail(RoleId,Layer,LayerTime,Detail,RoleLevel)->		
+	todo.
+drop_rule(RuleId,ItemId,Count,RoleFlag)->
+	todo.
+answer_log(RoleId,Score,Rank,Exp,RoleLevel)->
+	todo.
+answering_log(RoleId,Status,AnswerTime,Flag,Score)->
+	todo.
+spa_log(RoleId,RoleLevel,Status,Exp)->
+	todo.
+role_clear_continuous_days(RoleId,Days)->
+	todo.
+role_continuous_days_reward(RoleId,Days,IsVip)->
+	todo.
+role_activity_value_change(RoleId,Type,RoleLevel,CompleteTimes,TotalTimes)->
+	todo.
+role_activity_value(RoleId,AddValue,NewValue,Type,RoleLevel)->
+	todo.
+role_activity_value_reward(RoleId,Value,Id,Remain,RoleLevel)->
+	todo.
+role_first_charge_gift(RoleId,Opt,RoleLevel)->
+	todo.
+role_join_instance(RoleId,RoleLevel,GroupMember,InstanceId,InstanceProtoId,Times)->
+	todo.
+role_level_instance(RoleId,RoleLevel,GroupMember,InstanceId,InstanceProtoId)->
+	todo.
+role_send_mail(RoleId,ToRoleId,MailId,PlayerItems,Silver,Gold)->
+	todo.
+role_read_mail(RoleId,MailId,PlayerItems,Silver,Gold)->
+	todo.
+role_delete_mail(RoleId,MailId,ItemIds,Silver,Gold,Type)->
+	todo.
+role_auction_log(SellerId,BuyerId,PlayerItems,Silver,Gold)->
+	todo.
+role_chess_spirits_reward(RoleId,Level,Type,PlayerItems,Exp)->
+	todo.
+
+treasure_chest_lottery_items(RoleId,BeadType,ConsumeType,Gold,BindConsumeNum,NonBindConsumeNum,TreasureItems,RoleLevel)->
+	todo.
+treasure_chest_package_get_items(RoleId,ItemList)->
+	todo.
+facebook_bind(RoleId,FaceBookId,MsgId,Result)->
+	todo.
+role_buy_item_by_honor(RoleId,ItemId,Count,Price)->
+	todo.
+chess_spirit_log(Type,RoleId,RoleLevel,ConsumeTime_S,SectionNum,Roleids)->
+	todo.
+welfare_activity_log(RoleId,TypeNumber,SerialNumber)->
+	todo.
+pet_wash_attr_point_log(RoleId,RoleLevel,PetProtoId,PetId,Result)->
+	todo.
+pet_add_attr_point_log(RoleId,RoleLevel,PetProtoId,PetId,Result,AddPoint,RemainPoint)->
+	todo.
+pet_grade_quality_log(RoleId,RoleLevel,PetProtoId,PetId,IsHasProtect,Result,Value)->
+	todo.
+pet_grade_quality_up_log(RoleId,RoleLevel,PetProtoId,PetId,Type,Result,Value)->
+	todo.
+pet_evolution_log(RoleId,PetId,PetTempId,Silver,ItemClass,Count,Result)->
+	todo.
+pet_talent_consume(RoleId,PetId,PetTempId,Type,Gold)->
+	todo.
+pet_talent_change(RoleId,PetId,TalentList,PetProto)->
+	todo.
+ride_pet_synthesis_log(RoleId,RidePetA,RidePetB,ResultPet,AddAttr)->
+	todo.
+role_change_crime_log(RoleId,SelfModel,OtherModel,NewCrime,LastCrime,Ext)->
+	todo.
+golden_plume_awards_log(RoleId,RoleLevel,Result,TmpReason,ActivityNumber)->
+	todo.
+role_expand_package(RoleId,NewPackageSize,ExpandNum)->
+	todo.
+role_expand_storage(RoleId,NewStorageSize,ExpandNum)->
+	todo.
+refine_system_log(RoleId,RoleLevel,SerilNumber,Times,Result)->
+	todo.
+consume_return_activity_log(RoleId,RoleLevel,Times,RemainConsumeGold)->
+	todo.
+item_identify_log(RoleId,ResultItem,AddAttr)->
+	todo.
+treasure_transport_failed(RoleId,Quality,Bonusexp,Bonusmoney,Reason)->
+	todo.
+goals_can_reward(RoleId,RoleLevel,Days,Part)->
+	todo.
+goals_reward(RoleId,RoleLevel,Days,Part,Bonus)->
+	todo.
+pet_explore_log(RoleId,RoleLevel,SiteId,StyleId,Lucky,Key)->
+	todo.
+pet_explore_get_items_log(RoleId,RoleLevel,ItemList,Time,Key)->
+	todo.
+country_leader_opt(LeaderId,Post,TargetId,Type)->
+	todo.
+mainline_opt(RoleId,RoleLevel,Chapter,Stage,Difficult,Opt,Remark)->
+	todo.
+mainline_defend_monster(RoleId,RoleLevel,Chapter,Stage,Difficult,Section,MonstersList)->
+	todo.
+mainline_killmonster(RoleId,RoleLevel,Chapter,Stage,Difficult,MonsterProto)->
+	todo.
+festival_recharge_log(RoleId,RoleLevel,Id,CrystalNum,ItemList)->
+	todo.
+jszd_battle_log(RoleId,RoleLevel,State,Reward)->
+	todo.
+get_battle_reward(RoleId,Battle,Honor,Exp,Item)->
+	todo.
+item_info_to_save(ItemInfo)->
+	todo.
+playeritems_to_save(PlayerItem)->
+	todo.
+playeritems_union(ItemsInfos)->
+	todo.
+
+player_items_union(ItemsInfo)->
+	todo.
+
+player_items_to_string(PlayerItems)->
+	todo.
+
+roleids_to_string([])->
+	todo;
+roleids_to_string(RoleIdList)->
+	todo.
+

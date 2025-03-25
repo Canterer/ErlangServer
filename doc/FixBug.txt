@@ -1,0 +1,5 @@
+gen_mnesia_data.bat 运行失败
+	可能是日志打开 卡住流程了
+	base_define_min.hrl
+		注释-define(RELEASE,).
+	先运行 start.bat 然后 关闭所有节点  再运行gen_mnesia_data.bat

@@ -1,27 +1,77 @@
 -module(test_gm_client).
 
--behaviour(gen_server).
+%% --------------------------------------------------------------------
+%% External exports
+%% --------------------------------------------------------------------
+-export([
+	start_link/0,
+	connect/2,
+	auth/2,
+	query_player_request/1,
+	disable_player/2,
+	enable_player/1,
+	disable_player_say/2,
+	enable_player_say/1,
+	disable_ip_login/2,
+	enable_ip_login/1,
+	gm_change_role_name/2,
+	gift_send/0,
+	add_gm_notice/7,
+	publish_gm_notice/1,
+	user_charge/2,
+	gm_user_charge/3,
+	online_count/0,
+	facebook_bind/2,
+	gm_send/7,
+	gm_send_all/7,
+	loop_tower_week_reward/1,
+	get_loop_tower_curlayer/0,
+	system_option/1,
+	power_gather/0,
+	map_data/0,
+	gm_move_user/4,
+	gm_delete_mall_item/1,
+	gm_update_mall_item/6,
+	gm_get_role_info/1,
+	gm_delete_role_privilege/1,
+	gm_set_role_privilege/2,
+	gm_update_activity/1,
+	gm_update_global_monster/1,
+	gm_delete_global_monster/1,
+	gm_delete_activity/1,
+	gm_kick_role/1,
+	all_role_vip/0,
+	send/1,
+	quit/0
+]).
+
+%% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Records
+%% --------------------------------------------------------------------
+-record(state, {socket,addr,port}).
+
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+-include("base_gen_server_shared.hrl").
 
 %% --------------------------------------------------------------------
-%% External exports
--compile(export_all).
-
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--record(state, {socket,addr,port}).
-
-%% ====================================================================
-%% External functions
-%% ====================================================================
+%%% External functions
+%% --------------------------------------------------------------------
+%%% put(key, value)、get(key)在进程字典中存储和检索键值对
+%%% 进程字典是一个进程独有的、存储键值对的数据结构
+%% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
 start_link()->
-	gen_server:start_link({local,?MODULE}, ?MODULE, [], []).
+	?base_gen_server:start_link({local,?SERVER}, ?MODULE, [], []).
 
 connect(Address,Port)->
 	io:format("~p connect~n",[node()]),
-	gs_rpc:cast(node(), ?MODULE, {connect,Address,Port}).
+	base_rpc_util:cast(node(), ?MODULE, {connect,Address,Port}).
 
 %%send: {"cmd":"auth","username":"","userid":"","time":seonds_from_1970,"flag":secretstring} 
 %%            -> auth_algorithm : md5(UserId + urlencode(UserName) + time + "secretkey") == flag 
@@ -143,7 +193,6 @@ gm_change_role_name(RoleId,NewName)->
 		{error,Error}-> 
 			io:format("json:encode failed:~p~n",[Error])
 	end.
-	
 	
 %%send: {"cmd":"gift_send","rolename":"","gift":[giftid]}
 %% response : cmd = "gift_send_response"
@@ -443,10 +492,10 @@ all_role_vip()->
 
 
 send(Data)->
-	gs_rpc:cast(node(), ?MODULE, {send,Data}).
+	base_rpc_util:cast(node(), ?MODULE, {send,Data}).
 
 quit()->
-	gs_rpc:cast(node(), ?MODULE, {quit}).
+	base_rpc_util:cast(node(), ?MODULE, {quit}).
 	
 
 %% ====================================================================
@@ -461,7 +510,7 @@ quit()->
 %%          ignore               |
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
-init([]) ->
+?init([]) ->
     {ok, #state{}}.
 
 %% --------------------------------------------------------------------
@@ -474,7 +523,7 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call(Request, From, State) ->
+?handle_call(Request, From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -485,7 +534,7 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast(Msg, State) ->
+?handle_cast(Msg, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -495,7 +544,7 @@ handle_cast(Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_info({connect,Address,Port},#state{socket=Sock,addr=Addr,port=Pt}=State)->
+?handle_info({connect,Address,Port},#state{socket=Sock,addr=Addr,port=Pt}=State)->
 	case Sock of
 		undefined->
 			case gen_tcp:connect(Address, Port, [{packet,2},binary,{active,true},{reuseaddr, true}]) of
@@ -510,23 +559,23 @@ handle_info({connect,Address,Port},#state{socket=Sock,addr=Addr,port=Pt}=State)-
 			{noreply,State}
 	end;
 	
-handle_info({tcp,Socket,Binary},#state{socket=Sock,addr=Addr,port=Pt}=State)->
+?handle_info({tcp,Socket,Binary},#state{socket=Sock,addr=Addr,port=Pt}=State)->
 	handle_server_json(Binary),
 	inet:setopts(Socket, [{active, once}]),
 	{noreply, State};
 
-handle_info({tcp_closed, _Socket},StateData) ->
+?handle_info({tcp_closed, _Socket},StateData) ->
 	%%io:format("gm client closed ~n"),
 	{noreply, #state{}};
 
-handle_info({quit},#state{socket=Sock,addr=Addr,port=Pt}=State)->
+?handle_info({quit},#state{socket=Sock,addr=Addr,port=Pt}=State)->
 	case Sock of
 		undefined-> ignor;
 		_-> io:format("gm client quit~n"),gen_tcp:close(Sock)
 	end,
 	{noreply, #state{}};
 
-handle_info({send,Data},#state{socket=Sock,addr=Addr,port=Pt}=State)->
+?handle_info({send,Data},#state{socket=Sock,addr=Addr,port=Pt}=State)->
 	case Sock of
 		undefined -> io:format(" have not connect to gmserver");
 		_->	case gen_tcp:send(Sock, Data) of
@@ -536,7 +585,7 @@ handle_info({send,Data},#state{socket=Sock,addr=Addr,port=Pt}=State)->
 			end
 	end,
     {noreply, State};
-handle_info(Info, State) ->
+?handle_info(Info, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -544,7 +593,7 @@ handle_info(Info, State) ->
 %% Description: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %% --------------------------------------------------------------------
-terminate(Reason, State) ->
+?terminate(Reason, State) ->
 	%%io:format("gm client terminate ~p~n",[Reason]),
     ok.
 
@@ -553,7 +602,7 @@ terminate(Reason, State) ->
 %% Purpose: Convert process state when code is changed
 %% Returns: {ok, NewState}
 %% --------------------------------------------------------------------
-code_change(OldVsn, State, Extra) ->
+?code_change(OldVsn, State, Extra) ->
     {ok, State}.
 
 %% --------------------------------------------------------------------

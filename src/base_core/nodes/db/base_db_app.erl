@@ -4,6 +4,7 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+-include("base_define_min.hrl").
 -include("reloader.hrl").
 
 %% --------------------------------------------------------------------
@@ -43,7 +44,7 @@ start()->
 
 import()->
  	base_db_data_gen_util:import_config("game"),
-	mnesia:stop(),
+	?base_mnesia:stop(),
 	erlang:halt().
 
 
@@ -80,7 +81,7 @@ do_start()->
 
 	case base_db_sup:start_master() of
 		{ok, _Pid} ->
-			base_db_tools:wait_for_tables_loop(local,1000,mnesia:system_info(tables)),
+			base_db_tools:wait_for_tables_loop(local,1000,?base_mnesia:system_info(tables)),
 			base_logger_util:info_msg("---------------------------------------------------------~n"),
 			base_logger_util:info_msg("2)To generate data input: data_gen:import_config(\"game\").~n"),
 			base_logger_util:info_msg("3)To backup   data input: db_backup:backup(YourFileName).~n"),

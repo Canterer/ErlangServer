@@ -57,10 +57,12 @@
 %% --------------------------------------------------------------------
 
 get_map_info(MapId)->
-	case ?base_ets:lookup(?MAP_INFO_ETS,MapId) of
+	Res = case ?base_ets:lookup(?MAP_INFO_ETS,MapId) of
 		[]-> [];
 		[{_,MapInfo}]-> MapInfo
-	end.
+	end,
+	base_logger_util:info_msg("get_map_info(MapId:~p,MapInfo:~p)~n",[MapId,Res]),
+	Res.
 
 get_mapid(MapInfo)->
 	element(#map_info.mapid,MapInfo).

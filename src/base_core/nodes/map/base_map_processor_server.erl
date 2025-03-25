@@ -93,10 +93,10 @@ leave_instance(RoleId,MapProcName,offline)->
 	end.
 
 destroy_instance(Node,Proc)->
-	gs_rpc:cast(Node,Proc,{on_destroy}).
+	base_rpc_util:cast(Node,Proc,{on_destroy}).
 
 destroy_instance(Node,Proc,TimeMs)->
-	gs_rpc:cast(Node,Proc,{on_destroy,TimeMs}).
+	base_rpc_util:cast(Node,Proc,{on_destroy,TimeMs}).
 
 get_instance_id(MapProcName)->
 	try
@@ -400,7 +400,7 @@ get_instance_id(MapProcName)->
 					nothing;
 				{Id,Creation,StartTime,CanJoin,InstanceNode ,Pid,MapId,Protoid,Members}->
 					lists:foreach(fun(MemberId)->
-						RoleProc = role_op:make_role_proc_name(MemberId),
+						RoleProc = base_role_op:make_role_proc_name(MemberId),
 						send_kick_out(RoleProc,MapProcName)
 					end,Members),
 					if

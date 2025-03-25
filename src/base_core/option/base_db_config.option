@@ -10,6 +10,7 @@
 			{serverbackupdbfile,"zybackup_db"}
 		]
 	},
+	{serverid,1},%%引用文件 base_role_id_generator_sup
 	{serverids, %%引用文件 base_db_master_server
 		[1]
 	},

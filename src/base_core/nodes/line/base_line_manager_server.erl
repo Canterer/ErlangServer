@@ -273,7 +273,7 @@ get_role_num_by_mapId()->
 			
 			{get_role_count_by_map, {FromNode, FromProcName, MapId}} ->
 				LineInfo = base_line_processor_server:get_role_count_by_map(MapId),
-				tcp_client:line_info_success(FromNode, FromProcName, LineInfo);
+				base_tcp_client_statem:line_info_success(FromNode, FromProcName, LineInfo);
 			
 			{line_load_map, {LineName, MapNodeName}}->
 				start_map_processor(LineName, MapNodeName);

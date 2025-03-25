@@ -1,5 +1,13 @@
 %% Description: base define shared
+-ifndef(BASE_DEFINE_MIN).
 -include("base_define_min.hrl").
+-endif.
+
+-define(TUPLE_OP_START(Format, Data), ?base_logger_util:info_msg("#####TTTTT##### ~p:~p("++Format++") begin!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
+-define(TUPLE_OP_END(Format, Data), ?base_logger_util:info_msg("#####TTTTT##### ~p:~p("++Format++") end!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
+% -define(TUPLE_OP_START(Format, Data), ok).
+% -define(TUPLE_OP_END(Format, Data), ok).
+
 
 -define(OTP_FUNC_START(Format, Data), ?base_logger_util:info_msg("#####OOOOO##### ~p:~p("++Format++") begin!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
 -define(OTP_FUNC_END(Format, Data), ?base_logger_util:info_msg("#####OOOOO##### ~p:~p("++Format++") end!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
@@ -16,9 +24,9 @@
 
 
 -define(ETS_OPERATER_START(Format, Data), ?base_logger_util:info_msg("#####EEEEE##### ~p:~p("++Format++") begin!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
--define(ETS_OPERATER_END(Format, Data), ?base_logger_util:info_msg("#####EEEEE##### ~p:~p("++Format++") end!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
+% -define(ETS_OPERATER_END(Format, Data), ?base_logger_util:info_msg("#####EEEEE##### ~p:~p("++Format++") end!!!~n", [?MODULE,?FUNCTION_NAME]++Data)).
 % -define(ETS_OPERATER_START(Format, Data), ok).
-% -define(ETS_OPERATER_END(Format, Data), ok).
+-define(ETS_OPERATER_END(Format, Data), ok).
 
 
 -define(BEHAVIOUR_FUNC_START(), ?base_logger_util:info_msg("#####BBBBB##### ~p:~p() begin!!!~n", [?MODULE,?FUNCTION_NAME])).

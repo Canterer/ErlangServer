@@ -125,12 +125,12 @@ update_role_line_map(RoleId,NewLineId,NewMapId)->
 
 
 delete_fun(DelList)->	
-	lists:foreach(fun(DelOb)->mnesia:delete_object(DelOb)end,DelList).
+	lists:foreach(fun(DelOb)->?base_mnesia:delete_object(DelOb)end,DelList).
 	
 unreg_role_pos_to_mnesia_by_node(Mapnode)->
 	try
 		S = fun()->
-				Q = qlc:q([X|| X<-mnesia:table(role_pos),X#role_pos.rolenode=:=Mapnode]),
+				Q = qlc:q([X|| X<-?base_mnesia:table(role_pos),X#role_pos.rolenode=:=Mapnode]),
 				DelList = qlc:e(Q),
 				delete_fun(DelList)
 			end,						

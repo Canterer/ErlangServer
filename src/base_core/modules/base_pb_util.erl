@@ -1,9 +1,14 @@
 -module(base_pb_util).
 
+-export([
+	make_role_info/6,
+	get_role_id_from_logininfo/1
+]).
+
 -include("login_pb.hrl").
 -include("item_struct.hrl").
 -include("item_define.hrl").
--compile(export_all).
+
 
 make_role_info(RoleId, RoleName, LastMapId,Classtype,Gender,Level) ->
 	#r{roleid=RoleId, name=RoleName, lastmapid=LastMapId,classtype = Classtype,gender = Gender,level = Level}.

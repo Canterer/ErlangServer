@@ -123,7 +123,7 @@ is_all_node_waite_finish(MyWaitList)->
 			true;			%%wait finish
 		true->
 			AllNodes = base_node_util:get_all_nodes(),
-			base_logger_util:info_msg("TTTTT~p~n",[AllNodes]),
+			base_logger_util:info_msg("~p:~p ~p~n",[?MODULE,?FUNCTION_NAME,AllNodes]),
 			lists:foreach(
 				fun(ProcNotWaited)-> 
 					wait_global_proc_regist(ProcNotWaited,AllNodes) 

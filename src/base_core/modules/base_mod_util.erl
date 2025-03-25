@@ -1,6 +1,9 @@
 -module(base_mod_util).
 
--compile(export_all).
+-export([
+	behaviour_apply/3,
+	load_module_if_not_loaded/1
+]).
 
 get_all_module()->
 	{ok,ALLFiles} = file:list_dir("./"),

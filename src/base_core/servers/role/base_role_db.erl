@@ -1,17 +1,5 @@
 %% Description: TODO: Add description to role_db
 -module(base_role_db).
-
-%%
-%% Include files
-%%
--include("mnesia_table_def.hrl").
--include_lib("stdlib/include/qlc.hrl").
--include("common_define.hrl").
--include("error_msg.hrl").
-
--define(CLASS_BASE_ATTRIB_ETS,class_base_ets).
--define(ROLE_TABLE_BASE,roleattr).
-
 %%
 %% Exported Functions
 %%
@@ -50,7 +38,6 @@
 	get_class_commoncool/1,get_class_power/1,get_class_magicdefense/1,get_class_rangedefense/1,get_class_meleedefense/1
 ]).
 
-
 -export([get_account_username/1,get_account_roleids/1,get_account_gold/1]).
 
 
@@ -58,12 +45,21 @@
 
 -export([create_role/7,create_role_rpc/7]).
 
+
+
+-define(CLASS_BASE_ATTRIB_ETS,class_base_ets).
+-define(ROLE_TABLE_BASE,roleattr).
+
 %% --------------------------------------------------------------------
 %% behaviour include shared code
 %% --------------------------------------------------------------------
 -define(ETS_OPERATER_BEHAVIOUR,true).
 -define(DB_OPERATER_BEHAVIOUR,true).
 -include("base_all_behaviour_shared.hrl").
+-include("mnesia_table_def.hrl").
+-include_lib("stdlib/include/qlc.hrl").
+-include("common_define.hrl").
+-include("error_msg.hrl").
 %% --------------------------------------------------------------------
 %%% behaviour functions begine
 %% --------------------------------------------------------------------
@@ -82,6 +78,7 @@
 	base_db_tools:create_table_disc(account, record_info(fields,account), [], set).
 
 ?create_mnesia_split_table(roleattr,TrueTabName)->
+	?ZSS("TrueTabName:~p",[TrueTabName]),
 	base_db_tools:create_table_disc(TrueTabName,record_info(fields,roleattr),[account,name],set).
 
 ?delete_role_from_db(RoleId)->
@@ -99,7 +96,7 @@
 							base_db_dal_util:write_rpc(AllAccountRole#account{roleids = NewRoleIds})	
 					end;
 				_->
-					base_logger_util:info_msg("delelte_role_from_db not find account ~p ~n",[AccountName])
+					?base_logger_util:info_msg("delelte_role_from_db not find account ~p ~n",[AccountName])
 			end;
 		_->
 			nothing
@@ -141,7 +138,7 @@ get_account(RoleInfo)->
 	element(#roleattr.account,RoleInfo).
 
 put_account(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.account, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.account, RoleInfo, NewValue).
 
 get_rolename(RoleNameTuple)->
 	case RoleNameTuple of
@@ -174,12 +171,14 @@ get_role_list_by_account(AccountName)->
 						Classtype = element(#roleattr.class,RoleAttr),
 						Gender = element(#roleattr.sex,RoleAttr),
 						Level = element(#roleattr.level,RoleAttr),
-						Acc ++ [pb_util:make_role_info(RoleId, RoleName, LastMapId,Classtype,Gender,Level)];
+						Acc ++ [base_pb_util:make_role_info(RoleId, RoleName, LastMapId,Classtype,Gender,Level)];
 					_->
 						Acc
 				end end,[],AllRoleId),
+			?base_logger_util:info_msg("get_role_list_by_account AccountName:~p AllAttrs:~p",[AccountName,AllAttrs]),
 			{ok,AllAttrs};
 		_->
+			?base_logger_util:info_msg("get_role_list_by_account AccountName:~p AllAttrs:[]",[AccountName]),
 			{ok,[]}
 	end.
 
@@ -217,13 +216,16 @@ get_rolename_by_id(RoleId)->
 %% get_roleid_by_name() -> [integer] | []
 %%
 get_roleid_by_name(BinName) when is_binary(BinName)->
+	?ZSS("BinName:~p",[BinName]),
 	BinName2 = {visitor,BinName},
+	?ZSS(),
 	Tables = base_db_split_util:get_table_names(?ROLE_TABLE_BASE),
+	?ZSS("Tables:~p",[Tables]),
 	SelTab = fun(TableName)->
-				mnesia:index_read(TableName, BinName, #roleattr.name)
+				?base_mnesia:index_read(TableName, BinName, #roleattr.name)
 			end,
 	SelTab2 = fun(TableName)->
-				mnesia:index_read(TableName, BinName2, #roleattr.name)
+				?base_mnesia:index_read(TableName, BinName2, #roleattr.name)
 			end,
 	RoleIds = fun(E)->
 					  element(#roleattr.roleid,E)
@@ -233,13 +235,15 @@ get_roleid_by_name(BinName) when is_binary(BinName)->
 									   lists:map(RoleIds, Rs)
 							   end,Tables) 
 		end,
-	{_, ARoleIds} = mnesia:transaction(Q),
+	{_, ARoleIds} = ?base_mnesia:transaction(Q),
 	{ok,ARoleIds};
 	
 get_roleid_by_name(Name) when is_list(Name)->
+	?ZSS(),
 	BinName = list_to_binary(Name),
 	get_roleid_by_name(BinName);
 get_roleid_by_name(Name) when is_tuple(Name)->
+	?ZSS(),
 	{visitor,VName} = Name,
 	get_roleid_by_name(VName).
 
@@ -259,37 +263,37 @@ name_can_change(RoleInfo)->
 	end.
 
 put_name(RoleInfo,NewValue) when  is_list(NewValue)->
-	erlang:setelement(#roleattr.name, RoleInfo, list_to_binary(NewValue));
+	?base_erlang:setelement(#roleattr.name, RoleInfo, list_to_binary(NewValue));
 put_name(RoleInfo,NewValue) when  is_binary(NewValue)->
-	erlang:setelement(#roleattr.name, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.name, RoleInfo, NewValue).
 get_sex(RoleInfo)->
 	element(#roleattr.sex,RoleInfo).
 put_sex(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.sex, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.sex, RoleInfo, NewValue).
 get_class(RoleInfo)->
 	element(#roleattr.class,RoleInfo).
 put_class(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.class, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.class, RoleInfo, NewValue).
 get_level(RoleInfo)->
 	element(#roleattr.level,RoleInfo).
 put_level(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.level, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.level, RoleInfo, NewValue).
 get_exp(RoleInfo)->
 	element(#roleattr.exp,RoleInfo).
 put_exp(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.exp, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.exp, RoleInfo, NewValue).
 get_hp(RoleInfo)->
 	element(#roleattr.hp,RoleInfo).
 put_hp(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.hp, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.hp, RoleInfo, NewValue).
 get_mana(RoleInfo)->
 	element(#roleattr.mana,RoleInfo).
 put_mana(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.mana, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.mana, RoleInfo, NewValue).
 get_currencygold(RoleInfo)->
 	element(#roleattr.currencygold,RoleInfo).
 put_currencygold(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.currencygold, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.currencygold, RoleInfo, NewValue).
 get_gold_from_account(AccountName)->
 	case base_db_dal_util:read_rpc(account,AccountName) of
 		{ok,[Account]} ->
@@ -315,47 +319,47 @@ put_gold_to_account(AccountName,Gold)->
 get_currencygift(RoleInfo)->
 	element(#roleattr.currencygift,RoleInfo).
 put_currencygift(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.currencygift, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.currencygift, RoleInfo, NewValue).
 get_boundsilver(RoleInfo)->
 	element(#roleattr.boundsilver,RoleInfo).
 put_boundsilver(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.boundsilver, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.boundsilver, RoleInfo, NewValue).
 get_silver(RoleInfo)->
 	element(#roleattr.silver,RoleInfo).
 put_silver(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.silver, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.silver, RoleInfo, NewValue).
 get_mapid(RoleInfo)->
 	element(#roleattr.mapid,RoleInfo).
 put_mapid(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.mapid, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.mapid, RoleInfo, NewValue).
 get_coord(RoleInfo)->
 	element(#roleattr.coord,RoleInfo).
 put_coord(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.coord, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.coord, RoleInfo, NewValue).
 get_bufflist(RoleInfo)->
 	element(#roleattr.bufflist,RoleInfo).
 put_bufflist(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.bufflist, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.bufflist, RoleInfo, NewValue).
 get_training(RoleInfo)->
 	element(#roleattr.training,RoleInfo).
 put_training(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.training, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.training, RoleInfo, NewValue).
 get_packagesize(RoleInfo)->
 	element(#roleattr.packagesize,RoleInfo).
 put_packagesize(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.packagesize, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.packagesize, RoleInfo, NewValue).
 get_groupid(RoleInfo)->
 	element(#roleattr.groupid,RoleInfo).
 put_groupid(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.groupid, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.groupid, RoleInfo, NewValue).
 get_honor(RoleInfo)->
 	element(#roleattr.honor,RoleInfo).
 put_honor(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.honor, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.honor, RoleInfo, NewValue).
 get_fighting_force(RoleInfo)->
 	element(#roleattr.fightforce,RoleInfo).
 put_fighting_force(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.fightforce, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.fightforce, RoleInfo, NewValue).
 up_level_role(RoleId)->
 	RoleInfo = get_role_info(RoleId),
 	Level = get_level(RoleInfo),
@@ -364,29 +368,29 @@ up_level_role(RoleId)->
 	RoleInfo2=put_exp(RoleInfo1,Exp),
 	flush_role(RoleInfo2).
 put_guildid(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.guildid, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.guildid, RoleInfo, NewValue).
 get_guildid(RoleInfo)->
 	element(#roleattr.guildid,RoleInfo).
 put_pvpinfo(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.pvpinfo, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.pvpinfo, RoleInfo, NewValue).
 get_pvpinfo(RoleInfo)->
 	element(#roleattr.pvpinfo,RoleInfo).
 put_pet(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.pet, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.pet, RoleInfo, NewValue).
 get_pet(RoleInfo)->
 	element(#roleattr.pet,RoleInfo).
 put_offline(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.offline, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.offline, RoleInfo, NewValue).
 get_offline(RoleInfo)->
 	element(#roleattr.offline,RoleInfo).
 put_soulpower(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.soulpower, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.soulpower, RoleInfo, NewValue).
 get_soulpower(RoleInfo)->
 	element(#roleattr.soulpower,RoleInfo).
 get_stallname(RoleInfo)->
 	element(#roleattr.stallname,RoleInfo).
 put_stallname(RoleInfo,NewValue)->
-	erlang:setelement(#roleattr.stallname, RoleInfo, NewValue).
+	?base_erlang:setelement(#roleattr.stallname, RoleInfo, NewValue).
 
 %%save
 async_write_roleattr(RoleInfo)->
@@ -444,13 +448,13 @@ flush_role(RoleInfo)->
 	try
 		base_db_dal_util:write_rpc(RoleInfo)
 	catch
-		_:_-> base_logger_util:info_msg("fulsh role ~p failed ~n",[RoleInfo])
+		_:_-> ?base_logger_util:info_msg("fulsh role ~p failed ~n",[RoleInfo])
 	end.
 create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)->
 	case base_node_util:get_dbnode() of
 		nonode-> [];
 		DbNode-> 
-				base_logger_util:info_msg("role_db:create_role_rpc AccountName ~p DbNode ~p ~n",[DbNode,AccountName]),
+				?base_logger_util:info_msg("role_db:create_role_rpc DbNode:~p AccountName:~p ~n",[DbNode,AccountName]),
 				case base_rpc_util:asyn_call(DbNode, ?MODULE, create_role, [AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId]) of
 					 {failed,Reason}-> {failed,Reason};
 					 {ok,Result}-> {ok,Result};
@@ -458,13 +462,14 @@ create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)
 				 end
 	end.	
 create_role(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)->
-	base_logger_util:info_msg("role_db:create_role AccountName ~p Node ~p ~n",[AccountName,node()]),
+	?base_logger_util:info_msg("role_db:create_role Node:~p AccountId:~p, AccountName:~p, RoleName:~p, Gender:~p, ClassId:~p, CreateIp:~p, ServerId:~p",[node(),AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId]),
 	case get_roleid_by_name(RoleName) of
 		{ok,[]}->
 			CreateMod = case base_env_ets:get(create_role_base, []) of
 							[]-> role_create_deploy;
 							Mod -> Mod
 						end,
+			?base_logger_util:info_msg("~p:~p create_role_base ~p:create(...)~n",[?MODULE,?FUNCTION_NAME,CreateMod]),
 			CreateMod:create(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId);
 		{ok,_}-> {failed,?ERR_CODE_ROLENAME_EXISTED}
 	end.

@@ -19,12 +19,12 @@ db_init_master()->
 	?ZS_LOG(),
 	db_operater_behaviour:start(),
 	?ZS_LOG(),
-	case mnesia:system_info(is_running) of
-		yes ->	mnesia:stop();
+	case ?base_mnesia:system_info(is_running) of
+		yes ->	?base_mnesia:stop();
 		no -> o;
-		starting -> mnesia:stop()
+		starting -> ?base_mnesia:stop()
 	end,
-	mnesia:create_schema([node()]),
+	?base_mnesia:create_schema([node()]),
 	db_init_disc_tables().
 
 db_init_line_master()->
@@ -36,8 +36,8 @@ db_init_line_master()->
 		 end,base_node_util:get_all_nodes() ),
 	?ZS_LOG(),
 	lists:foreach(fun(Node)-> base_rpc_util:asyn_call(Node, mnesia, stop,[]) end, NeedShareNodes),
-	mnesia:delete_schema(NeedShareNodes),
-	mnesia:create_schema(NeedShareNodes),
+	?base_mnesia:delete_schema(NeedShareNodes),
+	?base_mnesia:create_schema(NeedShareNodes),
 	lists:foreach(fun(Node)-> base_rpc_util:asyn_call(Node, mnesia, start,[]) end, NeedShareNodes),
 	
 	?ZS_LOG(),
@@ -51,19 +51,19 @@ db_init_line_master()->
 				fun(Table)-> 
 					?ZS_LOG("Table:~p",[Table]),
 					try
-						TableNodes = mnesia:table_info(Table, ram_copies),
+						TableNodes = ?base_mnesia:table_info(Table, ram_copies),
 						?ZS_LOG("Table:~p TableNodes:~p",[Table,TableNodes]),
 						case lists:member(Node, TableNodes) of
 							false->
 								?ZS_LOG(),
-								mnesia:add_table_copy(Table,Node, ram_copies);
+								?base_mnesia:add_table_copy(Table,Node, ram_copies);
 							true->
 								?ZS_LOG(),
 								ignor
 						end
 					catch
 						_:_-> 
-							?base_logger_util:info_msg("~p:line:~p mnesia:table_info(Table:~p, ram_copies)~n",[?MODULE,?LINE,Table]),
+							?base_logger_util:info_msg("~p:line:~p ?base_mnesia:table_info(Table:~p, ram_copies)~n",[?MODULE,?LINE,Table]),
 							true
 					end
 				end, RamTables)	
@@ -76,15 +76,20 @@ db_init_slave()->
 	base_db_tools:config_disc_db_node(DbNode).
 
 create_split_table(CreateMod,BaseTable,Table)->
+	?ZSS(),
+	?base_logger_util:info_msg("CreateMod:~p,BaseTable:~p,Table:~p",[CreateMod,BaseTable,Table]),
+	?ZS(),
+	?base_logger_util:info_msg("CreateMod:~p,BaseTable:~p,Table:~p",[CreateMod,BaseTable,Table]),
+	?ZS("CreateMod:~p,BaseTable:~p,Table:~p",[CreateMod,BaseTable,Table]),
 	CreateMod:create_mnesia_split_table(BaseTable,Table).
 
 %%
 %% Local Functions
 %%
 db_init_disc_tables()->
-	mnesia:start(),
+	?base_mnesia:start(),
 	db_operater_behaviour:create_all_disc_table().
 
 db_init_ram_tables()->
-	mnesia:start(),
+	?base_mnesia:start(),
 	db_operater_behaviour:create_all_ram_table().

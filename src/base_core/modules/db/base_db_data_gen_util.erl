@@ -1,15 +1,17 @@
 %% Description: TODO: Add description to data_gen
 -module(base_db_data_gen_util).
--include("base_define_min.hrl").
--compile(export_all).
 
+-include("base_define_min.hrl").
 -include("mnesia_table_def.hrl").
-%%
-%% Include files
-%%
-%%
-%% Exported Functions
-%%
+
+-export([
+	import_config/1,
+	% clear_table_loop/4,
+	backup/1,
+	backup_ext/1,
+	recovery/1,
+	recovery_ext/1
+]).
 %%
 %% API Functions: add reginfo
 %%
@@ -38,7 +40,7 @@ clear_table_loop(UsedTables,Fd)->
 				true->
 					NewUsedTables = UsedTables;
 				_->
-					case mnesia:clear_table(TableName) of
+					case ?base_mnesia:clear_table(TableName) of
 						{atomic, ok}->
 							NewUsedTables = [TableName|UsedTables];
 						{aborted, R}->
@@ -59,10 +61,10 @@ backup(File)->
 		{ok,F}->
 			NoTempTabs = get_backup_tablelist(),
 			lists:foreach(fun(T)->
-								 {atomic,_} = mnesia:transaction(fun() -> mnesia:foldl(fun(Term,_)-> io:format(F,"~w.~n",[Term]) end,[],T) end)
+								 {atomic,_} = ?base_mnesia:transaction(fun() -> ?base_mnesia:foldl(fun(Term,_)-> io:format(F,"~w.~n",[Term]) end,[],T) end)
 %%								  W = mnesia_lib:val({T, wild_pattern}),
-%%								  {atomic,All} = mnesia:transaction(fun() -> mnesia:match_object(T, W, read) end),
-%%								  lists:foreach(fun(Term) -> io:format(F,"~w.~n", [setelement(1, Term, T)]) end, All)
+%%								  {atomic,All} = ?base_mnesia:transaction(fun() -> ?base_mnesia:match_object(T, W, read) end),
+%%								  lists:foreach(fun(Term) -> io:format(F,"~w.~n", [?base_erlang:setelement(1, Term, T)]) end, All)
 						  end,NoTempTabs),
 			file:close(F),
 			?base_logger_util:info_msg("Finish backup data to file:~p~n",[File]);
@@ -70,7 +72,7 @@ backup(File)->
 	end.
 
 backup_ext(File)->
-	case mnesia:backup(File,[]) of
+	case ?base_mnesia:backup(File,[]) of
 		ok->
 			?base_logger_util:info_msg("backup data success!!!  file ~p~n",[File]);
 		{error,R}->
@@ -108,7 +110,7 @@ recovery_ext(File)->
 						{[Term],NewAcc}
 				end
 			end,
-	case mnesia:traverse_backup(File,mnesia_backup,dummy,read_only,RestoreFun,[]) of
+	case ?base_mnesia:traverse_backup(File,mnesia_backup,dummy,read_only,RestoreFun,[]) of
 		{ok,[]}->
 			nothing;
 		{ok,Terms}->
@@ -131,7 +133,8 @@ write_table_data(L)->
 	[write_data_one(Term) || Term <- L].
 
 write_data_one(Term)->
-	case catch mnesia:dirty_write(Term) of
+	?ZSS("########################"),
+	case catch ?base_mnesia:dirty_write(Term) of
 		ok->
 			ok;
 		{'EXIT',{aborted,Reason}}->
@@ -143,7 +146,7 @@ write_data_one(Term)->
 						ok->
 							Re =
 							try 
-								mnesia:dirty_write(Term)
+								?base_mnesia:dirty_write(Term)
 							catch
 								_E:Error->
 									Error
@@ -173,7 +176,7 @@ is_miss_table_reason(Reason)->
 	end.
 
 is_table_no_exsit(Table)->
-	case catch mnesia:table_info(Table,wild_pattern) of
+	case catch ?base_mnesia:table_info(Table,wild_pattern) of
 		{'EXIT',{aborted,{no_exists,Table,_}}}->
 			true;
 		_->
@@ -219,11 +222,11 @@ do_consult(Fd,LastResult,TermCount,LastTable)->
 	end.
 
 write_list_ets_hack(LastResult)->
-	mnesia:ets(fun()-> [write_data_one_ets_hack(Term) || Term <- LastResult] end). 
+	?base_mnesia:ets(fun()-> [write_data_one_ets_hack(Term) || Term <- LastResult] end). 
 
 write_data_one_ets_hack(Term)->
 	Table = element(1,Term),
-	case catch mnesia:dirty_write(Term) of
+	case catch ?base_mnesia:dirty_write(Term) of
 		ok->
 			ok;
 		{'EXIT',{aborted,Reason}}->
@@ -236,7 +239,7 @@ write_data_one_ets_hack(Term)->
 						ok->
 							Re =
 							try 
-								mnesia:dirty_write(Term)
+								?base_mnesia:dirty_write(Term)
 							catch
 								_E:Error->
 									Error
@@ -253,7 +256,7 @@ write_data_one_ets_hack(Term)->
 	end.
 
 safe_change_table_type(NewTable,Node,Type)->
-	case mnesia:change_table_copy_type(NewTable,Node, Type) of
+	case ?base_mnesia:change_table_copy_type(NewTable,Node, Type) of
 		{aborted,Reason}->
 			case is_miss_table_reason(Reason) of
 				{true,Table}->
@@ -265,7 +268,7 @@ safe_change_table_type(NewTable,Node,Type)->
 							safe_change_table_type(NewTable,Node,Type)
 					end;
 				_->
-					?base_logger_util:info_msg("mnesia:change_table_copy_type Error ~p Reason ~p ~n",[{NewTable,Node, Type},Reason])
+					?base_logger_util:info_msg("?base_mnesia:change_table_copy_type Error ~p Reason ~p ~n",[{NewTable,Node, Type},Reason])
 			end;
 		{atomic, ok}->
 			nothing

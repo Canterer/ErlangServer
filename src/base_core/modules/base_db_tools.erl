@@ -43,7 +43,7 @@ wait_line_db_loop()->
 		Node->
 			case  base_db_line_master_server:is_db_prepread(Node) of
 				true->
-					mnesia:start();
+					?base_mnesia:start();
 				false->
 					timer:sleep(1000),
 					wait_line_db_loop()
@@ -52,11 +52,11 @@ wait_line_db_loop()->
 
 
 config_disc_db_node(DbNode)->
-	mnesia:start(),
+	?base_mnesia:start(),
 	case check_db_connected() of
 		false-> base_db_master_server:rpc_add_self_to_dbslave_node(DbNode);
 		_->
-			TablesList = mnesia:system_info(tables),
+			TablesList = ?base_mnesia:system_info(tables),
 			check_tables_disc_copies(TablesList),
 			base_logger_util:info_msg("This Node has been add to Mnesia as slave dbnode!\n")
 	end.
@@ -69,7 +69,7 @@ config_ram_tables_type(RamTableList)->
 				_DbNode->
 					config_ram_db_node(RamTableList),
 					CorrectTables = base_db_tools:correct_need_config_tables(RamTableList),
-					mnesia:wait_for_tables(CorrectTables,?DB_WAIT_TABLE_TIMEOUT),
+					?base_mnesia:wait_for_tables(CorrectTables,?DB_WAIT_TABLE_TIMEOUT),
 					ok
 			end
 	end.
@@ -78,7 +78,7 @@ config_ram_db_node(TablesList)->
 	case base_node_util:get_dbnode() of
 		nonode -> base_logger_util:info_msg("DB Node havn't startd!\n");
 		DbNode->
-			mnesia:start(),
+			?base_mnesia:start(),
 			case check_db_connected() of
 				false-> base_db_master_server:rpc_add_self_to_db_node(DbNode,TablesList);
 				_-> check_tables_ram_copies(base_db_tools:correct_need_config_tables(TablesList)),
@@ -91,7 +91,7 @@ config_ram_db_node(TablesList)->
 %% Local Functions
 %%
 check_db_connected()->
-	Nodes = mnesia:system_info(db_nodes),
+	Nodes = ?base_mnesia:system_info(db_nodes),
 	CurNode = node(),
 	case Nodes of
 		[CurNode]-> false;
@@ -106,10 +106,10 @@ check_tables_ram_copies([])->
 	ok;
 check_tables_ram_copies(TableList)->
 	[Table|T] = TableList,
-	Nodes = mnesia:table_info(Table, ram_copies),
+	Nodes = ?base_mnesia:table_info(Table, ram_copies),
 	case lists:member(node(), Nodes) of
 		false->
-			mnesia:add_table_copy(Table, node(), ram_copies);
+			?base_mnesia:add_table_copy(Table, node(), ram_copies);
 		true->
 			ignor
 	end,
@@ -137,23 +137,32 @@ check_tables_disc_copies(TableList)->
 %% Type-> bag|set|...
 %%
 create_table_disc(Tab,Attributes,Indices,Type)->
+	?ZSS("Tab:~p",[Tab]),
+	?DB_OPERATER_START(),
+	?ZSS(),
+	?ZSS(),
 	NeedCreate = try
-					 case mnesia:table_info(Tab,attributes) of
-						Attributes -> false;
+					 case ?base_mnesia:table_info(Tab,attributes) of
+						Attributes -> 
+							?ZSS(),
+							false;
 						_->  
 							base_logger_util:info_msg("table [~p] attributes are different\n",[Tab]),false
 					 end
 				 catch
-					 _:_-> true
+					 _:_->
+					 	?ZSS(), 
+					 	true
 				 end,
+	?DB_OPERATER_START("Tab:~p,Attributes:~p,Indices:~p,Type:~p,NeedCreate:~p",[Tab,Attributes,Indices,Type,NeedCreate]),
 	case NeedCreate of
 		true-> 
 			case Indices of
-				[]-> mnesia:create_table(Tab, [{disc_copies,[node()]},
+				[]-> ?base_mnesia:create_table(Tab, [{disc_copies,[node()]},
 										 {attributes, Attributes},
 										 {type,Type}]);
 				_->
-				  mnesia:create_table(Tab, [{disc_copies,[node()]},
+				  ?base_mnesia:create_table(Tab, [{disc_copies,[node()]},
 										 {attributes, Attributes},
 										 {index,Indices},
 										 {type,Type}])
@@ -163,7 +172,7 @@ create_table_disc(Tab,Attributes,Indices,Type)->
 	
 create_table_ram(Tab,Attributes,Indices,Type)->
 	NeedCreate = try
-					 case mnesia:table_info(Tab,attributes) of
+					 case ?base_mnesia:table_info(Tab,attributes) of
 						Attributes -> false;
 						_->  
 							base_logger_util:info_msg("table [~p] attributes are different\n",[Tab]),false
@@ -174,11 +183,11 @@ create_table_ram(Tab,Attributes,Indices,Type)->
 	case NeedCreate of
 		true-> 
 			case Indices of
-				[]-> mnesia:create_table(Tab, [{ram_copies,[node()]},
+				[]-> ?base_mnesia:create_table(Tab, [{ram_copies,[node()]},
 										 {attributes, Attributes},
 										 {type,Type}]);
 				_->
-				  mnesia:create_table(Tab, [{ram_copies,[node()]},
+				  ?base_mnesia:create_table(Tab, [{ram_copies,[node()]},
 										 {attributes, Attributes},
 										 {index,Indices},
 										 {type,Type}])
@@ -189,13 +198,13 @@ create_table_ram(Tab,Attributes,Indices,Type)->
 
 force_disc_copies(Node,Table)->
 	RamCopies = try
-					mnesia:table_info(Table, ram_copies)
+					?base_mnesia:table_info(Table, ram_copies)
 				catch
 				_:_->
 					[]
 				end,
 	DiscCopies= try
-					mnesia:table_info(Table, disc_copies)
+					?base_mnesia:table_info(Table, disc_copies)
 				catch
 				_:_->
 					[]
@@ -205,13 +214,13 @@ force_disc_copies(Node,Table)->
 		true->  {ok,ignor};
 		false->
 			case lists:member(Node,RamCopies ) of
-				true->mnesia:change_table_copy_type(Table, Node, disc_copies);
-				false->mnesia:add_table_copy(Table,Node,disc_copies)
+				true->?base_mnesia:change_table_copy_type(Table, Node, disc_copies);
+				false->?base_mnesia:add_table_copy(Table,Node,disc_copies)
 			end
 	end.
 
 correct_need_config_tables(NeedConfigTables)->
-	AllTables = mnesia:system_info(tables),
+	AllTables = ?base_mnesia:system_info(tables),
 	lists:foldl(fun(Tab,Acc)->
 						case Tab of
 							schema-> Acc;
@@ -237,9 +246,9 @@ is_table_in_list(Table,SplitTables)->
 	
 
 add_db_ram_node(NewNode,Tables) -> 
-	RunningNodeList = mnesia:system_info(running_db_nodes),  
+	RunningNodeList = ?base_mnesia:system_info(running_db_nodes),  
 	add_extra_node(RunningNodeList, NewNode),  
-	mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
+	?base_mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
 	base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
 	timer:sleep(1000),  
 	base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
@@ -248,14 +257,14 @@ add_db_ram_node(NewNode,Tables) ->
 	add_ram_tables(NeedConfigTables, NewNode).
   
 add_dbslave_node(NewNode) -> 
-	RunningNodeList = mnesia:system_info(running_db_nodes),  
+	RunningNodeList = ?base_mnesia:system_info(running_db_nodes),  
 	add_extra_node(RunningNodeList, NewNode),  
-	mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
+	?base_mnesia:change_table_copy_type(schema, NewNode, disc_copies),  
 	base_rpc_util:asyn_call(NewNode, mnesia, stop, []),  
 	timer:sleep(1000),  
 	base_rpc_util:asyn_call(NewNode, mnesia, start, []),  
 	timer:sleep(1000),  
-	TablesList = mnesia:system_info(tables),
+	TablesList = ?base_mnesia:system_info(tables),
 	add_disc_tables(TablesList, NewNode).
 
 add_extra_node([], _NewNode) ->  
@@ -267,14 +276,14 @@ add_extra_node(_RunningNodeList = [Node | T], NewNode) ->
 add_ram_tables([], _NewNode) ->  
 	null;  
 add_ram_tables(_TableList = [Table | T], NewNode) ->  
-	mnesia:add_table_copy(Table, NewNode, ram_copies),  
+	?base_mnesia:add_table_copy(Table, NewNode, ram_copies),  
 	add_ram_tables(T, NewNode).
 
 
 add_disc_tables([], _NewNode) ->  
 	null;  
 add_disc_tables(_TableList = [Table | T], NewNode) ->  
-	mnesia:add_table_copy(Table, NewNode, disc_copies),  
+	?base_mnesia:add_table_copy(Table, NewNode, disc_copies),  
 	add_disc_tables(T, NewNode).
 
 wait_for_tables_loop(_IsRemote,0,_TabList)->
@@ -378,10 +387,10 @@ wait_for_tables_rpc(TableList,TimeOut)->
 
 wait_for_tables_norpc(TableList,TimeOut)->
 	?ZS_LOG(),
-	mnesia:wait_for_tables(TableList,TimeOut).
+	?base_mnesia:wait_for_tables(TableList,TimeOut).
 
 wait_for_all_db_tables_in_db_node()->
-	AllTablesList = mnesia:system_info(tables),
+	AllTablesList = ?base_mnesia:system_info(tables),
 	case wait_for_tables_norpc(AllTablesList, ?DB_WAIT_TABLE_TIMEOUT) of
 		ok->
 			ok;
@@ -435,7 +444,7 @@ get_node_ram_tables(Node)->
 	
 check_mnesia_table_exist(Table)->
 	try
-		mnesia:table_info(Table,type),
+		?base_mnesia:table_info(Table,type),
 		true
 	catch
 		_:_-> false

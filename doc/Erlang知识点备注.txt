@@ -109,6 +109,22 @@ mnesia:dirty_write
 mnesia:wread(Tab, Key)
 注意：dirty_read速度是dirty_index_read速度近三倍。
 
+write/1,write/3,write/5
+read/1,read/2,read/4,read/5
+//Row = #shop{item=Name,cost=Cost}
+F = fun()-> mnesia:write(Row) end,
+mnesia:transaction(F).
+
+mnesia:write(Record)
+	Tab = element(1, Val),
+    write(Tab, Val, write);
+mnesia:write(Tab::table(), Record::tuple(), LockKind::write_locks())
+	 case get(mnesia_activity_state) of
+		{?DEFAULT_ACCESS, Tid, Ts} ->
+	    	write(Tid, Ts, Tab, Val, LockKind);
+		{Mod, Tid, Ts} ->
+	    	Mod:write(Tid, Ts, Tab, Val, LockKind);
+
 Mnesia使用5种锁
 读锁，在复制记录读前加锁
 写锁，在事务写记录前，会在指定记录的所有复件上添加写锁

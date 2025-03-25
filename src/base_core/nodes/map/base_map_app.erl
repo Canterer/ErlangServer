@@ -59,8 +59,8 @@ start(_Type, _StartArgs) ->
 			% 初始化当前节点的ets配置列表,并等待db节点数据库就绪
 			base_application_server:wait_ets_init(),
 			base_logger_util:info_msg("wait_for_all_db_tables end ~n"),
-			% role_pos_db:unreg_role_pos_to_mnesia_by_node(node()),
-			% role_app:start(),
+			role_pos_db:unreg_role_pos_to_mnesia_by_node(node()),
+			base_role_app:start(),
 			base_line_manager_server:wait_lines_manager_loop(),
 
 			%%load map

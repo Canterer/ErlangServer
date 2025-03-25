@@ -113,10 +113,10 @@ auth(FromNode,FromProc,ServerId,UserAuth)->
 	try
 		case Mod:Fun(UserAuth,SecretKey,CfgTimeOut,FatigueList,NoFatigueList) of
 			{ok,PlayerId,IsAudult}->
-				% base_logger_util:info_msg("~p login successed userid=~p~n",[UserName,PlayerId]),
+				base_logger_util:info_msg("~p login successed userid=~p~n",[UserName,PlayerId]),
 				base_tcp_client_statem:auth_ok(FromNode, FromProc,ServerId,PlayerId,UserName,IsAudult);
 			{ok,Info}->
-				% base_logger_util:info_msg("qq_auth_ok login successed username=~p  userid=~p~n",[UserName,UserId]),
+				base_logger_util:info_msg("qq_auth_ok login successed username=~p  userid=~p~n",[UserName,UserId]),
 				base_tcp_client_statem:qq_auth_ok(FromNode,FromProc,ServerId,UserId,UserName,LogTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey);
 			{error, Reason}-> 
 				base_logger_util:info_msg("~p login failed,Reason:~p ~n",[UserName, Reason]),

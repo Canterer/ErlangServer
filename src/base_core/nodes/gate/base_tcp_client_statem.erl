@@ -1,9 +1,12 @@
 -module(base_tcp_client_statem).
 
 %% External exports
--export([start_link/2,
-	 send_data/2,
-	 shutown_client/1]).
+-export([
+	start_link/2,
+	send_data/2,
+	shutown_client/1,
+	kick_client/1
+]).
 
 % 状态 connecting、connected、authing、rolelisting、preparing_into_map、gaming
 -export([
@@ -19,7 +22,9 @@
 
 -export([
 	% authing/3,
-	auth_ok/6,auth_failed/4
+	auth_ok/6,
+	qq_auth_ok/12,
+	auth_failed/4
 ]).
 
 -export([
@@ -32,6 +37,7 @@
 
 -export([
 	% logining/3,
+	role_into_map_request/4,
 	line_info_success/3
 ]).
 
@@ -45,9 +51,6 @@
 	line_info_request/3
 ]).
 
--export([kick_client/1]).
-
--compile(export_all).
 
 -define(OBJECT_PACKET_UPDATE_INTERVAL,500).	%%500ms
 -define(TIME_OUT_MICROS,300000000).		%%300s超时
@@ -451,6 +454,7 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	Is_yellow_year_vip = get(is_yellow_year_vip),
 	Yellow_vip_level = get(yellow_vip_level),
 	Pf = get(pf),
+	?base_logger_util:info_msg("error base_gate_op:create_role/11 undefined"),
 	case base_gate_op:create_role(PlayerId,AccountName,NickName,Gender,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
 		{ok,RoleId}->SendData = login_pb:encode_proto_msg(create_role_sucess_s2c,#create_role_sucess_s2c{role_id=RoleId}),
@@ -529,7 +533,7 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 ?handle_event(cast,{role_into_map_request,RoleId,_LineId},logining,StateData) ->
 % handle_logining_state(cast,{role_into_map_request,RoleId,_LineId},StateData) ->
 	RoleList = base_gate_op:get_role_list(get(account),get(serverid)),
-	case lists:member(RoleId,[ pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
+	case lists:member(RoleId,[base_pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
 		true->
 			case role_pos_util:where_is_role(RoleId) of
 				[]->
@@ -558,7 +562,7 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	{next_state,logining,StateData};
 ?handle_event(cast,{line_info_success,LineInfos},logining,StateData)->
 % handle_logining_state(cast,{line_info_success,LineInfos}, StateData)->
-	{LineId,_OnlineRole}=line_util:get_min_count_of_lines(LineInfos),
+	{LineId,_OnlineRole}=base_temp_util:get_min_count_of_lines(LineInfos),
 	put(lineid, LineId),
 %% 	start_game_after_line_fixed(LineId),
 	start_game_after_line_fixed(1),				%%枫少修改只有一线
@@ -989,6 +993,7 @@ async_get_line_info_by_mapid(MapId)->
 	end.
 	
 start_game_after_line_fixed(LineId)->
+	?ZSS(),
 	MapId = get(mapid),
 	RoleId = get(roleid),
 	AccountName= get(account),
@@ -1026,7 +1031,7 @@ start_game_after_line_fixed(LineId)->
 	GS_system_gate_info = #gs_system_gate_info{gate_proc = GateProc, gate_node=node(), gate_pid=self()},
 	New_GS_system_role_info = GS_system_role_info#gs_system_role_info{role_node=MapNode},
 	put(gs_system_role_info, New_GS_system_role_info),
-	%base_logger_util:info_msg("base_role_manager:start_one_role ~p ~p ~p ~n",[GS_system_gate_info,New_GS_system_role_info,GS_system_map_info]),
+	base_logger_util:info_msg("base_role_manager:start_one_role ~p ~p ~p ~n",[GS_system_gate_info,New_GS_system_role_info,GS_system_map_info]),
 	base_role_manager:start_one_role(GS_system_map_info, New_GS_system_role_info, GS_system_gate_info,
 								{get(account),get(pf),get(adult),LoginIp,get(is_yellow_vip), get(is_yellow_year_vip),
 								 get(yellow_vip_level),get(openid),get(openkey),get(pfkey)}).

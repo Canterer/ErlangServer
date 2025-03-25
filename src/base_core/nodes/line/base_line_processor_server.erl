@@ -91,14 +91,74 @@ lookup_map_name(LineId, MapId) ->
 %% DB field: {key, nodename, mapname, lineid, mapid, rolecount}
 %%		   {'_', '_',	  '_',	 '_',	mapid, '$1'}).
 get_role_count_by_map(MapId) ->
-	todo.
+	case ?base_ets:match(?MAP_PROC_DB, {'_', '_', '_', '$1', MapId}) of
+		[]->
+			base_logger_util:info_msg("get_role_count_by_map error ! MapId ~p ~n",[MapId]),
+			[];
+		LineIdList->
+			OrgList = lists:map(fun(LineId)-> {LineId,0} end, lists:append(LineIdList)),
+			MaxCount = base_env_ets:get2(line_switch,open_count,200),
+			DynLineList =  lists:filter(fun(Lid)-> lists:keymember(Lid, 1, OrgList) end, get(dynamic_lines)),
+			Fun = 
+				fun(RolePos,{CountTmp,LineInfo})->
+						LineId = role_pos_db:get_role_lineid(RolePos),
+						LineRoleCount = 
+						if
+							LineId>0->
+								case lists:keyfind(LineId, 1, LineInfo) of
+									false-> LineInfo;%%[{LineId,1}|LineInfo]; no this map
+									{_LineId,Count}->
+										lists:keyreplace(LineId, 1, LineInfo, {LineId,Count+1})
+								end;
+							true->
+								LineInfo
+						end,
+						{CountTmp+1,LineRoleCount}
+				end,
+			{AllOnlineNum,LineRoleCountOri} = role_pos_db:foldl(Fun ,{0,OrgList}),
+			RoleCountWithoutIdelDynLine =  lists:filter(fun({LineId,Count})->
+									   		(Count =/= 0) or (not lists:member(LineId, DynLineList))
+							   		end, LineRoleCountOri),
+			LiveLine = max(length(RoleCountWithoutIdelDynLine),1),
+			LonelyMaps = base_map_info_db:get_lonely_maps(),
+			case ( (AllOnlineNum/LiveLine) >=MaxCount) and (not lists:member(MapId,LonelyMaps)) of
+				true->
+		   			{_,RoleCountWithNewLine} = lists:foldl(fun(DyLineId,Acc0)->
+														case Acc0 of
+															{true,_}-> Acc0;
+															{false,RoleCountX}->
+																case lists:keyfind(DyLineId, 1, RoleCountWithoutIdelDynLine) of
+																		false->{true, RoleCountX ++ [{DyLineId,0}]};
+																	_-> Acc0
+																end
+														end
+												end, {false,RoleCountWithoutIdelDynLine}, DynLineList),
+			   		RoleCountWithNewLine;
+		   		_->
+			   		RoleCountWithoutIdelDynLine
+			end
+	end.
+
+%% Description: 
+get_role_count_by_line_map(MapId, LineId) ->
+	RoleInfo = role_pos_db:get_role_info_by_map_line(MapId, LineId),
+	erlang:length(RoleInfo).
 
 %%
 %%get role num in the map (all line)
 %%return [{MapId,RoleNum},.....]
 %%
 get_role_num_by_mapId() ->
-	todo.
+	Fun = 
+		fun(RolePos,TempList)->
+				MapId = role_pos_db:get_role_mapid(RolePos),
+				case lists:keyfind(MapId,1,TempList) of
+					false-> [{MapId,1}|TempList];
+					{_MapId,Count}->
+						lists:keyreplace(MapId, 1, TempList, {MapId,Count+1})
+				end
+		end,
+	role_pos_db:foldl(Fun ,[]).
 
 %% --------------------------------------------------------------------
 %%% Internal functions

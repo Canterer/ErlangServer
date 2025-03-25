@@ -74,7 +74,7 @@ is_db_prepread(Node)->
 	?ZS_LOG(),
 
 	% 初始化记录用的ets
-	% base_db_split_util:create_ets(),
+	base_db_split_util:create_ets(),
 	?ZS_LOG(),
 	% 记录自定义类型disc_split的表 通过db_operater_behaviour搜集
 	base_db_split_util:check_split_master_tables(),
@@ -111,6 +111,7 @@ is_db_prepread(Node)->
 ?handle_info({check_split},State)->
 	base_logger_util:info_msg("~p:~p({check_split},State:~p)~n",[?MODULE,?FUNCTION_NAME,State]),
 	ServerList = base_env_ets:get(serverids, [0]),
+	base_logger_util:info_msg("~p:~p({check_split},ServerList:~p)~n",[?MODULE,?FUNCTION_NAME,ServerList]),
 	Result = lists:foldl(fun(ServerId,Acc)->
 								 case Acc of
 									 ignor->ignor;

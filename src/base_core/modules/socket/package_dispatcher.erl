@@ -40,8 +40,8 @@
 %%
 dispatch(ID, Binary,FromProcName,RolePid)->
 	RecordName = login_pb:get_record_name(ID),
-	Message =login_pb:decode_proto_msg(RecordName,Binary),
 	base_logger_util:info_msg("dispatch client_packet (FromProcName:~p,RolePid:~p,MsgId:~p,MsgName:~p)~n", [FromProcName,RolePid,ID,RecordName]),
+	Message =login_pb:decode_proto_msg(RecordName,Binary),
 	case RecordName of
 		user_auth_c2s->  
 			% Message = login_pb:decode_user_auth_c2s(Binary),
@@ -50,7 +50,7 @@ dispatch(ID, Binary,FromProcName,RolePid)->
 			% Message = login_pb:decode_server_version_c2s(Binary),
 			try
 				Msg = version:make_version(),
-				tcp_client:send_data(self(),Msg)
+				base_tcp_client_statem:send_data(self(),Msg)
 			catch
 				_:_->nothing
 			end;

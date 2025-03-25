@@ -1,0 +1,154 @@
+流程
+服务端
+	1. listen端口
+	base_tcp_acceptor_server 处理客户端连接并开启 客户端状态机base_tcp_client_statem
+	base_tcp_client_statem 状态 connecting、connected、authing
+		connecting状态
+			尝试读取Packet 即user_auth_c2s
+		connected状态
+			负责开始验证
+			调用base_auth_processor_server:auth 切换authing状态
+				内部从base_env_ets:get(auth_module)读取验证模块 [default_auth_func_mod|auth_qq_platform]
+				根据base_env_ets:get(platformkey)调用不同函数 [validate_user_test|validate_user]
+				根据验证结果 发送消息 [auth_ok|qq_auth_ok|auth_failed]
+		authing状态
+			若验证成功, 
+				获取角色列表 base_gate_op:get_role_list(AccountName, get(serverid))
+					角色列表为空 则调用 autoname_op:init_autoname_s2c() 获取随机名 发送给客户端 init_random_rolename_s2c
+		rolelisting状态
+			收到role_create_request 调用 base_gate_op:create_role 获取角色id
+				base_gate_op:create_role
+					base_role_db:get_role_list_by_account获取角色列表
+					若无角色
+						验证角色名是否合理 senswords_util:word_is_sensitive
+						base_role_db:create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassType,CreateIp,ServerId)
+
+
+客户端
+	gen_tcp:connect 连接服务端
+	user_auth_c2s 发送验证包
+	若  收到init_random_rolename_s2c 发送 create_role_request_c2s
+		收到player_role_list_s2c 发送 role_line_query_c2s
+
+
+创建角色接口
+	// 正式创建接口  多出的属性 QQ昵称、QQ性别、LoginTime、是否为黄钻VIP、是否为黄钻年VIP、黄钻VIP等级、Pf(登录平台)
+	base_gate_op:create_role(AccountId,AccountName,NickName,QQGender,RoleName,Gender,ClassType,CreateIp,ServerId,LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf)
+	// 游客创建 角色名=游客+AccountId    性别和角色类型 随机
+	base_gate_op:create_role(AccountId,AccountName,CreateIp,ServerId)
+		下发的RoleName={visitor,RoleName}
+
+	底层接口：为角色创建数据
+	base_role_db:create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassId,CreateIp,ServerId)
+		读表获取创建角色模块  base_env_ets:get(create_role_base)  默认为role_create_deploy模块创建
+
+	角色数据关键数据：
+		AccountId,AccountName,//账号id 账号名
+		RoleName,Gender,ClassId,//角色名 性别 角色类型(1|2|3)种 查表的时候都是roleid={Gender,ClassId}
+		CreateIp,ServerId// 第一次创建的ip ServerId 服务器id
+
+
+
+
+	MIN_ROLE_ID 			= 10000000	最小角色id
+	SERVER_MAX_ROLE_NUMBER	= 50000000  服务器最大角色数
+	SPLIT_TABLE_MAX_NUM		= 500000	分割的子表最大角色数
+	RoleId = [MIN_ROLE_ID,_]
+
+	gen_newid
+		NewCurIndex = [MIN_ROLE_ID,SERVER_MAX_ROLE_NUMBER]
+		RoleId = ServerId*SERVER_MAX_ROLE_NUMBER + NewCurIndex
+
+	get_table_postfix(RoleId, Max)//Max为各类型table的角色数
+		OrgId = RoleId - MIN_ROLE_ID
+		ServerId = OrgId div SERVER_MAX_ROLE_NUMBER
+		Low = OrgId div SERVER_MAX_ROLE_NUMBER
+		TableIndex = Low div Max
+
+
+
+
+db_operater_behaviour
+	start					%% start mod 开始入口 主要调用所有继承该行为的模块
+	create_mnesia_table		%% 提供两者类型的table创建入口		%% args: ram/disc
+	create_mnesia_split_table	%% create split table		%% args:[BaseTable,TrueTabName]  给不同服务器一定范围的角色 单独分割成一个表
+	delete_role_from_db		%% 从各个相关表中删除一个角色的数据
+	tables_info				%% 返回 包含四种类型(proto、ram、disc、split_disc)的 table列表
+
+
+db_operater_behaviour:start
+	建立 db_operater_behaviour 记录所有的表模块以及tables_info列表
+	建立 dp_split_tables 记录disc_split类型的表
+
+db_operater_behaviour:start_module
+	通过各个表定义的tables_info() 将表数据记录在表里
+
+db_operater_behaviour:create_all_disc_table
+	调用所有表模块的 create_mnesia_table(disc) 方法
+db_operater_behaviour:create_all_ram_table
+	根据所有表模块的 tables_info列表 筛选是否含ram类型的table  
+		若含ram类型的table  由此调用该表模块的 create_mnesia_table(disc) 方法
+
+db_operater_behaviour:delete_role_from_db
+	调用所有表的 delete_role_from_db(RoleId) 方法
+
+db_operater_behaviour:get_all_ram_table
+	返回所有的ram_table
+db_operater_behaviour:get_split_table_and_mod(BaseTab)
+	获取包含 分割表BaseTab 的模块
+db_operater_behaviour:get_all_split_table_and_mod
+	获取所有 分割表以及所在的模块
+db_operater_behaviour:get_backup_filter_tables
+	获取所有表模块中 定义的ram、proto类型的 table列表
+
+
+初始化：
+	base_db_tools:wait_line_db
+		db_operater_behaviour:start()调用所有的表模块
+		chat_app、gate_app、guild_app、map_app 会调用wait_line_db() 初始化所有表模块
+	base_db_init_util:db_init_master()
+		db_app 会开启 db_master_server 并触发db_init_master() 初始化所有表模块并创建所有disc的表
+	base_db_init_util:db_init_line_master()
+		line_app 会开启 db_line_master_server 并触发db_init_line_master() 初始化所有表模块并创建所有ram的表
+		根据 配置nodes_ram_table 获取各个节点 所需要的共享 ram表
+		然后 重置各个节点的数据库 mnesia:stop、mnesia:delete_schema(NeedShareNodes)、mnesia:create_schema(NeedShareNodes)
+		获取各个表的 拷贝节点 mnesia:table_info(Table, ram_copies) 查看节点是否拷贝 若无则调用 mnesia:add_table_copy(Table, Node, ram_copies)
+
+创建表：
+	base_db_init_util:create_all_disc_table()
+		触发所有表模块的 Module:create_mnesia_table(disc)
+	base_db_init_util:create_all_ram_table()
+		触发部分含ram表模块的 Module:create_mnesia_table(ram)
+创建分割表：
+	base_db_init_util:create_split_table(CreateMod, BaseTable, SubTable) //底层统一入口
+
+	base_db_split_util:create_split_table_by_name(SubTableName) 根据分割表的名字 创建对应的表
+		获取所有的分割表及其模块信息  筛选相符合的分割表以及所在的模块 并触发create_split_table(CreateMod, BaseTable, SubTable)
+		如SubTableName为baseTableName_1_0 筛选前缀得出 baseTableName
+
+	base_db_split_util:check_need_new_table(BaseTable, HiValue)
+
+
+
+base_db_split_util:check_split_master_tables
+	db_app 的 db_master_server 周期性收集 所有分割表及其分割的子表列表
+base_db_split_util:get_table_names_rpc(OriginalTable)
+	获取db节点中某一个分割表所 分割的子表列表
+base_db_split_util:get_splitted_info(SubTableName)
+	根据分割的子表名 获取其 分割表信息
+base_db_split_util:get_splitted_tables(TablseBase)
+	获取该分割表的 已分割的子表
+base_db_split_util:get_owner_table(BaseTableName,RoleId)
+	根据角色id 以及对应的分割表 获取其所在的分割子表名
+
+base_db_split_util:check_need_split(HiValue)//HiValue即ServerId
+	db_app 的 db_master_server 周期性判断 若无问题 则每秒触发 否则 10分钟后触发
+	通过serverids字段获取 ServerList 对其每一个ServerId 触发check_need_split(ServerId)
+
+	获取所有的分割表信息 检查每个分割表 对应的当前ServerId的子表列表
+	判断是否需要创建 分割子表
+
+
+gen_db_code.erl 用于定义特殊格式的hrl 生成基本的xxx_db.erl 提供基本的存取数据
+
+gs_prof.erl 处理gs客户端连接

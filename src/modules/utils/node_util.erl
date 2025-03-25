@@ -9,7 +9,6 @@
 %% Exported Functions
 %%
 -export([]).
--compile(export_all).
 %%
 %% API Functions
 %%

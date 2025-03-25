@@ -63,6 +63,10 @@ start(_Type, _StartArgs) ->
 	% base_line_processor_sup 需要在 base_line_manager_sup 之前初始化
 	start_line_processor_sup(),
 	start_lines_manager_sup(),
+
+	start_role_id_generator_sup(),
+	start_item_id_generator_sup(),
+
 	{ok, self()}.
 	
 start()->
@@ -92,6 +96,22 @@ start_line_processor_sup() ->
 	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),
 	case base_line_processor_sup:start_link() of
 		{ok, Pid} ->
+			{ok, Pid};
+		Error ->
+			Error
+	end.
+
+start_role_id_generator_sup() ->
+	case base_role_id_generator_sup:start_link() of
+		{ok,Pid}->
+			{ok, Pid};
+		Error ->
+			Error
+	end.
+
+start_item_id_generator_sup() ->
+	case base_item_id_generator_sup:start_link() of
+		{ok,Pid}->
 			{ok, Pid};
 		Error ->
 			Error

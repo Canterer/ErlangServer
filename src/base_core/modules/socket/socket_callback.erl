@@ -34,7 +34,7 @@ on_client_receive_packet(GateProc,Binary,RolePid)->
 		% base_logger_util:info_msg("~p:~p(GateProc:~p,RolePid:~p,MsgId:~p,MsgName:~p)~n", [?MODULE,?FUNCTION_NAME,GateProc,RolePid,ID,ProtoName]),
 		package_dispatcher:dispatch(ID,Binary1,GateProc,RolePid)
 	catch
-		_:_-> base_logger_util:info_msg("socket_callback:receive_packet parse error ~p~n",[Binary])
+		_:_-> base_logger_util:info_msg("socket_callback:receive_packet parse error ~p~n stacktrace:~p~n",[Binary,erlang:get_stacktrace()])
 	end.
 
 on_client_close_socket(GateProc,RolePid) ->

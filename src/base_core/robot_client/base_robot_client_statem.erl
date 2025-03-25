@@ -148,7 +148,7 @@ sendtoserver(Pid,Binary)->
 
 ?handle_event(cast,#player_role_list_s2c{roles=RoleList},loging, State)->
 % loging(#player_role_list_s2c{roles=RoleList}, State)->
-	base_logger_util:info_msg("~p:~p(player_role_list_s2c)~n",[?MODULE,?FUNCTION_NAME]),
+	base_logger_util:info_msg("~p:~p(player_role_list_s2c RoleList:~p)~n",[?MODULE,?FUNCTION_NAME,RoleList]),
 	case RoleList of
 		[]->
 			nothing;

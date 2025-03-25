@@ -13,10 +13,20 @@
 %%
 %% Exported Functions
 %%
--compile(export_all).
--export([get_owner_table/2,check_need_split/1,get_table_names_rpc/1,get_table_names/1]).
 
--export([get_table_info/1]).
+-export([
+	get_owner_table/2,
+	check_need_split/1,
+	get_table_names_rpc/1,
+	get_table_names/1
+]).
+-export([
+	create_split_table_by_name/1,
+	check_split_table/1,
+	check_need_new_table/2,
+	check_split_master_tables/0,
+	get_splitted_tables/1
+]).
 
 %% --------------------------------------------------------------------
 %% behaviour include shared code
@@ -51,9 +61,14 @@ add_table_names(OriginalTable,SplittedTable)->
 	end.
 
 get_table_names(OriginalTable)->
+	?ZSS(),
 	case ?base_ets:lookup(?SPLIT_TABLE_NAME_ETS, OriginalTable) of
-		[]-> [];
-		[{_,SplittedTables}]->SplittedTables
+		[]->
+			?ZSS(), 
+			[];
+		[{_,SplittedTables}]->
+			?ZSS(), 
+			SplittedTables
 	end.
 
 get_table_names_rpc(OriginalTable)->
@@ -76,9 +91,9 @@ get_table_postfix(Id,Max)->
 	TabIndx = Low div Max,
 	erlang:integer_to_list(Hi) ++ "_" ++ erlang:integer_to_list(TabIndx).
 
-get_owner_table(TableName,Id)->
+get_owner_table(BaseTableName,RoleId)->
 	Max = 
-	case TableName of
+	case BaseTableName of
 		playeritems->
 			100000;
 		pet_explore_storage->
@@ -88,11 +103,13 @@ get_owner_table(TableName,Id)->
 		_->	
 			?SPLIT_TABLE_MAX_NUM
 	end,
-	NewTableString = erlang:atom_to_list(TableName) ++ "_" ++ get_table_postfix(Id,Max),
+	NewTableString = erlang:atom_to_list(BaseTableName) ++ "_" ++ get_table_postfix(RoleId,Max),
 	erlang:list_to_atom(NewTableString).
 
 check_need_split(HiValue)->
+	?ZSS("ServerId:~p",[HiValue]),
 	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
+	?ZSS("check_need_split ServerId:~p SplitInfos:~p",[HiValue,SplitInfos]),
 	lists:foldl(fun(TabLine,Acc)->
 						case Acc of
 							ignor-> ignor;
@@ -101,7 +118,7 @@ check_need_split(HiValue)->
 				  end,ok,SplitInfos).
 
 get_splitted_tables(TablseBase)->
-	AllTables = mnesia:system_info(tables),
+	AllTables = ?base_mnesia:system_info(tables),
 	lists:filter(fun(Table)-> check_tablebase_match(TablseBase,Table) end, AllTables).
 
 check_tablebase_match(TableBase,CurBase)->
@@ -123,13 +140,13 @@ get_basetable(TableInfo)->
 get_table_mod(TableInfo)->
 	erlang:element(2, TableInfo).
 
-get_splitted_info(CurTable)->
-	CurTableStr = atom_to_list(CurTable),
+get_splitted_info(SubTableName)->
+	SubTableStr = atom_to_list(SubTableName),
 	SplitInfos = db_operater_behaviour:get_all_split_table_and_mod(),
 	case lists:filter(fun(SplitInfo)->
 						 TableBase = get_basetable(SplitInfo),
 						 TableBaseStr = atom_to_list(TableBase),
-						 case string:str(CurTableStr, TableBaseStr) of
+						 case string:str(SubTableStr, TableBaseStr) of
 							 1-> true;
 							 _-> false
 						 end
@@ -139,16 +156,23 @@ get_splitted_info(CurTable)->
 		_-> false
 	end.
 
+make_table_name(BaseTable,HiValue,LowValue)->
+	?ZSS(),
+	TableString = atom_to_list(BaseTable) ++ "_"++integer_to_list(HiValue)++"_"++integer_to_list(LowValue),
+	list_to_atom(TableString).
+
 %%return ok/error
-create_split_table_by_name(Table)->
-	case base_db_split_util:get_splitted_info(Table) of
+create_split_table_by_name(SubTableName)->
+	?ZSS(),
+	case get_splitted_info(SubTableName) of
+	% case base_db_split_util:get_splitted_info(Table) of
 		false-> 
-			?base_logger_util:info_msg("create_split_table_by_name error ! not split table! (~p)~n",[Table]),
+			?base_logger_util:info_msg("create_split_table_by_name error ! not split table! (~p)~n",[SubTableName]),
 			error;
 		TableInfo->
 			CreateMod = get_table_mod(TableInfo),
 			BaseTable = get_basetable(TableInfo),
-			base_db_init_util:create_split_table(CreateMod, BaseTable,Table),
+			base_db_init_util:create_split_table(CreateMod, BaseTable,SubTableName),
 			ok
 	end.
 		
@@ -157,10 +181,10 @@ check_split_table(TableBase)->
 
 check_need_new_table(BaseTable,HiValue)->
 	Prefix = atom_to_list(BaseTable) ++ "_"++integer_to_list(HiValue)++"_",
-	Tables = mnesia:system_info(tables),
+	Tables = ?base_mnesia:system_info(tables),
 	F = fun(TableName,Acc0)->
 			case Acc0 of
-				{ok,_LastTable}-> Acc0;
+				{ok,_LastTable}-> Acc0;%% 某个子表的size为0 即刚创建
 				{error}-> {error};
 				{notable,LastMaxIndex}->
 					case TableName of
@@ -169,13 +193,17 @@ check_need_new_table(BaseTable,HiValue)->
 							case string:str(TableString,Prefix) of
 								0-> {notable,LastMaxIndex};
 								_Indx->
-									Count = mnesia:table_info(TableName, size),
+									% 获取该子表的数据量
+									Count = ?base_mnesia:table_info(TableName, size),
 									case Count of
 								   		0-> {ok,TableName};
-										undefined->{error};
+										undefined->
+											?ZSS("base_db_split_util:check_need_new_table mnesia:table_info(~p, size) undefined",[TableName]),
+											{error};
 								   		_->  Int = erlang:length(Prefix),
 											 PostNumString = string:sub_string(TableString, Int+1),
 											 PostNum = erlang:list_to_integer(PostNumString),
+											 %% PostNum 即子表序号
 									   		{notable,erlang:max(PostNum,LastMaxIndex)}
 							   		  end
 							end %% case string:str
@@ -189,15 +217,11 @@ check_need_new_table(BaseTable,HiValue)->
 							 case get_table_info(BaseTable) of
 								 []-> error;
 								 TableInfo->
-											 base_db_init_util:create_split_table(get_table_mod(TableInfo),BaseTable,Table),
-											 ok
+								 			?ZSS("base_db_init_util:create_split_table"),
+											base_db_init_util:create_split_table(get_table_mod(TableInfo),BaseTable,Table),
+											ok
 							 end
 	end.
-
-
-make_table_name(BaseTable,HiValue,LowValue)->
-	TableString = atom_to_list(BaseTable) ++ "_"++integer_to_list(HiValue)++"_"++integer_to_list(LowValue),
-	list_to_atom(TableString).
 
 check_split_master_tables()->
 	?ZS_LOG(),
@@ -215,5 +239,3 @@ check_split_master_tables()->
 						  _->  true
 					  end 
 				  end, TableBases).
-
-

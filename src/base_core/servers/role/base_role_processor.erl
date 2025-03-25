@@ -1,8 +1,13 @@
 -module(base_role_processor).
 
 
--export([start_link/2,whereis_role/1]).
-% -export([init/1, handle_event/3, handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+-export([
+	start_link/2,
+	whereis_role/1,
+	stop_role_processor/3,
+	stop_role_processor/4,
+	finish_visitor/2
+]).
 
 % 状态% 	gaming,moving,deading,singing,cleanuping,sitting
 
@@ -14,8 +19,6 @@
 % 	sitting/2,
 % 	sitting/3
 % ]).
-
--compile(export_all).
 
 -record(state, {}).
 -include("base_gen_statem_shared.hrl").
@@ -387,7 +390,7 @@ finish_visitor(RolePid,AccountName)->
 		true->
 			RoleInfo = get(creature_info),
 			MapInfo = get(map_info),
-			base_role_op:move_request(RoleInfo, MapInfo, MoveInfo, role_op:can_move(RoleInfo));
+			base_role_op:move_request(RoleInfo, MapInfo, MoveInfo, base_role_op:can_move(RoleInfo));
 		_ ->
 			nothing
 	end,		
@@ -461,7 +464,7 @@ finish_visitor(RolePid,AccountName)->
 		true->
 			MapInfo = get(map_info),
 			RoleInfo = get(creature_info),
-			base_role_op:move_request(RoleInfo, MapInfo, Path, role_op:can_move(RoleInfo));
+			base_role_op:move_request(RoleInfo, MapInfo, Path, base_role_op:can_move(RoleInfo));
 		_ ->
 			nothing
 	end,
@@ -1839,7 +1842,7 @@ finish_visitor(RolePid,AccountName)->
 
 %%充值
 ?handle_event(info, {role_recharge,RoleId,Money},StateName,State)->
-	role_op:role_online_recharge(RoleId,Money),
+	base_role_op:role_online_recharge(RoleId,Money),
 	{next_state, StateName, State};
 
 %%飞剑功能

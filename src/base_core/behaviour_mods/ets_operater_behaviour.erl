@@ -1,13 +1,13 @@
 -module(ets_operater_behaviour).
 
--export([behaviour_info/1]).
-% -export([
-% ]).
+% -export([behaviour_info/1]).
 
-%%
-%%	behaviour fun	-behaviour(ets_operater_behaviour).
-%%	copy this:		-export([init/0,create/0]).
-%%
+% -callback create_ets() ->
+% 	term().
+% -callback init_ets() ->
+% 	term().
+
+% -optional_callbacks([create_ets/0, init_ets/0]).
 
 behaviour_info(callbacks) ->
 [

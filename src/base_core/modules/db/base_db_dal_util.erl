@@ -89,7 +89,7 @@ index_match_object_rpc(Pattern,Pos)->
   
 index_match_object(Pattern,Pos)-> 
 	?MNESIA_OPERATER("Pattern:~p,Pos:~p",[Pattern,Pos]),
-	case catch mnesia:dirty_index_match_object(Pattern,Pos) of
+	case catch ?base_mnesia:dirty_index_match_object(Pattern,Pos) of
 		{'EXIT', Reason} ->
 			?base_logger_util:info_msg("index_match_object error ~p Pattern ~p ~n",[Reason,Pattern]),{failed,Reason};
 		Result when is_list(Result) -> {ok,Result};
@@ -98,8 +98,8 @@ index_match_object(Pattern,Pos)->
 	end.
 
 read(Table)->
-	ReadFun = fun()-> qlc:e(qlc:q([X || X <- mnesia:table(Table)])) end,
-	Res = case mnesia:transaction(ReadFun) of
+	ReadFun = fun()-> qlc:e(qlc:q([X || X <- ?base_mnesia:table(Table)])) end,
+	Res = case ?base_mnesia:transaction(ReadFun) of
 		{aborted,Reason} -> ?base_logger_util:info_msg("read error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		{atomic, []}	 -> {ok,[]};
 		{atomic, Result}-> {ok,Result}
@@ -108,7 +108,7 @@ read(Table)->
 	Res.
 
 read(Table,Key)->
-	Res = case catch  mnesia:dirty_read({Table,Key}) of
+	Res = case catch  ?base_mnesia:dirty_read({Table,Key}) of
 		{'EXIT',Reason} -> ?base_logger_util:info_msg("read error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		Result when is_list(Result) -> {ok,Result};
 		Result->
@@ -118,7 +118,7 @@ read(Table,Key)->
 	Res.
 
 read_index(Table,SecondaryKey,Pos)->
-	Res = case catch  mnesia:dirty_index_read(Table, SecondaryKey, Pos) of
+	Res = case catch  ?base_mnesia:dirty_index_read(Table, SecondaryKey, Pos) of
 		{'EXIT',Reason} -> ?base_logger_util:info_msg("read_index error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		Result when is_list(Result)-> {ok,Result};
 		Result->
@@ -129,8 +129,8 @@ read_index(Table,SecondaryKey,Pos)->
 
 run_transaction(Transaction)->
 	?MNESIA_OPERATER("Transaction:~p",[Transaction]),
-	case mnesia:transaction(Transaction) of
-		{aborted,Reason} -> ?base_logger_util:info_msg("run_transaction error ~p ~n",[Reason]),{failed,Reason};
+	case ?base_mnesia:transaction(Transaction) of
+		{aborted,Reason} -> ?base_logger_util:info_msg("run_transaction error ~p ~n",[Reason]),?ZZZSSS(),{failed,Reason};
 		{atomic, []}	 -> {ok,[]};
 		{atomic, Result}-> {ok,Result}
 	end.
@@ -147,7 +147,7 @@ delete_rpc(Table,Key)->
 	end.
 
 delete(Table,Key)->
-	Res = case catch mnesia:dirty_delete({Table,Key}) of
+	Res = case catch ?base_mnesia:dirty_delete({Table,Key}) of
 		{'EXIT',Reason} -> {failed,Reason};
 		ok	 -> {ok}
 	end,
@@ -167,7 +167,7 @@ delete_rpc(Table,TableKey,FieldIndex,FieldKey)->
 	
 delete(Table,TableKey,FieldIndex,FieldKey)->
 	WriteFun = fun()->
-					case mnesia:read(Table,TableKey) of
+					case ?base_mnesia:read(Table,TableKey) of
 						[]-> failed;
 						[Term]-> FieldValues = erlang:element(FieldIndex, Term),
 								 case lists:keyfind(FieldKey, 1, FieldValues) of
@@ -175,16 +175,16 @@ delete(Table,TableKey,FieldIndex,FieldKey)->
 										 case lists:member(FieldKey, FieldValues) of
 											 false-> ok;
 											 _-> FieldValue = lists:delete(FieldKey, FieldValues),
-												 Object = erlang:setelement(FieldIndex, Term, FieldValue),
-												 mnesia:write(Object)
+												 Object = ?base_erlang:setelement(FieldIndex, Term, FieldValue),
+												 ?base_mnesia:write(Object)
 										 end;
 									 _-> FieldValue = lists:keydelete(FieldKey, 1, FieldValues),
-										 Object = erlang:setelement(FieldIndex, Term, FieldValue),
-										 mnesia:write(Object)
+										 Object = ?base_erlang:setelement(FieldIndex, Term, FieldValue),
+										 ?base_mnesia:write(Object)
 								 end
 					end
 			   end,
-	Res = case mnesia:transaction(WriteFun) of
+	Res = case ?base_mnesia:transaction(WriteFun) of
 		{aborted,Reason} -> ?base_logger_util:info_msg("delete_object error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		{atomic, failed} -> ?base_logger_util:info_msg("delete_object Table ~p ~n",[Table]),{failed,"read table failed when write"};
 		{atomic, ok}	 -> {ok}
@@ -204,7 +204,7 @@ delete_object_rpc(Object)->
 	end.
 
 delete_object(Object)->
-	Res = case catch mnesia:dirty_delete_object(Object) of
+	Res = case catch ?base_mnesia:dirty_delete_object(Object) of
 		{'EXIT',Reason} -> ?base_logger_util:info_msg("delete_object error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};
 		ok	 -> {ok}
 	end,
@@ -268,7 +268,7 @@ write_rpc(Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 
 
 write(Object)->
-	Res = case catch mnesia:dirty_write(Object) of
+	Res = case catch ?base_mnesia:dirty_write(Object) of
 		{'EXIT',Reason} -> ?base_logger_util:info_msg("write error ~p Object ~p ~n",[Reason,Object]),{failed,Reason};
 		ok	 -> {ok}
 	end,
@@ -277,13 +277,13 @@ write(Object)->
 
 write(Table,TableKey,FieldIndex,Value)->
 	WriteFun = fun()->
-					case mnesia:read(Table,TableKey) of
+					case ?base_mnesia:read(Table,TableKey) of
 						[]-> error;
-						[Term]-> Object = erlang:setelement(FieldIndex, Term, Value),
-								 mnesia:write(Object)
+						[Term]-> Object = ?base_erlang:setelement(FieldIndex, Term, Value),
+								 ?base_mnesia:write(Object)
 					end
 			   end ,
-	Res = case mnesia:transaction(WriteFun) of
+	Res = case ?base_mnesia:transaction(WriteFun) of
 		{aborted,Reason} -> ?base_logger_util:info_msg("write error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		{atomic, failed} -> ?base_logger_util:info_msg("write error Table ~p ~n",[Table]),{failed,"read table failed when write"};
 		{atomic, ok}	 -> {ok}
@@ -293,7 +293,7 @@ write(Table,TableKey,FieldIndex,Value)->
 
 write(Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 	WriteFun = fun()->
-					case mnesia:read(Table,TableKey) of
+					case ?base_mnesia:read(Table,TableKey) of
 						[]-> failed;
 						[Term]-> FieldValues = erlang:element(FieldIndex, Term),
 								 NewFieldValue = case is_tuple(FieldTupleValue) of
@@ -315,11 +315,11 @@ write(Table,TableKey,FieldIndex,FieldKey,FieldTupleValue)->
 														  _-> FieldValues
 													  end
 											  end,			 
-								 Object = erlang:setelement(FieldIndex, Term, NewFieldValue),
-								 mnesia:write(Object)
+								 Object = ?base_erlang:setelement(FieldIndex, Term, NewFieldValue),
+								 ?base_mnesia:write(Object)
 					end
 			   end ,
-	Res = case mnesia:transaction(WriteFun) of
+	Res = case ?base_mnesia:transaction(WriteFun) of
 		{aborted,Reason} -> ?base_logger_util:info_msg("write error ~p Table ~p ~n",[Reason,Table]),{failed,Reason};
 		{atomic, failed} -> ?base_logger_util:info_msg("write error Table ~p ~n",[Table]),{failed,"read table failed when write"};
 		{atomic, ok}	 -> {ok}
@@ -341,8 +341,8 @@ async_write_rpc(Object)->
 async_write(Object)->
 	?MNESIA_OPERATER("Object:~p",[Object]),
 	try
-		WriteFun = fun()->mnesia:write(Object)end,
-		mnesia:activity(async_dirty,WriteFun),
+		WriteFun = fun()->?base_mnesia:write(Object)end,
+		?base_mnesia:activity(async_dirty,WriteFun),
 		{ok}
 	catch
 		_E:Reason-> ?base_logger_util:info_msg("async_write error ~p Object ~p ~n",[Reason,Object]),{failed,Reason}
@@ -361,7 +361,7 @@ clear_table_rpc(Object)->
 
 clear_table(TableName)->
 	?MNESIA_OPERATER("TableName ~p",[TableName]),
-	case mnesia:clear_table(TableName) of
+	case ?base_mnesia:clear_table(TableName) of
 		{aborted,Reason} -> ?base_logger_util:info_msg("clear_table error ~p TableName ~p ~n",[Reason,Reason]),{failed,Reason};
 		{atomic, ok}	 -> {ok}
 	end.

@@ -2,8 +2,14 @@
 
 -include("login_pb.hrl").
 
--compile(export_all).
--export([init/0,send_pending_update/0,push_to_create_data/1,push_to_update_data/1,push_to_delete_data/1]).
+-export([
+	init/0,
+	clear/0,
+	send_pending_update/0,
+	push_to_create_data/1,
+	push_to_update_data/1,
+	push_to_delete_data/1
+]).
 
 -define(MAX_CREATE_NUM,20).
 

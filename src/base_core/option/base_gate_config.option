@@ -9,5 +9,6 @@
 			{acceptor_count,2}
 		]
 	},
+	{create_role_base,role_create_deploy},
 	{register_enable,1}%%是否开放新角色注册 
 ].
