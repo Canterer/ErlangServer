@@ -978,14 +978,18 @@ send_recv_message_queue(Pid) ->
 	end.
 	
 async_get_line_info_by_mapid(MapId)->
+	?ZSS(),
 	case base_map_info_db:get_map_info(MapId) of
 		[]->
+			?ZSS(),
 			base_line_manager_server:query_line_status(node(),self() ,MapId);
 		MapInfo->
+			?ZSS(),
 			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(MapInfo)) of
 				true->
 					%%发给客户端当前线路,如果是副本地图,只提供线1供登录,登录之后再决定再转到副本地图所在
 					LineInfos = [{1,0}],
+					?ZSS(),
 					line_info_success(node(),self(),LineInfos);
 				_->
 					base_line_manager_server:query_line_status(node(),self() ,MapId)

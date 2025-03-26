@@ -119,3 +119,57 @@ xxx_db.erl 用于管理数据
 xxx_op.erl 用于协议的数据操作接口
 xxx_packet.erl	用于erlang数据封装成包packet，实质依赖login_pb.erl
 
+
+
+
+
+
+
+
+进入地图并创建角色数据
+start_game_after_line_fixed
+
+%% 启动一个角色进程:
+%%	 地图信息(GS_system_map_info): 角色进程和指定地图进行绑定
+%%	 角色信息(GS_system_role_info): 创建角色进程需要了解的基本信息
+%%	 网关信息(GS_system_gate_info): 将角色进程和网关进程进行绑定
+base_role_manager:start_one_role(GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo)
+	gm_block_db:get_block_info 检查账号封禁
+	base_role_processor:whereis_role(Role_id) 检查是否已存在该进程  关掉僵死进程
+	base_role_sup:start_role({start_one_role,StartInfo}, Role_id)
+		开启base_role_processor进程
+
+
+base_role_app
+	base_role_sup
+		base_role_manager 管理base_role_processor进程
+
+
+
+base_role_processor:init(start_one_role)
+	base_role_op:init()//初始化
+
+
+role_packet 
+
+
+login_pb 注册所有的协议 协议的解/加包函数接口
+xxx_db 处理数据的存储和读取
+xxx_packet 处理c2s协议的处理逻辑  s2c的协议接口 主要提供给xxx_op 
+	(部分写法 构建message然后调用xxx_op去发送) 或 构建message 调用 base_tcp_client_statem:send_data()发送
+xxx_op 所有对数据的操作
+	调用其他的xxx_op  xxx_db等
+	发送消息给各种模块(通过各个模块提供的消息接口) erlang:send、rpc:cast等
+
+
+xxx_db 引入 表Record
+xxx_packet 引入 协议Record
+
+xxx_op 引入的 Hrl也是最多最全的
+
+
+
+base_role_op
+	给base_tcp_client_statem状态机发送消息
+
+base_role_processor状态机
