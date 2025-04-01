@@ -13,6 +13,7 @@
 -define(BASE_AUTH_OPTION_FILE,"../src/base_core/option/base_auth_config.option").
 -define(BASE_CHAT_OPTION_FILE,"../src/base_core/option/base_chat_config.option").
 -define(BASE_GUILD_OPTION_FILE,"../src/base_core/option/base_guild_config.option").
+-define(BASE_COMPONENT_OPTION_FILE,"../src/base_core/option/base_component_config.option").
 
 %%
 %% Exported Functions
@@ -124,6 +125,7 @@ reset()->
 	read_from_file(?BASE_AUTH_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_CHAT_OPTION_FILE,?OPTION_ETS),
 	read_from_file(?BASE_GUILD_OPTION_FILE,?OPTION_ETS),
+	read_from_file(?BASE_COMPONENT_OPTION_FILE,?OPTION_ETS),
 	ok.
 
 

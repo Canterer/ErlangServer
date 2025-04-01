@@ -33,7 +33,6 @@ wait_loop()->
 
 
 send(ModuleName,Msg)->
-	?ZS_LOG(),
 	case base_global_proc_ets:get_global_proc_node(ModuleName) of
 		[]->
 			base_logger_util:info_msg("base_global_proc_ets send ModuleName ~p  Msg ~p error not in node ~p !!! ~n",[ModuleName,Msg,node()]),

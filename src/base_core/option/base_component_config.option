@@ -1,0 +1,10 @@
+[
+	{components,
+		[
+			{auth_component,true},
+			{autoname_component,true},
+			{request_line_map_component,true},
+			{create_role_component,true}
+		]
+	}
+].

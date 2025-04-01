@@ -17,28 +17,28 @@
 
 -export([
 	% connected/3,
-	start_auth/4
+	% start_auth/4
 ]).
 
 -export([
 	% authing/3,
-	auth_ok/6,
-	qq_auth_ok/12,
-	auth_failed/4
+	% auth_ok/6,
+	% qq_auth_ok/12,
+	% auth_failed/4
 ]).
 
 -export([
 	% rolelisting/3,
-	role_list_request/2,
-	role_create_request/5,
-	role_create_success/3,
-	role_create_failed/3
+	% role_list_request/2,
+	% role_create_request/5,
+	% role_create_success/3,
+	% role_create_failed/3
 ]).
 
 -export([
 	% logining/3,
-	role_into_map_request/4,
-	line_info_success/3
+	% role_into_map_request/4,
+	% line_info_success/3
 ]).
 
 -export([
@@ -48,7 +48,7 @@
 
 -export([
 	% gaming/3,
-	line_info_request/3
+	% line_info_request/3
 ]).
 
 
@@ -59,9 +59,9 @@
 -include("base_gen_statem_shared.hrl").
 -include("network_setting.hrl").
 -include("login_def.hrl").
--include("login_pb.hrl").
+% -include("login_pb.hrl").
 -include("data_struct.hrl").
--include("game_map_define.hrl").
+% -include("game_map_define.hrl").
 
 %% ====================================================================
 %% External functions
@@ -119,44 +119,44 @@ kick_client(GatePid)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% 事件: 列举角色请求
-role_list_request(GateNode,GateProc)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {role_list_request}).
+% role_list_request(GateNode,GateProc)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {role_list_request}).
 	
 %%autoname reset
-reset_random_rolename(_GateNode,GateProc)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {reset_random_rolename}).
+% reset_random_rolename(_GateNode,GateProc)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {reset_random_rolename}).
 
-%% 事件: 创建角色请求
-role_create_request(GateNode, GateProc,RoleName,Gender,ClassType)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {role_create_request,RoleName,Gender,ClassType}).
+% %% 事件: 创建角色请求
+% role_create_request(GateNode, GateProc,RoleName,Gender,ClassType)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {role_create_request,RoleName,Gender,ClassType}).
 
-%% 事件: 创建角色成功
-role_create_success(GateNode, GateProc,RoleInfo)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {role_create_success,RoleInfo}).
+% %% 事件: 创建角色成功
+% role_create_success(GateNode, GateProc,RoleInfo)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {role_create_success,RoleInfo}).
 
-%% 事件: 创建角色失败
-role_create_failed(GateNode, GateProc,Reason)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {role_create_failed,Reason}).
+% %% 事件: 创建角色失败
+% role_create_failed(GateNode, GateProc,Reason)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {role_create_failed,Reason}).
 
-%% 事件: 创建地图请求
-role_into_map_request(GateNode, GateProc, RoleId,LineId)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {role_into_map_request,RoleId,LineId}).
+% %% 事件: 创建地图请求
+% role_into_map_request(GateNode, GateProc, RoleId,LineId)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {role_into_map_request,RoleId,LineId}).
 
-%% 事件: 获取分线服务器信息成功
-line_info_success(GateNode,GateProc,LineInfos)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {line_info_success,LineInfos}).
+% %% 事件: 获取分线服务器信息成功
+% line_info_success(GateNode,GateProc,LineInfos)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {line_info_success,LineInfos}).
 
-%% 事件: 获取分线服务器信息请求
-line_info_request(GateNode,GateProc,MapId)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid,{line_info_request,MapId}).
+% %% 事件: 获取分线服务器信息请求
+% line_info_request(GateNode,GateProc,MapId)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid,{line_info_request,MapId}).
 
 %% 事件: 角色进程启动
 role_process_started(GatePid, MapNode,RoleProc)->
@@ -179,36 +179,36 @@ socket_disable(GateNode,GateProc,ClientSocket)->
 	GatePid = GateProc,    %% proc name is the remote pid
 	?base_gen_statem:cast(GatePid, {socket_disable,ClientSocket}).
 
-%% 事件: 开始认证
-start_auth(GateNode, GateProc,ServerId,UserAuth)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid,{start_auth,ServerId,UserAuth}).
+% %% 事件: 开始认证
+% start_auth(GateNode, GateProc,ServerId,UserAuth)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid,{start_auth,ServerId,UserAuth}).
 
-%%start_auth(GateNode, GateProc,Time,AuthResult)->
-%%	GatePid = GateProc,    %% proc name is the remote pid
-%%	?base_gen_statem:cast(GatePid,{start_auth,Time,AuthResult}).
+% %%start_auth(GateNode, GateProc,Time,AuthResult)->
+% %%	GatePid = GateProc,    %% proc name is the remote pid
+% %%	?base_gen_statem:cast(GatePid,{start_auth,Time,AuthResult}).
 
-%% 事件: 认证成功
-auth_ok(GateNode, GateProc,ServerId,PlayerId,AccountName,IsAdult)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}).
+% %% 事件: 认证成功
+% auth_ok(GateNode, GateProc,ServerId,PlayerId,AccountName,IsAdult)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}).
 
-qq_auth_ok(GateNode, GateProc,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid,{qq_auth_ok,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}).
+% qq_auth_ok(GateNode, GateProc,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid,{qq_auth_ok,ServerId,UserId,UserName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}).
 
-auth_failed(GateNode, GateProc,ServerId,Reason)->
-	GatePid = GateProc,    %% proc name is the remote pid
-	?base_gen_statem:cast(GatePid, {auth_failed,ServerId,Reason}).
+% auth_failed(GateNode, GateProc,ServerId,Reason)->
+% 	GatePid = GateProc,    %% proc name is the remote pid
+% 	?base_gen_statem:cast(GatePid, {auth_failed,ServerId,Reason}).
 
 %% 事件: 认证失败
 env_prepared(GateNode,GateProc,Info)->
 	GatePid = GateProc,    %% proc name is the remote pid
 	?base_gen_statem:cast(GatePid,{env_prepared,Info}).
 
-%% 事件: 准备进入地图
-role_into_map_success(GatePid) ->
-	?base_gen_statem:cast(GatePid, {role_into_map_success}).
+% %% 事件: 准备进入地图
+% role_into_map_success(GatePid) ->
+% 	?base_gen_statem:cast(GatePid, {role_into_map_success}).
 
 mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	GatePid = GateProc,    %% proc name is the remote pid
@@ -336,192 +336,192 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 状态：已连接
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-?handle_event(cast,{start_auth,ServerId,UserAuth},connected,StateData) ->
-% handle_connected_state(cast,{start_auth,ServerId,UserAuth}, StateData) ->
-	case lists:member(ServerId,base_env_ets:get(serverids,[])) of
-		true->
-			put(serverid,ServerId),
-			base_auth_processor_server:auth(node(),self(),ServerId,UserAuth);
-		_->
-			base_logger_util:info_msg("Server is id ~p~n",[ServerId]),
-			self()!{kick_client,"error serverid"}
-	end,	
-	{next_state, authing, StateData};
-%%handle_connected_state({start_auth,Time,AuthResult}, StateData) ->
-%%	base_auth_processor_server:auth(node(),self(),Time,AuthResult),
-%%	{next_state, authing, StateData};
-% handle_connected_state(EventType,Event,StateData) ->
-% 	do_handle_state_event(EventType,Event,connected,StateData).
-	% {next_state, connected, State}.
+% ?handle_event(cast,{start_auth,ServerId,UserAuth},connected,StateData) ->
+% % handle_connected_state(cast,{start_auth,ServerId,UserAuth}, StateData) ->
+% 	case lists:member(ServerId,base_env_ets:get(serverids,[])) of
+% 		true->
+% 			put(serverid,ServerId),
+% 			base_auth_processor_server:auth(node(),self(),ServerId,UserAuth);
+% 		_->
+% 			base_logger_util:info_msg("Server is id ~p~n",[ServerId]),
+% 			self()!{kick_client,"error serverid"}
+% 	end,	
+% 	{next_state, authing, StateData};
+% %%handle_connected_state({start_auth,Time,AuthResult}, StateData) ->
+% %%	base_auth_processor_server:auth(node(),self(),Time,AuthResult),
+% %%	{next_state, authing, StateData};
+% % handle_connected_state(EventType,Event,StateData) ->
+% % 	do_handle_state_event(EventType,Event,connected,StateData).
+% 	% {next_state, connected, State}.
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  状态: 认证中
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-?handle_event(cast,{auth_failed,ServerId,Reason},authing,StateData) ->
-% handle_authing_state(cast,{auth_failed,ServerId,Reason}, StateData) ->
-	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
-	SendData = login_pb:encode_proto_msg(user_auth_fail_s2c,FailedMsg),
-	send_data(self(), SendData),
-	{next_state, connected,StateData};
-%% authing * auth_ok -> rolelisting
-%% 认证成功后直接发送分线服务器列表
-%%handle_authing_state({auth_ok,{visitor,PlayerId},AccountName,IsAdult}, StateData) ->
-%%	?base_gen_statem:cast(node(),self(), {role_create_request}),
-%%	put(playerid, {visitor,PlayerId}),
-%%	put(account,AccountName),
-%%	put(adult,IsAdult),
-%%	{next_state,rolelisting,StateData};
-?handle_event(cast,{auth_ok,ServerId,PlayerId,AccountName,IsAdult},authing,StateData) ->
-% handle_authing_state(cast,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
-	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
-	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList}),
-	send_data(self(), SendData),
-	%%auto_name
-	case RoleList of
-		[]->
-			case autoname_op:init_autoname_s2c() of
-				{Gname,Bname}->
-					put(autoname,{Gname,Bname}),
-					Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
-					send_data(self(), Message);
-				_->
-					nothing
-			end;
-		_->
-			nothing
-	end,
-	put(playerid, PlayerId),
-	put(account,AccountName),
-	put(adult,IsAdult),
-	{next_state,rolelisting,StateData};
-?handle_event(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey},authing,StateData) ->
-% handle_authing_state(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}, StateData) ->
-	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
-	{NickName,Gender,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level} = Info,
-	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList,
-																		nickname=NickName,
-																		is_yellow_vip=Is_yellow_vip,
-																		is_yellow_year_vip=Is_yellow_year_vip,
-																		yellow_vip_level=Yellow_vip_level}),
-	send_data(self(), SendData),
-	%%auto_name
-	case RoleList of
-		[]->
-			case autoname_op:init_autoname_s2c() of
-				{Gname,Bname}->
-					put(autoname,{Gname,Bname}),
-					Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
-					send_data(self(), Message);
-				_->
-					nothing
-			end;
-		_->
-			nothing
-	end,
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%  状态: 认证中
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ?handle_event(cast,{auth_failed,ServerId,Reason},authing,StateData) ->
+% % handle_authing_state(cast,{auth_failed,ServerId,Reason}, StateData) ->
+% 	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
+% 	SendData = login_pb:encode_proto_msg(user_auth_fail_s2c,FailedMsg),
+% 	send_data(self(), SendData),
+% 	{next_state, connected,StateData};
+% %% authing * auth_ok -> rolelisting
+% %% 认证成功后直接发送分线服务器列表
+% %%handle_authing_state({auth_ok,{visitor,PlayerId},AccountName,IsAdult}, StateData) ->
+% %%	?base_gen_statem:cast(node(),self(), {role_create_request}),
+% %%	put(playerid, {visitor,PlayerId}),
+% %%	put(account,AccountName),
+% %%	put(adult,IsAdult),
+% %%	{next_state,rolelisting,StateData};
+% ?handle_event(cast,{auth_ok,ServerId,PlayerId,AccountName,IsAdult},authing,StateData) ->
+% % handle_authing_state(cast,{auth_ok,ServerId,PlayerId,AccountName,IsAdult}, StateData) ->
+% 	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
+% 	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList}),
+% 	send_data(self(), SendData),
+% 	%%auto_name
+% 	case RoleList of
+% 		[]->
+% 			case autoname_op:init_autoname_s2c() of
+% 				{Gname,Bname}->
+% 					put(autoname,{Gname,Bname}),
+% 					Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
+% 					send_data(self(), Message);
+% 				_->
+% 					nothing
+% 			end;
+% 		_->
+% 			nothing
+% 	end,
+% 	put(playerid, PlayerId),
+% 	put(account,AccountName),
+% 	put(adult,IsAdult),
+% 	{next_state,rolelisting,StateData};
+% ?handle_event(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey},authing,StateData) ->
+% % handle_authing_state(cast,{qq_auth_ok,ServerId,UserId,AccountName,LgTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey}, StateData) ->
+% 	RoleList = base_gate_op:get_role_list(AccountName,get(serverid)),
+% 	{NickName,Gender,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level} = Info,
+% 	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList,
+% 																		nickname=NickName,
+% 																		is_yellow_vip=Is_yellow_vip,
+% 																		is_yellow_year_vip=Is_yellow_year_vip,
+% 																		yellow_vip_level=Yellow_vip_level}),
+% 	send_data(self(), SendData),
+% 	%%auto_name
+% 	case RoleList of
+% 		[]->
+% 			case autoname_op:init_autoname_s2c() of
+% 				{Gname,Bname}->
+% 					put(autoname,{Gname,Bname}),
+% 					Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
+% 					send_data(self(), Message);
+% 				_->
+% 					nothing
+% 			end;
+% 		_->
+% 			nothing
+% 	end,
 	
-	put(playerid, UserId),
-	put(account,AccountName),
-	put(adult,true),
-	put(ipaddress, UserIp),
-	put(pf, Pf),
-	put(gender, Gender),
-	put(install, LgTime),
-	put(nickname, NickName),
-	put(is_yellow_vip, Is_yellow_vip),
-	put(is_yellow_year_vip, Is_yellow_year_vip),
-	put(yellow_vip_level, Yellow_vip_level),
-	put(openid, OpenId),
-	put(openkey, OpenKey),
-	put(pfkey, PfKey),
-	{next_state,rolelisting,StateData};
-% handle_authing_state(EventType,Event,StateData) ->
-% 	do_handle_state_event(EventType,Event,authing,StateData).
-	% {next_state, authing, State}.
+% 	put(playerid, UserId),
+% 	put(account,AccountName),
+% 	put(adult,true),
+% 	put(ipaddress, UserIp),
+% 	put(pf, Pf),
+% 	put(gender, Gender),
+% 	put(install, LgTime),
+% 	put(nickname, NickName),
+% 	put(is_yellow_vip, Is_yellow_vip),
+% 	put(is_yellow_year_vip, Is_yellow_year_vip),
+% 	put(yellow_vip_level, Yellow_vip_level),
+% 	put(openid, OpenId),
+% 	put(openkey, OpenKey),
+% 	put(pfkey, PfKey),
+% 	{next_state,rolelisting,StateData};
+% % handle_authing_state(EventType,Event,StateData) ->
+% % 	do_handle_state_event(EventType,Event,authing,StateData).
+% 	% {next_state, authing, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 列举角色状态
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-?handle_event(cast,{role_create_request},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{role_create_request}, StateData)->
-	{visitor,PlayerId} = get(playerid),
-	AccountName= get(account),
-	LoginTime = get(install),
-	Gender = get(gender),
-	NickName = get(nickname),
-	Is_yellow_vip = get(is_yellow_vip),
-	Is_yellow_year_vip = get(is_yellow_year_vip),
-	Yellow_vip_level = get(yellow_vip_level),
-	Pf = get(pf),
-	?base_logger_util:info_msg("error base_gate_op:create_role/11 undefined"),
-	case base_gate_op:create_role(PlayerId,AccountName,NickName,Gender,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
-							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
-		{ok,RoleId}->SendData = login_pb:encode_proto_msg(create_role_sucess_s2c,#create_role_sucess_s2c{role_id=RoleId}),
-					 send_data(self(), SendData),
-					 put(neednotchange,true), %%创建玩家的时候不需要自动提示,从完成注册中弹出
-					 {next_state,logining,StateData};
-		{_,Reason}->SendData = login_pb:encode_proto_msg(create_role_failed_s2c,#create_role_failed_s2c{reasonid=Reason}),
-					send_data(self(), SendData),
-					{next_state,rolelisting,StateData}
-	end;
-?handle_event(cast,{role_create_request,RoleName,Gender,ClassType},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{role_create_request,RoleName,Gender,ClassType}, StateData)->
-	PlayerId = get(playerid),
-	AccountName= get(account),
-	QQGender = get(gender),
-	NickName = get(nickname),
-	LoginTime = get(install),
-	Is_yellow_vip = get(is_yellow_vip),
-	Is_yellow_year_vip = get(is_yellow_year_vip),
-	Yellow_vip_level = get(yellow_vip_level),
-	Pf = get(pf),
-	case base_gate_op:create_role(PlayerId,AccountName,NickName,QQGender,RoleName,Gender,ClassType,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
-							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
-		{ok,RoleId}->
-			autoname_op:create_role(RoleName,RoleId),
-			case base_env_ets:get2(baidu_post,app_secret,"") of
-				""->
-					nothing;
-				_->
-					baidu_post:post_role_rpc(AccountName,RoleName)
-			end,
-			SendData = login_pb:encode_proto_msg(create_role_sucess_s2c,#create_role_sucess_s2c{role_id=RoleId}),
-			send_data(self(), SendData),
-			{next_state,logining,StateData};
-		{_,Reason}->SendData = login_pb:encode_proto_msg(create_role_failed_s2c,#create_role_failed_s2c{reasonid=Reason}),
-					send_data(self(), SendData),
-					{next_state,rolelisting,StateData}
-	end;
-?handle_event(cast,{role_create_success,RoleInfo},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{role_create_success,RoleInfo}, StateData)->
-	RoleList = get(role_list) ++ RoleInfo,
-	put(role_list, RoleList),
-	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList}),
-	send_data(self(),SendData),
-	{next_state,rolelisting,StateData};
-?handle_event(cast,{line_info_request,MapId},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{line_info_request,MapId},StateData)->
-	async_get_line_info_by_mapid(MapId),
-	{next_state,rolelisting,StateData};
-?handle_event(cast,{line_info_success,LineInfos},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{line_info_success,LineInfos},StateData)->
-	LineInfoByRecord = linesinfo_to_record(LineInfos),
-	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
-	send_data(self(),SendData),
-	{next_state,logining,StateData};
-?handle_event(cast,{reset_random_rolename},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{reset_random_rolename}, StateData)->
-	%%auto_name
-	put(autoname,[]),
-	case autoname_op:init_autoname_s2c() of
-		{Gname,Bname}->
-			Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
-			send_data(self(), Message);
-		_->
-			nothing
-	end,
-	{next_state, rolelisting, StateData};
+% ?handle_event(cast,{role_create_request},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{role_create_request}, StateData)->
+% 	{visitor,PlayerId} = get(playerid),
+% 	AccountName= get(account),
+% 	LoginTime = get(install),
+% 	Gender = get(gender),
+% 	NickName = get(nickname),
+% 	Is_yellow_vip = get(is_yellow_vip),
+% 	Is_yellow_year_vip = get(is_yellow_year_vip),
+% 	Yellow_vip_level = get(yellow_vip_level),
+% 	Pf = get(pf),
+% 	?base_logger_util:info_msg("error base_gate_op:create_role/11 undefined"),
+% 	case base_gate_op:create_role(PlayerId,AccountName,NickName,Gender,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
+% 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
+% 		{ok,RoleId}->SendData = login_pb:encode_proto_msg(create_role_sucess_s2c,#create_role_sucess_s2c{role_id=RoleId}),
+% 					 send_data(self(), SendData),
+% 					 put(neednotchange,true), %%创建玩家的时候不需要自动提示,从完成注册中弹出
+% 					 {next_state,logining,StateData};
+% 		{_,Reason}->SendData = login_pb:encode_proto_msg(create_role_failed_s2c,#create_role_failed_s2c{reasonid=Reason}),
+% 					send_data(self(), SendData),
+% 					{next_state,rolelisting,StateData}
+% 	end;
+% ?handle_event(cast,{role_create_request,RoleName,Gender,ClassType},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{role_create_request,RoleName,Gender,ClassType}, StateData)->
+% 	PlayerId = get(playerid),
+% 	AccountName= get(account),
+% 	QQGender = get(gender),
+% 	NickName = get(nickname),
+% 	LoginTime = get(install),
+% 	Is_yellow_vip = get(is_yellow_vip),
+% 	Is_yellow_year_vip = get(is_yellow_year_vip),
+% 	Yellow_vip_level = get(yellow_vip_level),
+% 	Pf = get(pf),
+% 	case base_gate_op:create_role(PlayerId,AccountName,NickName,QQGender,RoleName,Gender,ClassType,base_gate_op:trans_addr_to_list(get(clientaddr)),get(serverid),
+% 							 LoginTime,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,Pf) of
+% 		{ok,RoleId}->
+% 			autoname_op:create_role(RoleName,RoleId),
+% 			case base_env_ets:get2(baidu_post,app_secret,"") of
+% 				""->
+% 					nothing;
+% 				_->
+% 					baidu_post:post_role_rpc(AccountName,RoleName)
+% 			end,
+% 			SendData = login_pb:encode_proto_msg(create_role_sucess_s2c,#create_role_sucess_s2c{role_id=RoleId}),
+% 			send_data(self(), SendData),
+% 			{next_state,logining,StateData};
+% 		{_,Reason}->SendData = login_pb:encode_proto_msg(create_role_failed_s2c,#create_role_failed_s2c{reasonid=Reason}),
+% 					send_data(self(), SendData),
+% 					{next_state,rolelisting,StateData}
+% 	end;
+% ?handle_event(cast,{role_create_success,RoleInfo},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{role_create_success,RoleInfo}, StateData)->
+% 	RoleList = get(role_list) ++ RoleInfo,
+% 	put(role_list, RoleList),
+% 	SendData = login_pb:encode_proto_msg(player_role_list_s2c,#player_role_list_s2c{roles=RoleList}),
+% 	send_data(self(),SendData),
+% 	{next_state,rolelisting,StateData};
+% ?handle_event(cast,{line_info_request,MapId},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{line_info_request,MapId},StateData)->
+% 	async_get_line_info_by_mapid(MapId),
+% 	{next_state,rolelisting,StateData};
+% ?handle_event(cast,{line_info_success,LineInfos},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{line_info_success,LineInfos},StateData)->
+% 	LineInfoByRecord = linesinfo_to_record(LineInfos),
+% 	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
+% 	send_data(self(),SendData),
+% 	{next_state,logining,StateData};
+% ?handle_event(cast,{reset_random_rolename},rolelisting,StateData)->
+% % handle_rolelisting_state(cast,{reset_random_rolename}, StateData)->
+% 	%%auto_name
+% 	put(autoname,[]),
+% 	case autoname_op:init_autoname_s2c() of
+% 		{Gname,Bname}->
+% 			Message = login_pb:encode_proto_msg(init_random_rolename_s2c,#init_random_rolename_s2c{bn=Bname,gn=Gname}),
+% 			send_data(self(), Message);
+% 		_->
+% 			nothing
+% 	end,
+% 	{next_state, rolelisting, StateData};
 % handle_rolelisting_state(EventType,Event,StateData) ->
 % 	do_handle_state_event(EventType,Event,rolelisting,StateData).
 	% {next_state, rolelisting, State}.
@@ -530,46 +530,46 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 %%  事件: 获取分线服务器信息成功
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-?handle_event(cast,{role_into_map_request,RoleId,_LineId},logining,StateData) ->
-% handle_logining_state(cast,{role_into_map_request,RoleId,_LineId},StateData) ->
-	RoleList = base_gate_op:get_role_list(get(account),get(serverid)),
-	case lists:member(RoleId,[base_pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
-		true->
-			case role_pos_util:where_is_role(RoleId) of
-				[]->
-					%%由于line是客户端发来的,有可能会与当前地图线路不符.所以重新再请求一次线路,自动选择最优线路
-					Mapid = base_gate_op:get_last_mapid(RoleId),
-					put(roleid, RoleId),
-					put(mapid, Mapid),
-					async_get_line_info_by_mapid(Mapid);
-				RolePos ->
-					base_logger_util:info_msg("Role_id:[~p], is exist~n", [RoleId]),
-					RoleNode = role_pos_db:get_role_mapnode(RolePos),
-					RoleProc = role_pos_db:get_role_pid(RolePos),
-					case base_role_manager:stop_role_processor(RoleNode,RoleId, RoleProc,other_login) of
-						{error,{noproc,_}}->				%%进程已经不在了,直接删除该玩家残留  zhangting
-							role_pos_db:unreg_role_pos_to_mnesia(RoleId);
-						_->
-							nothing
-					end,	
-					Message = role_packet:encode_other_login_s2c(),
-					send_data_after(self(),Message,1000)
-			end;
-		_-> 
-			base_logger_util:info_msg("hack find !!! error roleid!!! Account ~p RoleId ~p ~n",[get(account),RoleId]),
-			self()!{kick_client}
-	end,
-	{next_state,logining,StateData};
-?handle_event(cast,{line_info_success,LineInfos},logining,StateData)->
-% handle_logining_state(cast,{line_info_success,LineInfos}, StateData)->
-	{LineId,_OnlineRole}=base_temp_util:get_min_count_of_lines(LineInfos),
-	put(lineid, LineId),
-%% 	start_game_after_line_fixed(LineId),
-	start_game_after_line_fixed(1),				%%枫少修改只有一线
-	{next_state,logining,StateData};
-?handle_event(cast,{role_into_map_success},logining,StateData) ->
-% handle_logining_state(cast,{role_into_map_success}, StateData) ->
-	{next_state, gaming,StateData};
+% ?handle_event(cast,{role_into_map_request,RoleId,_LineId},logining,StateData) ->
+% % handle_logining_state(cast,{role_into_map_request,RoleId,_LineId},StateData) ->
+% 	RoleList = base_gate_op:get_role_list(get(account),get(serverid)),
+% 	case lists:member(RoleId,[base_pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
+% 		true->
+% 			case role_pos_util:where_is_role(RoleId) of
+% 				[]->
+% 					%%由于line是客户端发来的,有可能会与当前地图线路不符.所以重新再请求一次线路,自动选择最优线路
+% 					Mapid = base_gate_op:get_last_mapid(RoleId),
+% 					put(roleid, RoleId),
+% 					put(mapid, Mapid),
+% 					async_get_line_info_by_mapid(Mapid);
+% 				RolePos ->
+% 					base_logger_util:info_msg("Role_id:[~p], is exist~n", [RoleId]),
+% 					RoleNode = role_pos_db:get_role_mapnode(RolePos),
+% 					RoleProc = role_pos_db:get_role_pid(RolePos),
+% 					case base_role_manager:stop_role_processor(RoleNode,RoleId, RoleProc,other_login) of
+% 						{error,{noproc,_}}->				%%进程已经不在了,直接删除该玩家残留  zhangting
+% 							role_pos_db:unreg_role_pos_to_mnesia(RoleId);
+% 						_->
+% 							nothing
+% 					end,	
+% 					Message = role_packet:encode_other_login_s2c(),
+% 					send_data_after(self(),Message,1000)
+% 			end;
+% 		_-> 
+% 			base_logger_util:info_msg("hack find !!! error roleid!!! Account ~p RoleId ~p ~n",[get(account),RoleId]),
+% 			self()!{kick_client}
+% 	end,
+% 	{next_state,logining,StateData};
+% ?handle_event(cast,{line_info_success,LineInfos},logining,StateData)->
+% % handle_logining_state(cast,{line_info_success,LineInfos}, StateData)->
+% 	{LineId,_OnlineRole}=base_temp_util:get_min_count_of_lines(LineInfos),
+% 	put(lineid, LineId),
+% %% 	start_game_after_line_fixed(LineId),
+% 	start_game_after_line_fixed(1),				%%枫少修改只有一线
+% 	{next_state,logining,StateData};
+% ?handle_event(cast,{role_into_map_success},logining,StateData) ->
+% % handle_logining_state(cast,{role_into_map_success}, StateData) ->
+% 	{next_state, gaming,StateData};
 % handle_logining_state(EventType,Event,StateData) ->
 % 	do_handle_state_event(EventType,Event,logining,StateData).
 	% {next_state, logining, State}.
@@ -593,33 +593,33 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 %%
-?handle_event(cast,{line_info_request,MapId},gaming,StateData)->
-% handle_gaming_state(cast,{line_info_request,MapId}, StateData)->
-	async_get_line_info_by_mapid(MapId),
-	{next_state,gaming,StateData};
-?handle_event(cast,{line_info_success,LineInfos},gaming,StateData)->
-% handle_gaming_state(cast,{line_info_success,LineInfos},StateData)->
-	LineInfoByRecord = linesinfo_to_record(LineInfos),
-	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
-	send_data(self(),SendData),
-	{next_state,gaming,StateData};
-?handle_event(cast,{auth_failed,Reason},gaming,StateData) ->
-% handle_gaming_state(cast,{auth_failed,Reason}, StateData) ->
-	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
-	SendData = login_pb:encode_proto_msg(user_auth_fail_s2c,FailedMsg),
-	send_data(self(), SendData),
-	{next_state, connected,StateData};
-?handle_event(cast,{auth_ok,_PlayerId,AccountName,IsAdult},gaming,StateData) ->
-% handle_gaming_state(cast,{auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
-	put(playerid, AccountName),
-	put(account,AccountName),
-	RolePid  = {get(roleproc),get(mapnode)},
-	base_role_processor:finish_visitor(RolePid,AccountName),
-	self()! {needchangename},
-	{next_state,gaming,StateData};
-% handle_gaming_state(EventType,Event,StateData)->
-% 	do_handle_state_event(EventType,Event,gaming,StateData).
-	% {next_state,gaming,StateData}.
+% ?handle_event(cast,{line_info_request,MapId},gaming,StateData)->
+% % handle_gaming_state(cast,{line_info_request,MapId}, StateData)->
+% 	async_get_line_info_by_mapid(MapId),
+% 	{next_state,gaming,StateData};
+% ?handle_event(cast,{line_info_success,LineInfos},gaming,StateData)->
+% % handle_gaming_state(cast,{line_info_success,LineInfos},StateData)->
+% 	LineInfoByRecord = linesinfo_to_record(LineInfos),
+% 	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
+% 	send_data(self(),SendData),
+% 	{next_state,gaming,StateData};
+% ?handle_event(cast,{auth_failed,Reason},gaming,StateData) ->
+% % handle_gaming_state(cast,{auth_failed,Reason}, StateData) ->
+% 	FailedMsg = #user_auth_fail_s2c{reasonid=Reason},
+% 	SendData = login_pb:encode_proto_msg(user_auth_fail_s2c,FailedMsg),
+% 	send_data(self(), SendData),
+% 	{next_state, connected,StateData};
+% ?handle_event(cast,{auth_ok,_PlayerId,AccountName,IsAdult},gaming,StateData) ->
+% % handle_gaming_state(cast,{auth_ok,_PlayerId,AccountName,IsAdult}, StateData) ->
+% 	put(playerid, AccountName),
+% 	put(account,AccountName),
+% 	RolePid  = {get(roleproc),get(mapnode)},
+% 	base_role_processor:finish_visitor(RolePid,AccountName),
+% 	self()! {needchangename},
+% 	{next_state,gaming,StateData};
+% % handle_gaming_state(EventType,Event,StateData)->
+% % 	do_handle_state_event(EventType,Event,gaming,StateData).
+% 	% {next_state,gaming,StateData}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -812,12 +812,14 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 	keep_state_and_data;
 
 % ==================================handle undefined event============================================
-?handle_event({call, From}, EventContent, StateName, StateData) ->
-	base_logger_util:info_msg("~p handle_event undefined event:({call, From:~p}, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, From, EventContent, StateName, StateData]),
-	{keep_state_and_data, [{reply, From, ok}]};
 ?handle_event(Event, EventContent, StateName, StateData) ->
-	base_logger_util:info_msg("~p handle_event undefined event:(Event:~p, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, Event, EventContent, StateName, StateData]),
-	keep_state_and_data.
+	apply_component_handle(Event, EventContent, StateName, StateData).
+% ?handle_event({call, From}, EventContent, StateName, StateData) ->
+% 	base_logger_util:info_msg("~p handle_event undefined event:({call, From:~p}, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, From, EventContent, StateName, StateData]),
+% 	{keep_state_and_data, [{reply, From, ok}]};
+% ?handle_event(Event, EventContent, StateName, StateData) ->
+% 	base_logger_util:info_msg("~p handle_event undefined event:(Event:~p, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, Event, EventContent, StateName, StateData]),
+% 	keep_state_and_data.
 % ==================================handle undefined event============================================
 
 %% --------------------------------------------------------------------
@@ -888,10 +890,10 @@ inton({A,B,C,D},P)->
 		integer_to_list(C) ++ "_" ++ integer_to_list(D) 
 		++ "_" ++ integer_to_list(P).
 
-linesinfo_to_record(LineInfos)->
-	lists:map(fun(X)->{LineId,RoleCount}=X, 
-			  #li{lineid=LineId,rolecount=RoleCount}
-		  end, LineInfos).
+% linesinfo_to_record(LineInfos)->
+% 	lists:map(fun(X)->{LineId,RoleCount}=X, 
+% 			  #li{lineid=LineId,rolecount=RoleCount}
+% 		  end, LineInfos).
 
 %% 启动聊天进程
 start_chat_role()->
@@ -977,68 +979,8 @@ send_recv_message_queue(Pid) ->
 			lists:foreach(S, NewMsgQueue)
 	end.
 	
-async_get_line_info_by_mapid(MapId)->
-	?ZSS(),
-	case base_map_info_db:get_map_info(MapId) of
-		[]->
-			?ZSS(),
-			base_line_manager_server:query_line_status(node(),self() ,MapId);
-		MapInfo->
-			?ZSS(),
-			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(MapInfo)) of
-				true->
-					%%发给客户端当前线路,如果是副本地图,只提供线1供登录,登录之后再决定再转到副本地图所在
-					LineInfos = [{1,0}],
-					?ZSS(),
-					line_info_success(node(),self(),LineInfos);
-				_->
-					base_line_manager_server:query_line_status(node(),self() ,MapId)
-			end
-	end.
-	
-start_game_after_line_fixed(LineId)->
-	?ZSS(),
-	MapId = get(mapid),
-	RoleId = get(roleid),
-	AccountName= get(account),
-	LoginTime = get(install),
-	LoginIp = base_gate_op:trans_addr_to_list(get(clientaddr)),
-	Gender = get(gender),
-	NickName = get(nickname),
-	% Is_yellow_vip = get(is_yellow_vip),
-	Is_yellow_year_vip = get(is_yellow_year_vip),
-	Yellow_vip_level = get(yellow_vip_level),
-	Pf = get(pf),
-	
-	base_gate_op:update_account_info(AccountName, LoginTime, LoginIp, NickName, Gender, Pf, Is_yellow_year_vip, Yellow_vip_level),
-	GateProc = self(),%%get(procname),
-	case base_line_manager_server:get_map_name(LineId, MapId) of
-		{ok,{MapNodeTmp,MapProcNameTmp}}->
-			case server_travels_util:is_share_map_node(MapNodeTmp) of
-				true->			%%玩家在跨服地图上,由于到从本地数据库中加载玩家数据,所以先在本地节点启动,之后再转移过去
-					[MapNode|_] = base_line_manager_server:get_map_nodes(),
-					MapProcName = undefined;
-				_->
-					MapNode = MapNodeTmp,
-					MapProcName = MapProcNameTmp
-			end; 
-		_->
-			%%玩家在副本中,先在本地节点启动,之后再转移过去
-			MapProcName = undefined,
-			[MapNode|_] = base_line_manager_server:get_map_nodes()
-	end,
-	GS_system_map_info = #gs_system_map_info{map_id=MapId,
-								 line_id=LineId, 
-								 map_proc=MapProcName,		%%这里的map_proc有可能是undefined 
-								 map_node=MapNode},
-	GS_system_role_info = #gs_system_role_info{role_id = RoleId},
-	GS_system_gate_info = #gs_system_gate_info{gate_proc = GateProc, gate_node=node(), gate_pid=self()},
-	New_GS_system_role_info = GS_system_role_info#gs_system_role_info{role_node=MapNode},
-	put(gs_system_role_info, New_GS_system_role_info),
-	base_logger_util:info_msg("base_role_manager:start_one_role ~p ~p ~p ~n",[GS_system_gate_info,New_GS_system_role_info,GS_system_map_info]),
-	base_role_manager:start_one_role(GS_system_map_info, New_GS_system_role_info, GS_system_gate_info,
-								{get(account),get(pf),get(adult),LoginIp,get(is_yellow_vip), get(is_yellow_year_vip),
-								 get(yellow_vip_level),get(openid),get(openkey),get(pfkey)}).
+
+
 
 filter_tgw(CliSocket) ->
 	Ret1 = gen_tcp:recv(CliSocket, 1, 10000),

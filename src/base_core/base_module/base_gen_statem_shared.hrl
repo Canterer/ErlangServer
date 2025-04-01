@@ -30,6 +30,8 @@
 -export([init/1, callback_mode/0, handle_event/4, terminate/3, code_change/4]).
 -behaviour(gen_statem).
 
+-include("base_component_shared.hrl").
+
 %% --------------------------------------------------------------------
 %% Server functions
 %% --------------------------------------------------------------------

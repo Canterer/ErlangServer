@@ -80,7 +80,7 @@ def erl_compile(debug,srcfile,inc_dir_map,hipe,out_dir,nowarning_opt,defines):
 		Defines = ''
 		
 	cmdline = cmdline_header + Out + Inc + Dbg  + Defines + Hipe + NoWarning + Src
-	print(cmdline)
+	# print(cmdline)
 	os.system(cmdline)
 
 opt = Options(sys.argv)
@@ -115,12 +115,13 @@ class erl_object(object):
 		erl_object.proc_erl(self,src)
 
 	def proc_erl(self,src):
-		print("proc src:",src)
+		# print("proc src:",src)
 		fd = open(src,'r',encoding='utf-8')
 		lines = fd.readlines()
 		fd.close()
 		incstr = '-include("'
 		incstr2= '").'
+		recordMap = {}
 		for line in lines:
 			if line[0]!='%' and line.find(incstr) != -1:
 				line = line.replace(incstr,'')
@@ -130,11 +131,19 @@ class erl_object(object):
 				line = line.replace(' ','')
 				incFile = line.replace(incstr2,'')
 				
-				self._inc.append(incFile)
+				if not recordMap.get(incFile, False):
+					recordMap[incFile] = True
+					self._inc.append(incFile)
+					subFileList = include_sub_list_map[incFile]
+					for subFile in subFileList:
+						if recordMap.get(subFile, False):
+							recordMap[subFile] = True
+							self._inc.append(subFile)
 		for incFile in self._inc:
-			incPath = include_path_map[incFile]
-			self._inc_path_map[incPath] = True
-
+			incPaths = include_dir_map[incFile]
+			for incPath in incPaths:
+				if not self._inc_path_map.get(incPath, False):
+					self._inc_path_map[incPath] = True
 
 				
 	def check_modified(self,out):
@@ -183,8 +192,32 @@ def scan_dir(files,input_dir,suffix):
 				files.append(absfile)
 
 
-
 include_path_map = {}
+include_dir_map = {}# hrl 的include目录列表
+include_sub_list_map = {}# hrl 引入的其他hrl列表
+
+# 计算某个hrl 需要引入的目录列表(包含自身以及引入其他的  路径目录)
+def cacl_include_paths(fileName,filePath,subFileList):
+	paths = include_dir_map.get(fileName, [])
+	if len(paths) > 0:
+		return paths
+
+	tempList = [filePath]
+	for subFileName in subFileList:
+		subFilePath = include_path_map.get(subFileName)
+		ssubList = include_sub_list_map.get(subFileName)
+		tempList.extend(cacl_include_paths(subFileName,subFilePath,ssubList))
+	# 路径去重
+	pathMap = {}
+	pathList = []
+	for path in tempList:
+		bRepeat = pathMap.get(path, False)
+		if not bRepeat:
+			pathMap[path] = True
+			pathList.append(path)
+	include_dir_map[fileName]=pathList
+	# print("include file:{0} subFileList:{1} \ndir_map:{2}".format(fileName,subFileList,pathList))
+	return pathList
 
 # 扫描include依赖文件
 files = []
@@ -198,7 +231,32 @@ for filePath in files:
 		path = os.path.split(filePath)
 		fileName = path[1]
 		include_path_map[fileName]=path[0]
-		print("include fileName: "+fileName+" path: "+filePath)
+		# print("include fileName: "+fileName+" path: "+filePath)
+
+		# 递归引用
+		incList = []
+		fd = open(filePath,'r',encoding='utf-8')
+		lines = fd.readlines()
+		fd.close()
+		incstr = '-include("'
+		incstr2= '").'
+		for line in lines:
+			if line[0]!='%' and line.find(incstr) != -1:
+				line = line.replace(incstr,'')
+				line = line.replace('\n','')
+				line = line.replace('\r','')
+				line = line.replace('\t','')
+				line = line.replace(' ','')
+				incFile = line.replace(incstr2,'')
+				incList.append(incFile)
+		include_sub_list_map[fileName] = incList
+		# print("include fileList:{0}".format(incList))
+
+# 计算每个hrl的 引入目录列表
+for fileName, path in include_path_map.items():
+	subFileList = include_sub_list_map.get(fileName, [])
+	cacl_include_paths(fileName, path, subFileList)
+	
 
 # 扫描app.src文件
 files = []

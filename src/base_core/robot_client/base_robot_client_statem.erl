@@ -33,7 +33,7 @@
 -record(state, {socket, role_info, map_info, client_config}).
 -record(account,{username,roleids,gold,qq_gold,local_gold,nickname,gender,first_login_ip,first_login_time,last_login_ip,last_login_time,login_days,is_yellow_vip,is_yellow_year_vip,yellow_vip_level,first_login_platform,login_platform}).
 -include("base_gen_statem_shared.hrl").
--include("login_pb.hrl").
+% -include("login_pb.hrl").
 -include("base_robot_client_def.hrl").
 -include("common_define.hrl").
 -include("quest_define.hrl").

@@ -114,18 +114,22 @@ auth(FromNode,FromProc,ServerId,UserAuth)->
 		case Mod:Fun(UserAuth,SecretKey,CfgTimeOut,FatigueList,NoFatigueList) of
 			{ok,PlayerId,IsAudult}->
 				base_logger_util:info_msg("~p login successed userid=~p~n",[UserName,PlayerId]),
-				base_tcp_client_statem:auth_ok(FromNode, FromProc,ServerId,PlayerId,UserName,IsAudult);
+				% base_tcp_client_statem:auth_ok(FromNode, FromProc,ServerId,PlayerId,UserName,IsAudult);
+				base_gm_client_statem:apply_component(auth_component,auth_ok,[FromNode, FromProc,ServerId,PlayerId,UserName,IsAudult]);
 			{ok,Info}->
 				base_logger_util:info_msg("qq_auth_ok login successed username=~p  userid=~p~n",[UserName,UserId]),
-				base_tcp_client_statem:qq_auth_ok(FromNode,FromProc,ServerId,UserId,UserName,LogTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey);
+				% base_tcp_client_statem:qq_auth_ok(FromNode,FromProc,ServerId,UserId,UserName,LogTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey);
+				base_tcp_client_statem:apply_component(auth_component,qq_auth_ok,[FromNode,FromProc,ServerId,UserId,UserName,LogTime,Pf,UserIp,Info,OpenId,OpenKey,PfKey]);
 			{error, Reason}-> 
 				base_logger_util:info_msg("~p login failed,Reason:~p ~n",[UserName, Reason]),
-				base_tcp_client_statem:auth_failed(FromNode, FromProc, ServerId,Reason)
+				% base_tcp_client_statem:auth_failed(FromNode, FromProc, ServerId,Reason)
+				base_tcp_client_statem:apply_component(auth_component,auth_failed,[FromNode, FromProc, ServerId,Reason])
 		end
 	catch
 		R:E->
 			base_logger_util:info_msg("base_auth_processor_server error,R:~p,E:~p,UserAuth:~p~n",[R,E,UserAuth]),
-			base_tcp_client_statem:auth_failed(FromNode, FromProc, ServerId,?AUTH_FAILED)
+			% base_tcp_client_statem:auth_failed(FromNode, FromProc, ServerId,?AUTH_FAILED)
+			base_tcp_client_statem:apply_component(auth_component,auth_failed,[FromNode, FromProc, ServerId,?AUTH_FAILED])
 	end,
     {noreply, State};
 ?handle_info(_Info, State) ->

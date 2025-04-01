@@ -63,10 +63,12 @@ auth(FromNode,FromProc,GmUserName,GmUserId,Time,GmAuthResult)->
 	case Mod:Fun(GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut) of
 		{ok,GmId}->
 			base_logger_util:info_msg("~p login successed userid=~p~n",[GmName,GmId]),
-			base_gm_client_statem:auth_ok(FromNode, FromProc, GmId);
+			% base_gm_client_statem:auth_ok(FromNode, FromProc, GmId);
+			base_gm_client_statem:apply_component(auth_component,auth_ok,[FromNode, FromProc, GmId]);
 		{error, Reason}-> 
 			base_logger_util:info_msg("~p login failed,Reason:~p ~n",[GmName, Reason]),
-			base_gm_client_statem:auth_failed(FromNode, FromProc, Reason)
+			% base_gm_client_statem:auth_failed(FromNode, FromProc, Reason)
+			base_gm_client_statem:apply_component(auth_component,auth_failed,[FromNode, FromProc, Reason])
 	end,
     {noreply, State};
 ?handle_info(_Info, State) ->

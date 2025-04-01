@@ -22,10 +22,10 @@
 
 -record(state, {}).
 -include("base_gen_statem_shared.hrl").
+% -include("login_pb.hrl").
 -include("data_struct.hrl").
 -include("role_struct.hrl").
 -include("map_info_struct.hrl").
--include("login_pb.hrl").
 -include("common_define.hrl").
 -include("skill_define.hrl").
 -include("mnesia_table_def.hrl").
@@ -1851,7 +1851,7 @@ finish_visitor(RolePid,AccountName)->
 	{next_state, StateName, State};
 
 
-% ==================================handle undefined event============================================
+% ==================================handle undefined event============================================	
 ?handle_event({call, From}, EventContent, StateName, StateData) ->
 	base_logger_util:info_msg("~p handle_event undefined event:({call, From:~p}, EventContent:~p, StateName:~p, StateData:~p) !!!!!~n",[?MODULE, From, EventContent, StateName, StateData]),
 	{keep_state_and_data, [{reply, From, ok}]};

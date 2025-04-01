@@ -89,7 +89,8 @@ init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,AccountInfo) -
 			self() ! {gm_kick_you},
 			faild;
 		{Chatnode,Chatproc}->
-			base_tcp_client_statem:role_into_map_success(GatePid),
+			% base_tcp_client_statem:role_into_map_success(GatePid),
+			base_tcp_client_statem:apply_component(request_line_map_component,role_into_map_success,[GatePid]),
 			% chat_op:init(Chatnode,Chatproc),
 			
 			%% 请求地图
