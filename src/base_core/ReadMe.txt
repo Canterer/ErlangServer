@@ -31,5 +31,6 @@ application:get_env(Opt)
 	--global_proc 用于提供全局模块的进程
 	--role 角色相关
 	--server_control 用于控制运行中的服务器
+	--map_instance 地图副本
 
 --robot_client 用于模拟client连接 测试服务器

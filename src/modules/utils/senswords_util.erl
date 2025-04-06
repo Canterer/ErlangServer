@@ -49,9 +49,9 @@
 	?base_ets:delete_all_objects(?ETS_SENSITIVE),
 	?base_ets:delete_all_objects(?ETS_SENSITIVE_BLACKNAME),
 	?base_ets:delete_all_objects(?ETS_SENSITIVE_BLACKHEADER),
-	DictionaryFile = env:get(sensitive,[]),
-	BlackNameFile = env:get(nameissensitive,[]),
-	BlackHeaderFile = env:get(nameisblackheader,[]),
+	DictionaryFile = base_env_ets:get(sensitive,[]),
+	BlackNameFile = base_env_ets:get(nameissensitive,[]),
+	BlackHeaderFile = base_env_ets:get(nameisblackheader,[]),
 	import_black_words(BlackNameFile,?ETS_SENSITIVE_BLACKNAME),
 	import_words(BlackHeaderFile,?ETS_SENSITIVE_BLACKHEADER),
 	add_word_to_ets(<<"游客">>,?ETS_SENSITIVE_BLACKHEADER),
@@ -70,7 +70,7 @@ import_black_words(File,EtsName)->
 								  ?base_ets:insert(EtsName, {UniString})
 						   end, Terms);
 		{error,Reason}->
-			slogger:msg("import_black_words error:~p~n",[Reason])
+			base_logger_util:info_msg("import_black_words error:~p~n",[Reason])
 	end.
 
 import_words(File,EtsName)->
@@ -80,7 +80,7 @@ import_words(File,EtsName)->
 								  add_word_to_ets(X,EtsName)
 						  end,Terms);
 		{error,Reason}->
-			slogger:msg("import_words error:~p~n",[Reason])
+			base_logger_util:info_msg("import_words error:~p~n",[Reason])
 	end.
 	
 

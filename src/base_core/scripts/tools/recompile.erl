@@ -77,7 +77,7 @@ doit(From, To) ->
 		up_to_date-> 
 			Stamp = stamp(),
 			{{Y,M,D},{H,Min,S}}=Stamp,
-			slogger:msg("Check finish @ ~p/~s/~s-~s:~s:~s~n",[Y,
+			base_logger_util:info_msg("Check finish @ ~p/~s/~s-~s:~s:~s~n",[Y,
 															str_num:make_int_str2(M),
 															str_num:make_int_str2(D),
 															str_num:make_int_str2(H),
@@ -86,7 +86,7 @@ doit(From, To) ->
 		error->
 			Stamp = stamp(),
 			{{Y,M,D},{H,Min,S}}=Stamp,
-			slogger:msg("Check error  @ ~p/~s/~s-~s:~s:~s~n",[Y,
+			base_logger_util:info_msg("Check error  @ ~p/~s/~s-~s:~s:~s~n",[Y,
 															str_num:make_int_str2(M),
 															str_num:make_int_str2(D),
 															str_num:make_int_str2(H),

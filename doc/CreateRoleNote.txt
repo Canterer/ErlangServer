@@ -22,13 +22,34 @@
 					若无角色
 						验证角色名是否合理 senswords_util:word_is_sensitive
 						base_role_db:create_role_rpc(AccountId,AccountName,RoleName,Gender,ClassType,CreateIp,ServerId)
+			收到role_line_query_c2s 调用组件request_line_map_component接口line_info_request
+				base_line_manager_server:query_line_status 返回line信息 触发line_info_success事件
+			处理line_info_success事件
+				发送role_line_query_ok_s2c消息
+		logining状态
+			收到player_select_role_c2s消息
+				验证RoleId是否在RoleList中
+				role_pos_util:where_is_role(RoleId)验证玩家是否已存在
+				若 存在则base_role_manager:stop_role_processor  发送已登录消息 kick_client
+				   不存在 获取上次的MapId  base_gate_op:get_last_mapid(RoleId)
+				   		async_get_line_info_by_mapid(Mapid)
+				   		base_line_manager_server:query_line_status 返回line信息 触发line_info_success事件
+			处理line_info_success事件
+				验证当前line的最小角色数
+				start_game_after_line_fixed(1)
+					base_role_manager:start_one_role 开启角色
 
+
+base_role_manager:start_one_role 开启角色
+base_role_manager:start_copy_role  仅在change_map_in_other_node_begin
 
 客户端
 	gen_tcp:connect 连接服务端
 	user_auth_c2s 发送验证包
 	若  收到init_random_rolename_s2c 发送 create_role_request_c2s
 		收到player_role_list_s2c 发送 role_line_query_c2s
+	收到role_line_query_ok_s2c 
+		根据lineid 发送player_select_role_c2s
 
 
 创建角色接口
@@ -152,3 +173,35 @@ base_db_split_util:check_need_split(HiValue)//HiValue即ServerId
 gen_db_code.erl 用于定义特殊格式的hrl 生成基本的xxx_db.erl 提供基本的存取数据
 
 gs_prof.erl 处理gs客户端连接
+
+
+
+
+
+
+
+%% 启动一个角色进程:
+%%	 地图信息(GS_system_map_info): 角色进程和指定地图进行绑定
+%%	 角色信息(GS_system_role_info): 创建角色进程需要了解的基本信息
+%%	 网关信息(GS_system_gate_info): 将角色进程和网关进程进行绑定
+start_one_role(GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo)->
+	base_role_sup:start_role({start_one_role,StartInfo}, Role_id)
+	base_role_processor:init([{start_copy_role,{MapInfo, RoleInfo, GateInfo, X, Y,AllInfo}},RoleId,_RoleProc])
+	base_role_processor:init([{start_one_role,{GS_system_map_info, GS_system_role_info, GS_system_gate_info,OtherInfo}},RoleId,Role_proc_name])
+		base_role_op:init(GS_system_map_info, GS_system_gate_info, New_gs_system_roleinfo,OtherInfo)
+
+
+base_role_op:init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,AccountInfo)
+	init_attribute(GS_system_map_info, GS_system_gate_info, GS_system_role_info)
+		init_roleinfo(RoleId,GS_MapInfo,GS_GateInfo,GS_RoleInfo)
+			update_role_info(Role_id,get(creature_info))
+	base_tcp_client_statem:role_process_started(GatePid, node(), make_role_proc_name(RoleId))//通知gate 开启start_chat_role
+		// 切换loging状态至gaming状态
+		base_tcp_client_statem:apply_component(request_line_map_component,role_into_map_success,[GatePid])
+		base_role_op:on_into_world(MapId, LineId)
+			instance_op_component:instance_into_world(MapId,LineId,RoleInfo)
+				instance_op_component:transport(RoleInfo, MapInfo,LineId,MapId,{X,Y} = Coord)
+
+//game计时器
+base_role_op:do_role_game_interval()
+		base_role_op:start_all_timer()

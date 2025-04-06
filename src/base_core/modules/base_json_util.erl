@@ -13,7 +13,7 @@ json_encode({struct,_MemberList}=Term)->
 		%%{ok,term_to_binary(Term)}
 	catch
 		E:R-> 
-			slogger:msg("json_encode exception ~p:~p~n~p",[E,R,Term]),
+			base_logger_util:info_msg("json_encode exception ~p:~p~n~p",[E,R,Term]),
 			{error,"Excption!"}
 	end;
 json_encode(S) when is_binary(S)->
@@ -22,7 +22,7 @@ json_encode(S) when is_binary(S)->
 		{ok,list_to_binary(Json)}
 	catch
 		E:R-> 
-			slogger:msg("s_encode exception ~p:~p",[E,R]),
+			base_logger_util:info_msg("s_encode exception ~p:~p",[E,R]),
 			{error,"Excption!"}
 	end;
 json_encode(_)->
@@ -33,14 +33,14 @@ json_decode(Json) when is_list(Json)->
 		Term = json:decode(Json),
 		{ok,Term}
 	catch
-		E:R-> slogger:msg("json_decode exception ~p:~p",[E,R])
+		E:R-> base_logger_util:info_msg("json_decode exception ~p:~p",[E,R])
 	end;
 json_decode(Json) when is_binary(Json)->
 	try
 		Term = json:decode(binary_to_list(Json)),
 		{ok,Term}
 	catch
-		E:R-> slogger:msg("json_decode exception ~p:~p",[E,R])
+		E:R-> base_logger_util:info_msg("json_decode exception ~p:~p",[E,R])
 	end;
 json_decode(_)->
 	{error}.

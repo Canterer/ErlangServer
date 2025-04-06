@@ -750,7 +750,8 @@ finish_visitor(RolePid,AccountName)->
 		uninit->
 			base_role_op:kick_out(RoleId);
 		_->
-			base_role_op:do_cleanup(Tag,RoleId)
+			% base_role_op:do_cleanup(Tag,RoleId)
+			apply_component(instance_op_component,do_cleanup,[Tag,RoleId])
 	end,
 	% {reply, ok, cleanuping, StateData};
 	{next_state, cleanuping, StateData, [{reply, From, ok}]};
@@ -811,7 +812,8 @@ finish_visitor(RolePid,AccountName)->
 	{next_state, NewState, StateData};
 	
 ?handle_event(info, {directly_send, Message}, StateName, StateData) ->
-	base_role_op:send_data_to_gate(Message),
+	% base_role_op:send_data_to_gate(Message),
+	apply_component(send_to_gate_component,send_data_to_gate,[Message]),
 	{next_state, StateName, StateData};
 
 ?handle_event(info, {be_add_buffer, Buffers,CasterInfo}, StateName, StateData) ->
@@ -1078,11 +1080,13 @@ finish_visitor(RolePid,AccountName)->
 				ChangedAttrs->
 					RoleID = get(roleid),
 					base_role_op:update_role_info(RoleID,get(creature_info)),
-					base_role_op:self_update_and_broad(ChangedAttrs),
+					% base_role_op:self_update_and_broad(ChangedAttrs),
+					apply_component(role_update_broad_component,self_update_and_broad,[ChangedAttrs]),
 					%%广播当前buff影响
 					BuffChangesForSend = lists:map(fun({AttrTmp,ValueTmp})-> role_attr:to_role_attribute({AttrTmp,ValueTmp}) end,BuffChangeAttrs),
 					Message = role_packet:encode_buff_affect_attr_s2c(RoleID,BuffChangesForSend),
-					base_role_op:send_data_to_gate(Message),
+					% base_role_op:send_data_to_gate(Message),
+					apply_component(send_to_gate_component,send_data_to_gate,[Message]),
 					base_role_op:broadcast_message_to_aoi_client(Message),
 					%%检查一下有没有影响到血量,如果有的话,看是否导致死掉
 					case lists:keyfind(hp,1,ChangedAttrs) of
@@ -1118,7 +1122,8 @@ finish_visitor(RolePid,AccountName)->
 					HP = CurHp + ChangeValue,
 					put(creature_info, set_life_to_roleinfo(get(creature_info), HP)),
 					base_role_op:update_role_info(RoleID,get(creature_info)),
-					base_role_op:self_update_and_broad([{hp,HP}]);
+					% base_role_op:self_update_and_broad([{hp,HP}]);
+					apply_component(role_update_broad_component,self_update_and_broad,[[{hp,HP}]]);
 				true->
 					nothing
 			end
@@ -1137,7 +1142,8 @@ finish_visitor(RolePid,AccountName)->
 			case (CurMp =/= MP) of
 				true ->
 					put(creature_info, set_mana_to_roleinfo(get(creature_info), MP)),
-					base_role_op:self_update_and_broad([{mp,MP}]);
+					% base_role_op:self_update_and_broad([{mp,MP}]);
+					apply_component(role_update_broad_component,self_update_and_broad,[[{mp,MP}]]);
 				false ->
 					do_not_do_any_thing
 			end
@@ -1313,7 +1319,8 @@ finish_visitor(RolePid,AccountName)->
 	{next_state, StateName, State};
 
 ?handle_event(info, {line_change,LineId}, StateName, State) ->
-	base_role_op:change_line(LineId),
+	% base_role_op:change_line(LineId),
+	apply_component(instance_op_component,change_line,[LineId]),
 	{next_state, StateName, State};
 %%  
 %%完成注册
@@ -1469,11 +1476,13 @@ finish_visitor(RolePid,AccountName)->
 			fatigue:set_adult(),
 			Msg = #identify_verify_s2c{code=Code},
 			MsgBin = login_pb:encode_proto_msg(identify_verify_s2c,Msg),
-			base_role_op:send_data_to_gate(MsgBin);
+			% base_role_op:send_data_to_gate(MsgBin);
+			apply_component(send_to_gate_component,send_data_to_gate,[MsgBin]);
 		_-> 
 			Msg = #identify_verify_s2c{code=Code},
 			MsgBin = login_pb:encode_proto_msg(identify_verify_s2c,Msg),
-			base_role_op:send_data_to_gate(MsgBin)
+			% base_role_op:send_data_to_gate(MsgBin)
+			apply_component(send_to_gate_component,send_data_to_gate,[MsgBin])
 	end,
 	{next_state, StateName, State};
 	

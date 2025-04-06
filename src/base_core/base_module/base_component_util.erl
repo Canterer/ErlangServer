@@ -3,7 +3,8 @@
 
 -export([
 	getComponents/0,
-	applyComponentFunc/4
+	applyComponentFunc/4,
+	applyComponentFunc/5
 ]).
 
 -define(ComponentName(Component), list_to_atom(atom_to_list(components_) ++ atom_to_list(Component))).
@@ -48,15 +49,38 @@ applyComponentFunc(Mod,Component,Func,Args)->
 		true ->
 			Res = erlang:apply(Component,Func,Args),
 			if
-				Func == handle_event and Res =/= unhandle) ->
+				(Func == handle_event) and (Res =/= unhandle) ->
 					base_logger_util:info_msg("#####CCCCC##### Mod:~p applyComponentFunc(Component:~p FuncName:~p Args:~p)",[Mod,Component,Func,Args]);
 				true->
 					ok
 			end,
 			Res;
 		false ->
-			base_logger_util:info_msg("#####CCCCC##### checkComponent ~p failed !!!!!!!!!!!!!!!!!!!!!",[Component]),
+			base_logger_util:info_msg("#####CCCCC##### checkComponent ~p failed !!!!!!! call ~p:~p(Args:~p)~n",[Component,Component,Func,Args]),
 			failed
+	end.
+
+applyComponentFunc(Mod,Component,Func,Args,DefaultReturn)->
+	if
+		Func =/= handle_event ->
+			base_logger_util:info_msg("#####CCCCC##### Mod:~p applyComponentFunc(Component:~p FuncName:~p Args:~p)",[Mod,Component,Func,Args]);
+		true->
+			ok
+	end,
+	% base_logger_util:info_msg("Mod:~p applyComponentFunc(Component:~p FuncName:~p Args:~p)",[Mod,Component,Func,Args]),
+	case checkComponent(Component) of
+		true ->
+			Res = erlang:apply(Component,Func,Args),
+			if
+				(Func == handle_event) and (Res =/= unhandle) ->
+					base_logger_util:info_msg("#####CCCCC##### Mod:~p applyComponentFunc(Component:~p FuncName:~p Args:~p)",[Mod,Component,Func,Args]);
+				true->
+					ok
+			end,
+			Res;
+		false ->
+			base_logger_util:info_msg("#####CCCCC##### checkComponent ~p failed !!!!!!! call ~p:~p(Args:~p)~n",[Component,Component,Func,Args]),
+			DefaultReturn
 	end.
 
 

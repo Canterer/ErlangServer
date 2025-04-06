@@ -10,6 +10,7 @@ is_share_server()->
 is_has_share_map()->
 	base_env_ets:get(share_map_node,[])=/=[].
 
+% 是否为跨服地图
 is_share_maps(MapId)->
 	lists:member(MapId,base_env_ets:get(share_maps,[])).
 

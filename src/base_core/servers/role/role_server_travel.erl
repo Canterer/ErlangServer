@@ -2,12 +2,13 @@
 
 -compile(export_all).
 
+-include("base_component_shared.hrl").
 -include("map_info_struct.hrl").
--include("login_pb.hrl").
+% -include("login_pb.hrl").
 
 init()->
 	put(is_in_travel,false),
-	put(source_servers_ids,env:get(serverids,[])),
+	put(source_servers_ids,base_env_ets:get(serverids,[])),
 	put(role_source_node,node()).
 
 hook_on_chat_in_view()->
@@ -106,6 +107,7 @@ change_is_in_travel(Tag)->
 		true->
 			Msg = login_pb:encode_server_travel_tag_s2c(#server_travel_tag_s2c{istravel = 0})
 	end,
-	base_role_op:send_data_to_gate(Msg),
+	% base_role_op:send_data_to_gate(Msg),
+	apply_component(send_to_gate_component,send_data_to_gate,[Msg]),
 	put(is_in_travel,Tag).
 	

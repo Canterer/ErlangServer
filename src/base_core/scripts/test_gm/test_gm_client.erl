@@ -665,7 +665,7 @@ handle_all_role_vip_response_ok(JsonObject)->
 
 t()->
 	start_link(),
-	test_gm_client:connect("127.0.0.1",env:get2(gmport, gm, 1080)),
+	test_gm_client:connect("127.0.0.1",base_env_ets:get2(gmport, gm, 1080)),
 	test_gm_client:auth("abc",123).
 %% 	lists:foreach(fun (X) ->
 %%       add_gm_notice(X,X rem 3,X,1287991828+X*60,1288991828+X*10*60,30000+X*1000,[X|"xxxx"])        

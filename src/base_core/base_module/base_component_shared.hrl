@@ -9,11 +9,15 @@
 
 -export([
 	apply_component/3,
+	apply_component/4,
 	apply_component_handle/4
 ]).
 
 apply_component(Component,Func,Args)->
 	base_component_util:applyComponentFunc(?MODULE,Component,Func,Args).
+
+apply_component(Component,Func,Args,DefaultReturn)->
+	base_component_util:applyComponentFunc(?MODULE,Component,Func,Args,DefaultReturn).
 
 apply_component_handle(Event, EventContent, StateName, StateData)->
 	Components = base_component_util:getComponents(),

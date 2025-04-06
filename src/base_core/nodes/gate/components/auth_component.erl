@@ -141,5 +141,4 @@ handle_event(cast,{auth_ok,_PlayerId,AccountName,IsAdult},gaming,StateData) ->
 	self()! {needchangename},
 	{next_state,gaming,StateData};
 handle_event(Event, EventContent, StateName, StateData) ->
-	?ZSS(),
 	unhandle.

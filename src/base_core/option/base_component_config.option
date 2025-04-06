@@ -4,7 +4,10 @@
 			{auth_component,true},
 			{autoname_component,true},
 			{request_line_map_component,true},
-			{create_role_component,true}
+			{create_role_component,true},
+			%%进入地图
+			{instance_op_component,true},
+			{send_to_gate_component,true}
 		]
 	}
 ].

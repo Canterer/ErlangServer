@@ -66,6 +66,7 @@ start(_Type, _StartArgs) ->
 			%%load map
 			start_map_manager_sup(),
 			start_map_processor_sup(),
+			% start_map_db_sup(),
 
 			% case node_util:check_node_allowable(battle_ground_manager, node()) of
 			% 	true->

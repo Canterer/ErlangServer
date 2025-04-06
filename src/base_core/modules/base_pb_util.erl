@@ -2,7 +2,14 @@
 
 -export([
 	make_role_info/6,
-	get_role_id_from_logininfo/1
+	get_role_id_from_logininfo/1,
+	key_value/2,
+	to_object_attribute/3,
+	convert_to_pos/1,
+	item_changed/4,
+	loot_slot_info/2,
+	to_teammate_state/12,
+	to_skill_info/3
 ]).
 
 -include("login_pb.hrl").

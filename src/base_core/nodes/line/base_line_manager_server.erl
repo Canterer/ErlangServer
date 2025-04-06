@@ -25,7 +25,9 @@
 	unregist_map_by_node/1,
 	get_line_map_in_node/1,
 	get_role_num_by_mapId/0,
-	open_dynamic_line/1
+	open_dynamic_line/1,
+	regist_chatmanager/1,
+	get_chat_name/0
 ]).
 %%add for chat
 % -export([regist_chatmanager/1,get_chat_name/0]).
@@ -87,8 +89,8 @@ regist_map_manager(Args) ->
 % %%
 % %%regist chatmagager
 % %%
-% regist_chatmanager(Args) ->
-% 	base_global_proc_util:send(?MODULE, {regist_chatmanager, Args}).
+regist_chatmanager(Args) ->
+	base_global_proc_util:send(?MODULE, {regist_chatmanager, Args}).
 
 wait_lines_manager_loop()->
 	base_logger_util:info_msg("~p:~p~n",[?MODULE,?FUNCTION_NAME]),

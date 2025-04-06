@@ -20,7 +20,7 @@ validate_gm(GmName, GmId,Time,AuthResult,SecretKey,CfgTimeOut)->
 	{MegaSec,Sec,_} = timer_center:get_correct_now(),
 	Seconds = MegaSec*1000000 + Sec,
 	DiffTim = erlang:abs(Seconds-Time),
-	GmAccounts = env:get(gmaccount,[]),
+	GmAccounts = base_env_ets:get(gmaccount,[]),
 	if DiffTim>CfgTimeOut->
 			{error,200001};
 		true ->

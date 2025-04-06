@@ -31,20 +31,32 @@ line_info_success(GateNode,GateProc,LineInfos)->
 	GatePid = GateProc,    %% proc name is the remote pid
 	?base_gen_statem:cast(GatePid, {line_info_success,LineInfos}).
 
-
+handle_event(cast,{line_info_request,MapId},rolelisting,StateData)->
+% handle_rolelisting_state(cast,{line_info_request,MapId},StateData)->
+	async_get_line_info_by_mapid(MapId),
+	{next_state,rolelisting,StateData};
+handle_event(cast,{line_info_success,LineInfos},rolelisting,StateData)->
+% handle_rolelisting_state(cast,{line_info_success,LineInfos},StateData)->
+	LineInfoByRecord = linesinfo_to_record(LineInfos),
+	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
+	base_tcp_client_statem:send_data(self(),SendData),
+	{next_state,logining,StateData};
 handle_event(cast,{role_into_map_request,RoleId,_LineId},logining,StateData) ->
 % handle_logining_state(cast,{role_into_map_request,RoleId,_LineId},StateData) ->
 	RoleList = base_gate_op:get_role_list(get(account),get(serverid)),
+	?ZSS("role_into_map_request RoleList:~p",[RoleList]),
 	case lists:member(RoleId,[base_pb_util:get_role_id_from_logininfo(RoleInfo) || RoleInfo <- RoleList]) of
 		true->
 			case role_pos_util:where_is_role(RoleId) of
 				[]->
+					?ZSS(),
 					%%由于line是客户端发来的,有可能会与当前地图线路不符.所以重新再请求一次线路,自动选择最优线路
 					Mapid = base_gate_op:get_last_mapid(RoleId),
 					put(roleid, RoleId),
 					put(mapid, Mapid),
 					async_get_line_info_by_mapid(Mapid);
 				RolePos ->
+					?ZSS(),
 					base_logger_util:info_msg("Role_id:[~p], is exist~n", [RoleId]),
 					RoleNode = role_pos_db:get_role_mapnode(RolePos),
 					RoleProc = role_pos_db:get_role_pid(RolePos),
@@ -72,16 +84,6 @@ handle_event(cast,{line_info_success,LineInfos},logining,StateData)->
 handle_event(cast,{role_into_map_success},logining,StateData) ->
 % handle_logining_state(cast,{role_into_map_success}, StateData) ->
 	{next_state, gaming,StateData};
-handle_event(cast,{line_info_request,MapId},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{line_info_request,MapId},StateData)->
-	async_get_line_info_by_mapid(MapId),
-	{next_state,rolelisting,StateData};
-handle_event(cast,{line_info_success,LineInfos},rolelisting,StateData)->
-% handle_rolelisting_state(cast,{line_info_success,LineInfos},StateData)->
-	LineInfoByRecord = linesinfo_to_record(LineInfos),
-	SendData = login_pb:encode_proto_msg(role_line_query_ok_s2c,#role_line_query_ok_s2c{lines=LineInfoByRecord}),
-	base_tcp_client_statem:send_data(self(),SendData),
-	{next_state,logining,StateData};
 handle_event(cast,{line_info_request,MapId},gaming,StateData)->
 % handle_gaming_state(cast,{line_info_request,MapId}, StateData)->
 	async_get_line_info_by_mapid(MapId),
@@ -118,6 +120,7 @@ async_get_line_info_by_mapid(MapId)->
 					?ZSS(),
 					line_info_success(node(),self(),LineInfos);
 				_->
+					?ZSS(),
 					base_line_manager_server:query_line_status(node(),self() ,MapId)
 			end
 	end.

@@ -154,7 +154,7 @@ class erl_object(object):
 		srcfile = self._src
 		
 		if not os.path.exists(os.path.abspath(dstfile)) :
-			print('not exists:' + dstfile)
+			print('not exists: ../ebin/' + path1[0] + '.beam')
 			return True
 		if os.stat(os.path.abspath(dstfile)).st_mtime < os.stat(os.path.abspath(srcfile)).st_mtime:
 			print('timeout:' + dstfile)

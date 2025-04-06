@@ -55,10 +55,10 @@ random_pos1(MapId)->
 %% 			io:format("board:X:~p,Y:~p~n",[X,Y]),
 			is_can_stand_pos(X,Y,MapDbName);
 		{}->
-			slogger:msg("Path:not find board~n"),
+			base_logger_util:info_msg("Path:not find board~n"),
 			is_can_stand_pos(200,200,MapDbName);
 		ERROR->
-			slogger:msg("random_pos,ERROR:~p~n",[ERROR]),
+			base_logger_util:info_msg("random_pos,ERROR:~p~n",[ERROR]),
 			is_can_stand_pos(200,200,MapDbName)
 	end. 
 
@@ -105,7 +105,7 @@ make_path(Path,PresentNode,HadCheckNodeList,Begin)->
 				{value,ParentNode}->
 					make_path([PresentPoint|Path],ParentNode,HadCheckNodeList,Begin);
 				false->
-					slogger:msg("path:not find parentnode~n"),
+					base_logger_util:info_msg("path:not find parentnode~n"),
 					[]
 			end
 	end.
@@ -205,13 +205,13 @@ path_find1(Begin,End,MapId)->
 		path_find(Begin,End,StartNode,[StartNode],[],MapDbName)
 	catch
 		E:R ->
-			slogger:msg("E:~pR:~p~n",[E,R]),
+			base_logger_util:info_msg("E:~pR:~p~n",[E,R]),
 			[]
 	end.
 
 
 path_find(Begin,End,ParentNode,[],HadCheckNodeList,MapDbName)->
-%% 	slogger:msg("path_find,error,startpos is not can stand,Begin:~p,End:~p~n",[Begin,End]),
+%% 	base_logger_util:info_msg("path_find,error,startpos is not can stand,Begin:~p,End:~p~n",[Begin,End]),
 	[];
 
 path_find(Begin,End,ParentNode,WaitCheckNodeList,HadCheckNodeList,MapDbName)->	
@@ -230,7 +230,7 @@ path_find(Begin,End,ParentNode,WaitCheckNodeList,HadCheckNodeList,MapDbName)->
 %%  			io:format("path:path_find:NewWaitCheckNodeList:~p~n",[NewWaitCheckNodeList]),		
 			path_find(Begin,End,LeastCostNode,NewWaitCheckNodeList,NewHadCheckNodeList,MapDbName);
 		ERROR->
-			slogger:msg("path_find,error:~p~n",[ERROR]),
+			base_logger_util:info_msg("path_find,error:~p~n",[ERROR]),
 			[]
 	end.
 

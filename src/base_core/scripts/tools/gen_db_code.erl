@@ -274,7 +274,7 @@ make_fun_disc_record(#db_record{recordname=RecordName,type=Type,field=Fileds,arg
 		bag->
 			"record_list\n\t\t{ok,Results}->Results;\n"
 	end++
-	"\t\tError->  slogger:error(\"get_"++RecordNameStr ++"failed ~p~n\",[Error])\n\tend.\n\n"
+	"\t\tError->  base_logger_util:error_msg(\"get_"++RecordNameStr ++"failed ~p~n\",[Error])\n\tend.\n\n"
 	++
 	"write_"++RecordNameStr ++"_info("++make_fun_args_by_list(Fileds)++")->\n\tdal:write_rpc({"++	
 	RecordNameStr++","++make_fun_args_by_list(Fileds)++"}).\n\n"
@@ -294,7 +294,7 @@ make_fun_disc_split_record(#db_record{recordname=RecordName,field=Fileds,type=Ty
 		bag->
 			"record_list\n\t\t{ok,Results}->Results;\n"
 	end++
-	"\t\tError->  slogger:error(\"get_"++RecordNameStr ++"failed ~p~n\",[Error])\n\tend.\n\n"
+	"\t\tError->  base_logger_util:error_msg(\"get_"++RecordNameStr ++"failed ~p~n\",[Error])\n\tend.\n\n"
 	++
 	"write_"++RecordNameStr ++"_info(RoleId,"++make_fun_args_by_list(Fileds)++")->\n"
 	"\tTableName = db_split:get_owner_table("++RecordNameStr++",RoleId),\n"++

@@ -2,6 +2,7 @@
 
 -compile(export_all).
 
+-include("base_component_shared.hrl").
 -include("common_define.hrl").
 -include("skill_define.hrl").
 -include("mnesia_table_def.hrl").
@@ -21,7 +22,8 @@ send_skill_info()->
 						base_pb_util:to_skill_info(SkillID,SkillLevel,LastCastTime)
 					end,SkillList), 					
 	Msg = role_packet:encode_learned_skill_s2c(get(roleid),SendSkillInfo),
-	base_role_op:send_data_to_gate(Msg).
+	% base_role_op:send_data_to_gate(Msg).
+	apply_component(send_to_gate_component,send_data_to_gate,[Msg]).
 
 save_to_db()->
 	skill_db:save_role_skill_info(get(skill_info)).

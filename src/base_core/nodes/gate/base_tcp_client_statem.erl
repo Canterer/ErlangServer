@@ -5,7 +5,12 @@
 	start_link/2,
 	send_data/2,
 	shutown_client/1,
-	kick_client/1
+	kick_client/1,
+	object_update_create/2,
+	send_data_after/3,
+	role_process_started/3,
+	mapid_change/5,
+	send_pending_object_update/1
 ]).
 
 % 状态 connecting、connected、authing、rolelisting、preparing_into_map、gaming
@@ -639,14 +644,18 @@ mapid_change(GateNode, GateProc, MapNode,MapId,RoleProc)->
 % handle_sync_event({role_process_started,MapNode,RoleProc}, From, StateName, StateData) ->
 	put(mapnode, MapNode),
 	put(roleproc, RoleProc),
+	?ZSS(),
 	%% add 
 	{ChatNode,ChatProc} = start_chat_role(),
 	put(chatnode,ChatNode),
 	put(chatproc,ChatProc),
+	?ZSS(),
 	case get(neednotchange) of
 		undefined->
+			?ZSS(),
 			NeedChangeName = base_role_db:name_can_change(base_role_db:get_role_info(get(roleid))),
-				%%可以改名
+			?ZSS("NeedChangeName:~p",[NeedChangeName]),
+			%%可以改名
 			case NeedChangeName of
 				true->  self()! {needchangename};
 				_-> noting
@@ -909,14 +918,15 @@ start_chat_role()->
 			RoleProc = get(roleproc),
 			GS_system_role_info = #gs_system_role_info{role_id = RoleId, role_pid = RoleProc, role_node =MapNode},
 			GS_system_gate_info = #gs_system_gate_info{gate_proc = GateProc, gate_node=node(), gate_pid=self()},
-			case chat_manager:start_chat_role(ChatNode, GS_system_role_info, GS_system_gate_info) of
-				error->
-					base_logger_util:info_msg("chat_manager:start_chat_role error ~n"),
-					self() ! {tcp_closed, 0},
-					{0,0};
-				Re->
-					Re
-			end
+			% case chat_manager:start_chat_role(ChatNode, GS_system_role_info, GS_system_gate_info) of
+			% 	error->
+			% 		base_logger_util:info_msg("chat_manager:start_chat_role error ~n"),
+			% 		self() ! {tcp_closed, 0},
+			% 		{0,0};
+			% 	Re->
+			% 		Re
+			% end
+			apply_component(chat_manager_component,start_chat_role,[ChatNode, GS_system_role_info, GS_system_gate_info],{chatNode,chatProc})
 	end.
 
 stop_chat_role()->
@@ -926,7 +936,8 @@ stop_chat_role()->
 		undefined->
 			nothing;
 		ChatNode->  
-			chat_manager:stop_chat_role(ChatNode, ChatProc,RoleId)
+			% chat_manager:stop_chat_role(ChatNode, ChatProc,RoleId)
+			apply_component(chat_manager_component,stop_chat_role,[ChatNode,ChatProc,RoleId])
 	end.  
 
 

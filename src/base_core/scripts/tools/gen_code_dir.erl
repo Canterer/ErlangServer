@@ -31,7 +31,7 @@ read_file_loop(F)->
 			file:close(F),
 			[];
 		Error->
-			slogger:error("read error ~p ~n",[Error]),
+			base_logger_util:error_msg("read error ~p ~n",[Error]),
 			file:close(F),
 			[]
 	end.

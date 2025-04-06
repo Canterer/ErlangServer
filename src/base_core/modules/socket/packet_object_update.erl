@@ -1,6 +1,7 @@
 -module(packet_object_update).
 
 -include("login_pb.hrl").
+-include("base_define_min.hrl").
 
 -export([
 	init/0,
@@ -32,14 +33,16 @@ clear()->
 send_pending_update()->
 	case (get(object_create_info) =/= []) or (get(object_update_info) =/= []) or (get(object_delete_info) =/= []) of
 		true->
+			?ZSS(),
 			Message = role_packet:encode_object_update_s2c(lists:reverse(get(object_create_info)),lists:reverse(get(object_update_info)),lists:reverse(get(object_delete_info))),
 			%%TODO
+			?ZSS(),
 			try erlang:binary_to_term(Message) of
 				Val-> base_logger_util:info_msg("send_to_role ~p~n",[erlang:binary_to_term(Message)])
 			catch
 				_:_->
-					<<ID:16, Data1/binary>> = Message
-					%base_logger_util:info_msg("send_to_role [~p] ~n",[ID])
+					<<ID:16, Data1/binary>> = Message,
+					base_logger_util:info_msg("send_to_role pure binary !!!!  [~p] ~n",[ID])
 			end,
 			erlang:port_command(get(clientsock), Message, [force]);
 		false->

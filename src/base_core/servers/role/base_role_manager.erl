@@ -6,7 +6,13 @@
 -export([
 	start_link/1,
 	start_one_role/4,
-	stop_role_processor/4
+	start_copy_role/6,
+	stop_self_process/3,
+	stop_role_processor/4,
+	get_role_info/1,
+	get_role_remoteinfo_by_node/2,
+	regist_role_info/2,
+	unregist_role_info/1
 ]).
 
 %% --------------------------------------------------------------------
@@ -148,6 +154,7 @@ get_role_remoteinfo_by_node(Node,RoleId)->
 %% 向该节点的RoleManager,注册Role信息
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 regist_role_info(RoleId, RoleInfo) ->
+	?ZSS("RoleId:~p RoleInfo:~p",[RoleId,RoleInfo]),
 	?base_ets:insert(local_roles_datatbase, {RoleId, RoleInfo}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -241,6 +248,7 @@ unregist_role_info(RoleId) ->
 			?ZSS(),
 			case base_role_sup:start_role({start_one_role,StartInfo}, Role_id) of
 				{ok,_Role_pid} ->
+					?ZSS(),
 					ok;
 				AnyInfo ->
 					Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_UNKNOWN),

@@ -221,7 +221,7 @@ sendtoserver(Pid,Binary)->
 			gm_levelup(get(level)),
 			gm_moneychange(?MONEY),
 			gm_goldchange(?GOLD),
- 			timer:send_afr(rand:uniform(60)*1000,{speek_loop}),
+ 			timer:send_after(rand:uniform(60)*1000,{speek_loop}),
 			self() ! {check_alive},
 			query_time_c2s(),
 			{next_state, gaming, State};
@@ -595,7 +595,7 @@ sendtoserver(Pid,Binary)->
 		?base_gen_statem:cast(self(), BinMsg)
 	catch
 		E:R->
-			nothing%%slogger:msg("tcp error record_name Binary E:~p,R~p~n",[E,R])
+			nothing%%base_logger_util:info_msg("tcp error record_name Binary E:~p,R~p~n",[E,R])
 	end,
 	inet:setopts(Socket, [{active, once}]),
 	{next_state, StateName, State};
@@ -964,7 +964,7 @@ call_robot(Index)->
 				gen_server:cast(load_map_process,{call_robot,Index})
 			catch
 				E:R->
-					slogger:msg("Error = ~p,Reason = ~p~n",[E,R]),
+					base_logger_util:info_msg("Error = ~p,Reason = ~p~n",[E,R]),
 					nothing
 			end
 	end.

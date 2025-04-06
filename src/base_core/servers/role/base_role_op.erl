@@ -1,4 +1,4 @@
--module(base_base_role_op).
+-module(base_role_op).
 
 % -export([use_pet_egg_ext/3,can_use_egg/1,proc_use_iegg/4]).
 -compile(export_all).
@@ -22,12 +22,16 @@
 	get_processor_state_by_roleinfo/0,
 	respawn_self/1,
 	handle_other_login/1,
-	kick_out/1,
-	do_cleanup/2,
-	account_charge/2
+	kick_out/1
+	% do_cleanup/2,
+	% account_charge/2
 ]).
 
--include("login_pb.hrl").
+-define(SHOP,1).
+-define(TRANS,2).
+
+-include("base_component_shared.hrl").
+% -include("login_pb.hrl").
 -include("data_struct.hrl").
 -include("role_struct.hrl").
 -include("npc_struct.hrl").
@@ -50,9 +54,6 @@
 -include("effect_define.hrl").
 %%增加标准的查询库  by zhangting
 -include_lib("stdlib/include/qlc.hrl").
-
--define(SHOP,1).
--define(TRANS,2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 生成角色进程名称
@@ -82,21 +83,25 @@ init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,AccountInfo) -
 	LineId = get_lineid_from_gs_system_mapinfo(GS_system_map_info),
 	MapId = get_mapid_from_gs_system_mapinfo(GS_system_map_info),
 	RoleId = get_id_from_gs_system_roleinfo(GS_system_role_info),
-	% Level = get(level),
+	Level = get(level),
 	% gm_logger_role:role_login(RoleId,Ip,Level),
+	apply_component(gm_logger_role, role_login, [RoleId,Ip,Level]),
 	case base_tcp_client_statem:role_process_started(GatePid, node(), make_role_proc_name(RoleId)) of
 		error ->		%%玩家网关不存在!
+			?ZSS(),
 			self() ! {gm_kick_you},
 			faild;
 		{Chatnode,Chatproc}->
 			% base_tcp_client_statem:role_into_map_success(GatePid),
 			base_tcp_client_statem:apply_component(request_line_map_component,role_into_map_success,[GatePid]),
 			% chat_op:init(Chatnode,Chatproc),
-			
+			apply_component(chat_op,init,[Chatnode,Chatproc]),
+			?ZSS(),
 			%% 请求地图
 			on_into_world(MapId, LineId),
-			
+			?ZSS(),			
 			init_db_save_time(),
+			?ZSS(),
 			start_all_timer(),
 			ok
 	end.
@@ -107,248 +112,378 @@ init(GS_system_map_info, GS_system_gate_info, GS_system_role_info,AccountInfo) -
 init_attribute(GS_MapInfo, GS_GateInfo, GS_RoleInfo) ->
 	RoleId = get_id_from_gs_system_roleinfo(GS_RoleInfo),
 	% role_private_option:load_rpc(),
-	%% 设置地图信息
-	case get_proc_from_gs_system_mapinfo(GS_MapInfo) of
-		undefined->
-			MapProc = undefined, 
-			put(npcinfo_db,undefined);	
-		MapProc->
-			% NpcInfoDB = npc_op:make_npcinfo_db_name(MapProc),
-			% put(npcinfo_db,NpcInfoDB)
-			ok
-	end,
+	apply_component(role_private_option,load_rpc,[]),
+	% %% 设置地图信息
+	% case get_proc_from_gs_system_mapinfo(GS_MapInfo) of
+	% 	undefined->
+	% 		MapProc = undefined, 
+	% 		put(npcinfo_db,undefined);	
+	% 	MapProc->
+	% 		NpcInfoDB = npc_op:make_npcinfo_db_name(MapProc),
+	% 		put(npcinfo_db,NpcInfoDB)
+	% 		ok
+	% end,
+	MapProc = apply_component(npc_op_component,init_npc_info,[GS_MapInfo]),
 	MapId = get_mapid_from_gs_system_mapinfo(GS_MapInfo),
-	Map_db = base_map_db_processor_server:make_db_name(MapId),
+	?ZSS(),
+	Map_db = base_map_db_util:make_db_name(MapId),
 	put(map_db,Map_db),
+	?ZSS(),
 	LineId = get_lineid_from_gs_system_mapinfo(GS_MapInfo),
 	put(map_info, create_mapinfo(MapId, LineId, node(), MapProc, ?GRID_WIDTH)),			
+	?ZSS(),
 	%% 设置网关信息
 	put(gate_info, GS_GateInfo),	
 	%% 初始化角色信息
+	?ZSS(),
 	init_roleinfo(RoleId,GS_MapInfo,GS_GateInfo,GS_RoleInfo),
+	?ZSS(),
 	switch_to_gaming_state(RoleId).
 
 on_into_world(MapId, LineId)->
 	RoleInfo = get(creature_info),
-	% %%发送装备
-	% send_items_onhands(),			
+	%%发送装备
+	% send_items_onhands(),
+	apply_component(role_package_component,send_items_onhands,[]),			
 	% %%发送任务
 	% quest_op:send_quest_list(),
+	apply_component(quest_op,send_quest_list,[]),
 	% everquest_op:send_everquest_list(),
+	apply_component(everquest_op,send_everquest_list,[]),
 	% facebook:init(),
+	apply_component(facebook,init,[]),
 	% %%发送技能栏
 	% skill_op:send_skill_info(),
+	apply_component(skill_op,send_skill_info,[]),
 	% send_display_hotbar(RoleInfo),
-	%% 直接添加发送消息，改变位置消息
-	Position =  get_pos_from_roleinfo(RoleInfo),
-	IsInInstance = instance_op:is_in_instance(),
-	IsInInstance = false,
-	case IsInInstance of
-		false->		
-			case ?CHECK_INSTANCE_MAP(map_info_db:get_is_instance(map_info_db:get_map_info(MapId)))of
-				true->			%%没在副本,但是在副本地图,数据存储有错误
-%% 					{RespawnMapId,Pos} = mapop:get_respawn_pos(base_map_db_processor_server:make_db_name(?DEFAULT_MAP)),
-                    %%目前没有../maps，暂时将此时复活点放在{300,{175,175}}
-                    {RespawnMapId,Pos} = 
-							case mapop:get_respawn_pos(base_map_db_processor_server:make_db_name(?DEFAULT_MAP)) of
-								[]->{300,{175,175}};
-								% MapPos->MapPos;
-								_->{300,{175,175}}
-								end,
-					transport(RoleInfo, get(map_info),LineId,RespawnMapId,Pos);
-				_->				%%未在副本地图
-					case server_travels_util:is_share_maps(MapId) of
-						true->				%%玩家在跨服地图,传送到跨服地图
-							transport(RoleInfo, get(map_info),LineId,MapId,Position);
-						_->
-							case mapop:check_pos_is_valid(Position,get(map_db)) of	
-								false->						%%检查坐标是否在不可行走区域
-									{RespawnMapId,Pos} =  mapop:get_respawn_pos(get(map_db)), 
-									transport(RoleInfo, get(map_info),LineId,RespawnMapId,Pos);
-								true->
-									Message = role_packet:encode_role_map_change_s2c(Position, MapId,LineId),
-									send_data_to_gate(Message)
-							end
-					end	
-			end;
-		true->
-			instance_op:on_line_by_instance(MapId,LineId,get(map_info))	
-	end.
+	apply_component(role_quick_bar_component,send_display_hotbar,[RoleInfo]),
+% 	%% 直接添加发送消息，改变位置消息
+% 	Position =  get_pos_from_roleinfo(RoleInfo),
+% 	IsInInstance = instance_op:is_in_instance(),
+% 	IsInInstance = false,
+% 	case IsInInstance of
+% 		false->		
+% 			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(base_map_info_db:get_map_info(MapId)))of
+% 				true->			%%没在副本,但是在副本地图,数据存储有错误
+% %% 					{RespawnMapId,Pos} = mapop:get_respawn_pos(base_map_db_util:make_db_name(?DEFAULT_MAP)),
+%                     %%目前没有../maps，暂时将此时复活点放在{300,{175,175}}
+%                     {RespawnMapId,Pos} = 
+% 							case mapop:get_respawn_pos(base_map_db_util:make_db_name(?DEFAULT_MAP)) of
+% 								[]->{300,{175,175}};
+% 								% MapPos->MapPos;
+% 								_->{300,{175,175}}
+% 								end,
+% 					transport(RoleInfo, get(map_info),LineId,RespawnMapId,Pos);
+% 				_->				%%未在副本地图
+% 					case server_travels_util:is_share_maps(MapId) of
+% 						true->				%%玩家在跨服地图,传送到跨服地图
+% 							transport(RoleInfo, get(map_info),LineId,MapId,Position);
+% 						_->
+% 							case mapop:check_pos_is_valid(Position,get(map_db)) of	
+% 								false->						%%检查坐标是否在不可行走区域
+% 									{RespawnMapId,Pos} =  mapop:get_respawn_pos(get(map_db)), 
+% 									transport(RoleInfo, get(map_info),LineId,RespawnMapId,Pos);
+% 								true->
+% 									Message = role_packet:encode_role_map_change_s2c(Position, MapId,LineId),
+% 									send_data_to_gate(Message)
+% 							end
+% 					end	
+% 			end;
+% 		true->
+% 			instance_op:on_line_by_instance(MapId,LineId,get(map_info))	
+% 	end.
+	apply_component(instance_op_component,instance_into_world, [MapId,LineId,RoleInfo]).
 	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%local:for change map
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-export_for_copy()->
-	AccountInfo = {get(account_id),get(is_adult),get(client_ip),get(login_time),get(pf),get(is_yellow_vip),get(is_yellow_year_vip),get(yellow_vip_level),get(openid),get(openkey),get(pfkey)}, 
-	{get(current_buffer),
-	get(current_attribute),
-	get(base_attr),
-	get(other_attr),
-	get(murderer),
-	get(loot_index),
-	continuous_logging_op:export_for_copy(),
-	invite_friend_op:export_for_copy(), 
-	role_game_rank:export_for_copy(),
-	items_op:export_for_copy(),
-	group_op:export_for_copy(),
-	loop_instance_op:export_for_copy(),
-	package_op:export_for_copy(),
-	chat_op:export_for_copy(),
-	quest_op:export_for_copy(),
-	buffer_op:export_for_copy(),
-	guild_op:export_for_copy(),
-	skill_op:export_for_copy(),
-	friend_op:export_for_copy(),
-	achieve_op:export_for_copy(),
-	instance_op:export_for_copy(),
-	instance_quality_op:export_for_copy(),
-	block_training_op:export_for_copy(),
-	role_chess_spirits:export_for_copy(),
-	activity_value_op:export_for_copy(),
-	first_charge_gift_op:export_for_copy(),
-	treasure_storage_op:export_for_copy(),
-	role_mainline:export_for_copy(),
-	guildbattle_op:export_for_copy(),
-	country_op:export_for_copy(),
-	spiritspower_op:export_for_copy(),
-	AccountInfo,
-	hp_package_gift:export_for_copy(),
-	mp_package_gift:export_for_copy(),
-	get(init_buffer_tmp),
-	battle_ground_op:export_for_copy(),
-	loop_tower_op:export_for_copy(),
-	everquest_op:export_for_copy(),
-	vip_op:export_for_copy(),
-	series_kill:export_for_copy(),
-	pet_op:export_for_copy(),
-	role_soulpower:export_for_copy(),
-	mall_op:export_for_copy(),
-	timelimit_gift_op:export_for_copy(),
-	% role_private_option:export_for_copy(),
-	answer_op:export_for_copy(),
-	congratulations_op:export_for_copy(),
-	auction_op:export_for_copy(),
-	fatigue:export_for_copy(),
-	venation_op:export_for_copy(),
-	role_dragon_fight:export_for_copy(),
-	role_global_op:export_for_copy(),
-	role_server_travel:export_for_copy(),
-	gm_role_privilege_op:export_for_copy(),
-	offline_exp_op:export_for_copy(),
-	goals_op:export_for_copy(),
-	role_treasure_transport:export_for_copy(),
-	gold_exchange:export_for_copy(),
-	designation_op:export_for_copy(),
-	consume_return:export_for_copy(),
-	spa_op:export_for_copy(),
-	pet_explore_op:export_for_copy(),
-	open_service_activities:export_for_copy(),
-	explore_storage_op:export_for_copy(),
-	pvp_op:export_for_copy()
-	}.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%local:for change map
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+% export_for_copy()->
+% 	AccountInfo = {get(account_id),get(is_adult),get(client_ip),get(login_time),get(pf),get(is_yellow_vip),get(is_yellow_year_vip),get(yellow_vip_level),get(openid),get(openkey),get(pfkey)}, 
+% 	{
+% 	get(current_buffer),
+% 	get(current_attribute),
+% 	get(base_attr),
+% 	get(other_attr),
+% 	get(murderer),
+% 	get(loot_index),
+% 	% continuous_logging_op:export_for_copy(),
+% 	apply_component(continuous_logging_op,export_for_copy,[]),
+% 	% invite_friend_op:export_for_copy(),
+% 	apply_component(invite_friend_op,export_for_copy,[]),
+% 	% role_game_rank:export_for_copy(),
+% 	apply_component(role_game_rank,export_for_copy,[]),
+% 	% items_op:export_for_copy(),
+% 	apply_component(items_op,export_for_copy,[]),
+% 	% group_op:export_for_copy(),
+% 	apply_component(group_op,export_for_copy,[]),
+% 	% loop_instance_op:export_for_copy(),
+% 	apply_component(loop_instance_op,export_for_copy,[]),
+% 	% package_op:export_for_copy(),
+% 	apply_component(package_op,export_for_copy,[]),
+% 	% chat_op:export_for_copy(),
+% 	apply_component(chat_op,export_for_copy,[]),
+% 	% quest_op:export_for_copy(),
+% 	apply_component(quest_op,export_for_copy,[]),
+% 	% buffer_op:export_for_copy(),
+% 	apply_component(buffer_op,export_for_copy,[]),
+% 	% guild_op:export_for_copy(),
+% 	apply_component(guild_op,export_for_copy,[]),
+% 	% skill_op:export_for_copy(),
+% 	apply_component(skill_op,export_for_copy,[]),
+% 	% friend_op:export_for_copy(),
+% 	apply_component(friend_op,export_for_copy,[]),
+% 	% achieve_op:export_for_copy(),
+% 	apply_component(achieve_op,export_for_copy,[]),
+% 	% instance_op:export_for_copy(),
+% 	apply_component(instance_op,export_for_copy,[]),
+% 	% instance_quality_op:export_for_copy(),
+% 	apply_component(instance_quality_op,export_for_copy,[]),
+% 	% block_training_op:export_for_copy(),
+% 	apply_component(block_training_op,export_for_copy,[]),
+% 	% role_chess_spirits:export_for_copy(),
+% 	apply_component(role_chess_spirits,export_for_copy,[]),
+% 	% activity_value_op:export_for_copy(),
+% 	apply_component(activity_value_op,export_for_copy,[]),
+% 	% first_charge_gift_op:export_for_copy(),
+% 	apply_component(first_charge_gift_op,export_for_copy,[]),
+% 	% treasure_storage_op:export_for_copy(),
+% 	apply_component(treasure_storage_op,export_for_copy,[]),
+% 	% role_mainline:export_for_copy(),
+% 	apply_component(role_mainline,export_for_copy,[]),
+% 	% guildbattle_op:export_for_copy(),
+% 	apply_component(guildbattle_op,export_for_copy,[]),
+% 	% country_op:export_for_copy(),
+% 	apply_component(country_op,export_for_copy,[]),
+% 	% spiritspower_op:export_for_copy(),
+% 	apply_component(spiritspower_op,export_for_copy,[]),
+% 	AccountInfo,
+% 	% hp_package_gift:export_for_copy(),
+% 	apply_component(spiritspower_op,export_for_copy,[]),
+% 	% mp_package_gift:export_for_copy(),
+% 	apply_component(spiritspower_op,export_for_copy,[]),
+% 	get(init_buffer_tmp),
+% 	% battle_ground_op:export_for_copy(),
+% 	apply_component(battle_ground_op,export_for_copy,[]),
+% 	% loop_tower_op:export_for_copy(),
+% 	apply_component(loop_tower_op,export_for_copy,[]),
+% 	% everquest_op:export_for_copy(),
+% 	apply_component(everquest_op,export_for_copy,[]),
+% 	% vip_op:export_for_copy(),
+% 	apply_component(vip_op,export_for_copy,[]),
+% 	% series_kill:export_for_copy(),
+% 	apply_component(series_kill,export_for_copy,[]),
+% 	% pet_op:export_for_copy(),
+% 	apply_component(pet_op,export_for_copy,[]),
+% 	% role_soulpower:export_for_copy(),
+% 	apply_component(role_soulpower,export_for_copy,[]),
+% 	% mall_op:export_for_copy(),
+% 	apply_component(mall_op,export_for_copy,[]),
+% 	% timelimit_gift_op:export_for_copy(),
+% 	apply_component(timelimit_gift_op,export_for_copy,[]),
+% 	% role_private_option:export_for_copy(),
+% 	apply_component(role_private_option,export_for_copy,[]),
+% 	% answer_op:export_for_copy(),
+% 	apply_component(answer_op,export_for_copy,[]),
+% 	% congratulations_op:export_for_copy(),
+% 	apply_component(congratulations_op,export_for_copy,[]),
+% 	% auction_op:export_for_copy(),
+% 	apply_component(auction_op,export_for_copy,[]),
+% 	% fatigue:export_for_copy(),
+% 	apply_component(fatigue,export_for_copy,[]),
+% 	% venation_op:export_for_copy(),
+% 	apply_component(venation_op,export_for_copy,[]),
+% 	% role_dragon_fight:export_for_copy(),
+% 	apply_component(role_dragon_fight,export_for_copy,[]),
+% 	% role_global_op:export_for_copy(),
+% 	apply_component(role_global_op,export_for_copy,[]),
+% 	% role_server_travel:export_for_copy(),
+% 	apply_component(role_server_travel,export_for_copy,[]),
+% 	% gm_role_privilege_op:export_for_copy(),
+% 	apply_component(gm_role_privilege_op,export_for_copy,[]),
+% 	% offline_exp_op:export_for_copy(),
+% 	apply_component(offline_exp_op,export_for_copy,[]),
+% 	% goals_op:export_for_copy(),
+% 	apply_component(goals_op,export_for_copy,[]),
+% 	% role_treasure_transport:export_for_copy(),
+% 	apply_component(role_treasure_transport,export_for_copy,[]),
+% 	% gold_exchange:export_for_copy(),
+% 	apply_component(gold_exchange,export_for_copy,[]),
+% 	% designation_op:export_for_copy(),
+% 	apply_component(designation_op,export_for_copy,[]),
+% 	% consume_return:export_for_copy(),
+% 	apply_component(consume_return,export_for_copy,[]),
+% 	% spa_op:export_for_copy(),
+% 	apply_component(spa_op,export_for_copy,[]),
+% 	% pet_explore_op:export_for_copy(),
+% 	apply_component(pet_explore_op,export_for_copy,[]),
+% 	% open_service_activities:export_for_copy(),
+% 	apply_component(open_service_activities,export_for_copy,[]),
+% 	% explore_storage_op:export_for_copy(),
+% 	apply_component(explore_storage_op,export_for_copy,[]),
+% 	% pvp_op:export_for_copy()
+% 	apply_component(pvp_op,export_for_copy,[])
+% 	}.
 	
-load_by_copy(CopyInfo)->
-	{CurrentBuff,CurrentAttr,BaseAttr,OtherAttr,
-	Murderer,Loot_index
-	,Continuous_Info
-	,Invite_friend_Info
-	,JudgeInfo,ItemsInfo,GroupInfos,
-	LoopInstanceInfo,
-	PackageInfo,ChatInfo,QuestInfo,BufferInfo,GuildInfo,SkillInfo,FriendInfo,AchieveInfo,InstanceInfo,InstanceQualityInfo,TrainInfo,ChessInfo,
-	ActivityValueInfo,
-	FirstChargeGiftInfo,
-	TreasureStorageInfo,
-	MainLineInfo,
-	GuildBattleInfo,
-	CountryInfo,
-	SpiritsPowerInfo,
-	AccountInfo,HpPackage,MpPackage,InitBuffInfo,BattleGround,RoleLoopTower,EverQuestInfo,RoleVipInfo,SeriesKillInfo,PetsInfo,SoulPowerInfo,LatestBuyLog,TimeLimitGiftInfo,PriVateInfo,RoleAnswerInfo,
-	RoleCongratuLog,AuctionInfo,FatigueInfo,VenationInfo,DragonFightInfo,GlobalInfo,ServertravelInfo,RolePrivilege,OfflineExpLog,GoalsInfo,TransportInfo,GoldConsumeInfo,DesignationInfo,ConsumeReturnInfo,
-	SpaInfo,PetExploreInfo,OpenService,ExploreStorageInfo,PvpInfo} = CopyInfo,
-	%%当前buff
- 	{Account,IsAdult,Ip,LogInTime,Pf,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,OpenId,OpenKey,PfKey} = AccountInfo ,
-	put(client_ip,Ip),
-	put(account_id,Account),
-	put(is_adult,IsAdult),
-	put(login_time,LogInTime), 
-	put(pf,Pf),
-	put(is_yellow_vip, Is_yellow_vip),
-	put(is_yellow_year_vip, Is_yellow_year_vip),
-	put(yellow_vip_level, Yellow_vip_level),
-	put(openid, OpenId),
-	put(openkey, OpenKey),
-	put(pfkey, PfKey),
-	put(base_attr,BaseAttr),
-	put(other_attr,OtherAttr),
-	put(current_buffer, CurrentBuff),
-	put(current_attribute,CurrentAttr),
-	put(init_buffer_tmp,InitBuffInfo),
-	put(murderer,Murderer),
-	put(loot_index,Loot_index),
-	trade_role:init(),
-	spiritspower_op:load_by_copy(SpiritsPowerInfo),
-	role_chess_spirits:load_by_copy(ChessInfo),
-	role_global_op:load_by_copy(GlobalInfo),
-	role_server_travel:load_by_copy(ServertravelInfo),
-	% role_private_option:load_by_copy(PriVateInfo),
-	items_op:load_by_copy(ItemsInfo),
-	group_op:load_by_copy(GroupInfos),
-	loop_instance_op:load_by_copy(LoopInstanceInfo),
-	package_op:load_by_copy(PackageInfo),
-	quest_op:load_by_copy(QuestInfo),
-	everquest_op:load_by_copy(EverQuestInfo),
-	battle_ground_op:load_by_copy(BattleGround),
-	role_dragon_fight:load_by_copy(DragonFightInfo),
-	%%初始化chat
-	chat_op:load_by_copy(ChatInfo),
-	%%重新载入buffer
-	buffer_op:init(),
-	%%公会
-	guild_op:load_by_copy(GuildInfo),
-	country_op:load_by_copy(CountryInfo),
-	guildbattle_op:load_by_copy(GuildBattleInfo),
-	skill_op:load_by_copy(SkillInfo),
-	block_training_op:load_by_copy(TrainInfo),
-	instance_op:load_by_copy(InstanceInfo),
-	instance_quality_op:load_by_copy(InstanceQualityInfo),
-	friend_op:load_by_copy(FriendInfo),
-	achieve_op:load_by_copy(AchieveInfo),
-	goals_op:load_by_copy(GoalsInfo),
-	loop_tower_op:load_by_copy(RoleLoopTower),
-	vip_op:load_by_copy(RoleVipInfo),
-	gm_role_privilege_op:load_by_copy(RolePrivilege),
-	answer_op:load_by_copy(RoleAnswerInfo),
-	spa_op:load_by_copy(SpaInfo),
-	congratulations_op:load_by_copy(RoleCongratuLog),
-	offline_exp_op:load_by_copy(OfflineExpLog),
-	series_kill:load_by_copy(SeriesKillInfo),
-	pet_op:load_by_copy(PetsInfo), 
-	role_soulpower:load_by_copy(SoulPowerInfo),
-	auction_op:load_by_copy(AuctionInfo),
-	fatigue:load_by_copy(FatigueInfo),
-	mall_op:load_by_copy(LatestBuyLog),
-	role_mainline:load_by_copy(MainLineInfo),
-	continuous_logging_op:load_by_copy(Continuous_Info),
-	invite_friend_op:load_by_copy(Invite_friend_Info),
-	
-	role_game_rank:load_by_copy(JudgeInfo),
-	pvp_op:load_by_copy(PvpInfo),
-	activity_value_op:load_by_copy(ActivityValueInfo),
-	first_charge_gift_op:load_by_copy(FirstChargeGiftInfo),
-	treasure_storage_op:load_by_copy(TreasureStorageInfo),
-	AllBufferInfo = buffer_op:get_from_copy(BufferInfo),
-	hp_package_gift:load_by_copy(HpPackage),
-	mp_package_gift:load_by_copy(MpPackage),
-	timelimit_gift_op:load_by_copy(TimeLimitGiftInfo),
-	venation_op:load_by_copy(VenationInfo),
-	gold_exchange:load_by_copy(GoldConsumeInfo),
-	role_treasure_transport:load_by_copy(TransportInfo),
-	designation_op:load_by_copy(DesignationInfo),
-	consume_return:load_by_copy(ConsumeReturnInfo),
-	pet_explore_op:load_by_copy(PetExploreInfo),
-	open_service_activities:load_by_copy(OpenService),
-	explore_storage_op:load_by_copy(ExploreStorageInfo),
-	init_buffers_by_node(AllBufferInfo).
+% load_by_copy(CopyInfo)->
+% 	{CurrentBuff,CurrentAttr,BaseAttr,OtherAttr,
+% 	Murderer,Loot_index
+% 	,Continuous_Info
+% 	,Invite_friend_Info
+% 	,JudgeInfo,ItemsInfo,GroupInfos,
+% 	LoopInstanceInfo,
+% 	PackageInfo,ChatInfo,QuestInfo,BufferInfo,GuildInfo,SkillInfo,FriendInfo,AchieveInfo,InstanceInfo,InstanceQualityInfo,TrainInfo,ChessInfo,
+% 	ActivityValueInfo,
+% 	FirstChargeGiftInfo,
+% 	TreasureStorageInfo,
+% 	MainLineInfo,
+% 	GuildBattleInfo,
+% 	CountryInfo,
+% 	SpiritsPowerInfo,
+% 	AccountInfo,HpPackage,MpPackage,InitBuffInfo,BattleGround,RoleLoopTower,EverQuestInfo,RoleVipInfo,SeriesKillInfo,PetsInfo,SoulPowerInfo,LatestBuyLog,TimeLimitGiftInfo,PriVateInfo,RoleAnswerInfo,
+% 	RoleCongratuLog,AuctionInfo,FatigueInfo,VenationInfo,DragonFightInfo,GlobalInfo,ServertravelInfo,RolePrivilege,OfflineExpLog,GoalsInfo,TransportInfo,GoldConsumeInfo,DesignationInfo,ConsumeReturnInfo,
+% 	SpaInfo,PetExploreInfo,OpenService,ExploreStorageInfo,PvpInfo} = CopyInfo,
+% 	%%当前buff
+%  	{Account,IsAdult,Ip,LogInTime,Pf,Is_yellow_vip,Is_yellow_year_vip,Yellow_vip_level,OpenId,OpenKey,PfKey} = AccountInfo ,
+% 	put(client_ip,Ip),
+% 	put(account_id,Account),
+% 	put(is_adult,IsAdult),
+% 	put(login_time,LogInTime), 
+% 	put(pf,Pf),
+% 	put(is_yellow_vip, Is_yellow_vip),
+% 	put(is_yellow_year_vip, Is_yellow_year_vip),
+% 	put(yellow_vip_level, Yellow_vip_level),
+% 	put(openid, OpenId),
+% 	put(openkey, OpenKey),
+% 	put(pfkey, PfKey),
+% 	put(base_attr,BaseAttr),
+% 	put(other_attr,OtherAttr),
+% 	put(current_buffer, CurrentBuff),
+% 	put(current_attribute,CurrentAttr),
+% 	put(init_buffer_tmp,InitBuffInfo),
+% 	put(murderer,Murderer),
+% 	put(loot_index,Loot_index),
+% 	% trade_role:init(),
+% 	apply_component(trade_role,init,[]),
+% 	% spiritspower_op:load_by_copy(SpiritsPowerInfo),
+% 	apply_component(spiritspower_op,load_by_copy,[SpiritsPowerInfo]),
+% 	% role_chess_spirits:load_by_copy(ChessInfo),
+% 	apply_component(role_chess_spirits,load_by_copy,[ChessInfo]),
+% 	% role_global_op:load_by_copy(GlobalInfo),
+% 	apply_component(role_global_op,load_by_copy,[GlobalInfo]),
+% 	% role_server_travel:load_by_copy(ServertravelInfo),
+% 	apply_component(role_server_travel,load_by_copy,[ServertravelInfo]),
+% 	% role_private_option:load_by_copy(PriVateInfo),
+% 	apply_component(role_private_option,load_by_copy,[PriVateInfo]),
+% 	% items_op:load_by_copy(ItemsInfo),
+% 	apply_component(items_op,load_by_copy,[ItemsInfo]),
+% 	% group_op:load_by_copy(GroupInfos),
+% 	apply_component(group_op,load_by_copy,[GroupInfos]),
+% 	% loop_instance_op:load_by_copy(LoopInstanceInfo),
+% 	apply_component(loop_instance_op,load_by_copy,[LoopInstanceInfo]),
+% 	% package_op:load_by_copy(PackageInfo),
+% 	apply_component(package_op,load_by_copy,[PackageInfo]),
+% 	% quest_op:load_by_copy(QuestInfo),
+% 	apply_component(quest_op,load_by_copy,[QuestInfo]),
+% 	% everquest_op:load_by_copy(EverQuestInfo),
+% 	apply_component(everquest_op,load_by_copy,[EverQuestInfo]),
+% 	% battle_ground_op:load_by_copy(BattleGround),
+% 	apply_component(battle_ground_op,load_by_copy,[BattleGround]),
+% 	% role_dragon_fight:load_by_copy(DragonFightInfo),
+% 	apply_component(role_dragon_fight,load_by_copy,[DragonFightInfo]),
+% 	% %%初始化chat
+% 	% chat_op:load_by_copy(ChatInfo),
+% 	apply_component(chat_op,load_by_copy,[ChatInfo]),
+% 	% %%重新载入buffer
+% 	% buffer_op:init(),
+% 	apply_component(buffer_op,init,[]),
+% 	% %%公会
+% 	% guild_op:load_by_copy(GuildInfo),
+% 	apply_component(guild_op,load_by_copy,[GuildInfo]),
+% 	% country_op:load_by_copy(CountryInfo),
+% 	apply_component(country_op,load_by_copy,[CountryInfo]),
+% 	% guildbattle_op:load_by_copy(GuildBattleInfo),
+% 	apply_component(guildbattle_op,load_by_copy,[GuildBattleInfo]),
+% 	% skill_op:load_by_copy(SkillInfo),
+% 	apply_component(skill_op,load_by_copy,[SkillInfo]),
+% 	% block_training_op:load_by_copy(TrainInfo),
+% 	apply_component(block_training_op,load_by_copy,[TrainInfo]),
+% 	% instance_op:load_by_copy(InstanceInfo),
+% 	apply_component(instance_op,load_by_copy,[InstanceInfo]),
+% 	% instance_quality_op:load_by_copy(InstanceQualityInfo),
+% 	apply_component(instance_quality_op,load_by_copy,[InstanceQualityInfo]),
+% 	% friend_op:load_by_copy(FriendInfo),
+% 	apply_component(friend_op,load_by_copy,[FriendInfo]),
+% 	% achieve_op:load_by_copy(AchieveInfo),
+% 	apply_component(achieve_op,load_by_copy,[AchieveInfo]),
+% 	% goals_op:load_by_copy(GoalsInfo),
+% 	apply_component(goals_op,load_by_copy,[GoalsInfo]),
+% 	% loop_tower_op:load_by_copy(RoleLoopTower),
+% 	apply_component(loop_tower_op,load_by_copy,[RoleLoopTower]),
+% 	% vip_op:load_by_copy(RoleVipInfo),
+% 	apply_component(vip_op,load_by_copy,[RoleVipInfo]),
+% 	% gm_role_privilege_op:load_by_copy(RolePrivilege),
+% 	apply_component(gm_role_privilege_op,load_by_copy,[RolePrivilege]),
+% 	% answer_op:load_by_copy(RoleAnswerInfo),
+% 	apply_component(answer_op,load_by_copy,[RoleAnswerInfo]),
+% 	% spa_op:load_by_copy(SpaInfo),
+% 	apply_component(spa_op,load_by_copy,[SpaInfo]),
+% 	% congratulations_op:load_by_copy(RoleCongratuLog),
+% 	apply_component(congratulations_op,load_by_copy,[RoleCongratuLog]),
+% 	% offline_exp_op:load_by_copy(OfflineExpLog),
+% 	apply_component(offline_exp_op,load_by_copy,[OfflineExpLog]),
+% 	% series_kill:load_by_copy(SeriesKillInfo),
+% 	apply_component(series_kill,load_by_copy,[SeriesKillInfo]),
+% 	% pet_op:load_by_copy(PetsInfo), 
+% 	apply_component(pet_op,load_by_copy,[PetsInfo]),
+% 	% role_soulpower:load_by_copy(SoulPowerInfo),
+% 	apply_component(role_soulpower,load_by_copy,[SoulPowerInfo]),
+% 	% auction_op:load_by_copy(AuctionInfo),
+% 	apply_component(auction_op,load_by_copy,[AuctionInfo]),
+% 	% fatigue:load_by_copy(FatigueInfo),
+% 	apply_component(fatigue,load_by_copy,[FatigueInfo]),
+% 	% mall_op:load_by_copy(LatestBuyLog),
+% 	apply_component(mall_op,load_by_copy,[LatestBuyLog]),
+% 	% role_mainline:load_by_copy(MainLineInfo),
+% 	apply_component(role_mainline,load_by_copy,[MainLineInfo]),
+% 	% continuous_logging_op:load_by_copy(Continuous_Info),
+% 	apply_component(continuous_logging_op,load_by_copy,[Continuous_Info]),
+% 	% invite_friend_op:load_by_copy(Invite_friend_Info),
+% 	apply_component(invite_friend_op,load_by_copy,[Invite_friend_Info]),
+% 	% role_game_rank:load_by_copy(JudgeInfo),
+% 	apply_component(role_game_rank,load_by_copy,[JudgeInfo]),
+% 	% pvp_op:load_by_copy(PvpInfo),
+% 	apply_component(pvp_op,load_by_copy,[PvpInfo]),
+% 	% activity_value_op:load_by_copy(ActivityValueInfo),
+% 	apply_component(activity_value_op,load_by_copy,[ActivityValueInfo]),
+% 	% first_charge_gift_op:load_by_copy(FirstChargeGiftInfo),
+% 	apply_component(first_charge_gift_op,load_by_copy,[FirstChargeGiftInfo]),
+% 	% treasure_storage_op:load_by_copy(TreasureStorageInfo),
+% 	apply_component(treasure_storage_op,load_by_copy,[TreasureStorageInfo]),
+% 	% AllBufferInfo = buffer_op:get_from_copy(BufferInfo),
+% 	AllBufferInfo = apply_component(buffer_op,get_from_copy,[BufferInfo]),
+% 	% hp_package_gift:load_by_copy(HpPackage),
+% 	apply_component(hp_package_gift,load_by_copy,[HpPackage]),
+% 	% mp_package_gift:load_by_copy(MpPackage),
+% 	apply_component(mp_package_gift,load_by_copy,[MpPackage]),
+% 	% timelimit_gift_op:load_by_copy(TimeLimitGiftInfo),
+% 	apply_component(timelimit_gift_op,load_by_copy,[TimeLimitGiftInfo]),
+% 	% venation_op:load_by_copy(VenationInfo),
+% 	apply_component(venation_op,load_by_copy,[VenationInfo]),
+% 	% gold_exchange:load_by_copy(GoldConsumeInfo),
+% 	apply_component(gold_exchange,load_by_copy,[GoldConsumeInfo]),
+% 	% role_treasure_transport:load_by_copy(TransportInfo),
+% 	apply_component(role_treasure_transport,load_by_copy,[TransportInfo]),
+% 	% designation_op:load_by_copy(DesignationInfo),
+% 	apply_component(designation_op,load_by_copy,[DesignationInfo]),
+% 	% consume_return:load_by_copy(ConsumeReturnInfo),
+% 	apply_component(consume_return,load_by_copy,[ConsumeReturnInfo]),
+% 	% pet_explore_op:load_by_copy(PetExploreInfo),
+% 	apply_component(pet_explore_op,load_by_copy,[PetExploreInfo]),
+% 	% open_service_activities:load_by_copy(OpenService),
+% 	apply_component(open_service_activities,load_by_copy,[OpenService]),
+% 	% explore_storage_op:load_by_copy(ExploreStorageInfo),
+% 	apply_component(explore_storage_op,load_by_copy,[ExploreStorageInfo]),
+% 	init_buffers_by_node(AllBufferInfo).
 
 %%返回用户当前状态	
 copy_init(MapInfo, RoleInfo, GateInfo, X, Y,CopyInfo)->
@@ -357,19 +492,20 @@ copy_init(MapInfo, RoleInfo, GateInfo, X, Y,CopyInfo)->
 	RoleName = get_name_from_roleinfo(RoleInfo),
 	NewRoleproc = make_role_proc_name(RoleId),
 	NewRolenode = get_node_from_mapinfo(MapInfo),
-	MapProc = get_proc_from_mapinfo(MapInfo),
-	NpcInfoDB = npc_op:make_npcinfo_db_name(MapProc),
-	put(npcinfo_db,NpcInfoDB),		
+	% MapProc = get_proc_from_mapinfo(MapInfo),
+	% NpcInfoDB = npc_op:make_npcinfo_db_name(MapProc),
+	% put(npcinfo_db,NpcInfoDB),
+	apply_component(npc_op_component,copy_init,[MapInfo]),
 	MapId = get_mapid_from_mapinfo(MapInfo),
 	LineId = get_lineid_from_mapinfo(MapInfo),
-	Map_db = base_map_db_processor_server:make_db_name(MapId),
+	Map_db = base_map_db_util:make_db_name(MapId),
 	put(map_db,Map_db),				
 	%%导入数据		
 	ClassId = get_class_from_roleinfo(RoleInfo),
 	Level = get_level_from_roleinfo(RoleInfo),
 	%%信息初始化
 	put(map_info, MapInfo),	
-	%%Pid已经在role_manager的copy里设置过
+	%%Pid已经在base_role_manager的copy里设置过
 	put(creature_info, RoleInfo),	
 	GS_MapInfo = #gs_system_map_info{map_id=get_mapid_from_mapinfo(MapInfo),
 						 line_id=get_lineid_from_mapinfo(MapInfo), 
@@ -387,29 +523,37 @@ copy_init(MapInfo, RoleInfo, GateInfo, X, Y,CopyInfo)->
 	put(last_cast_time,{0,0,0}),
 	put(last_nor_cast_time,{0,0,0}),
 	Expr = get_exp_from_roleinfo(get(creature_info)),
-	NowLevelExp = role_level_db:get_level_experience(Level),	
-	put(current_exp,Expr+NowLevelExp),		
-	loot_op:init_loot_list(),
-	block_training_op:init(),
-	role_sitdown_op:init(),	
-	load_by_copy(CopyInfo),
+	% NowLevelExp = role_level_db:get_level_experience(Level),	
+	% put(current_exp,Expr+NowLevelExp),
+	apply_component(role_level_component,init_current_exp,[Expr,Level]),	
+	% loot_op:init_loot_list(),
+	apply_component(loot_op,init_loot_list,[]),
+	% block_training_op:init(),
+	apply_component(block_training_op,init,[]),
+	% role_sitdown_op:init(),	
+	apply_component(role_sitdown_op,init,[]),
+	% load_by_copy(CopyInfo),
+	apply_component(role_op_copy_component,load_by_copy,[CopyInfo]),
 
 	
 	%%注册玩家信息
 	update_role_info(RoleId,get(creature_info)),
-	change_map_in_other_node_end(RoleInfo, MapInfo, X, Y),
+	% change_map_in_other_node_end(RoleInfo, MapInfo, X, Y),
+	apply_component(instance_op_component,change_map_in_other_node_end,[RoleInfo, MapInfo, X, Y]),
 	GateNode = get_node_from_gs_system_gateinfo(GateInfo),
 	GateProc = get_proc_from_gs_system_gateinfo(GateInfo),
 	role_pos_db:reg_role_pos_to_mnesia(RoleId,LineId,MapId,RoleName,NewRolenode,NewRoleproc,GateNode,GateProc),
-  	%%初始化抽奖
-  	lottery_op:on_playeronline(),	
+  	% %%初始化抽奖
+  	% lottery_op:on_playeronline(),
+  	apply_component(lottery_op,on_playeronline,[]),
 	init_db_save_time(),
 	start_all_timer(),
-	case get(is_adult) of
-		false-> fatigue:init();
-		true-> ignor
-	end.
-	
+	% case get(is_adult) of
+	% 	false-> fatigue:init();
+	% 	true-> ignor
+	% end.
+	apply_component(role_fatigue_component,init,[]).
+
 get_processor_state_by_roleinfo()->	
 	case get_state_from_roleinfo(get(creature_info)) of
 		deading->
@@ -420,167 +564,168 @@ get_processor_state_by_roleinfo()->
 			gaming
 	end.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 反初始化角色数据!!!组队转移队长,更新组队信息,更新副本信息
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-relocating_on_uninit()->
-	%%位置修正
-	case is_dead() of
-		true->	
-			case get_my_respwan_pos() of
-				[]->
-					nothing;
-				{RespawnMapId,RespawnPos}->
-					put(creature_info, set_pos_to_roleinfo(get(creature_info), RespawnPos)),
-					put(map_info,set_mapid_to_mapinfo(get(map_info), RespawnMapId))
-			end;
-		_->
-			nothing
-	end,
-%%	end,
-	%%血量修正
-	case is_dead() of
-		true->	
-			ModifyHp = erlang:trunc(get_hpmax_from_roleinfo(get(creature_info))*10/100), 			
-			put(creature_info, set_state_to_roleinfo(get(creature_info), gaming)),
-			put(creature_info, set_life_to_roleinfo(get(creature_info), ModifyHp ));		
-		_->
-			nothing
-	end.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% 反初始化角色数据!!!组队转移队长,更新组队信息,更新副本信息
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% relocating_on_uninit()->
+% 	%%位置修正
+% 	case is_dead() of
+% 		true->	
+% 			case get_my_respwan_pos() of
+% 				[]->
+% 					nothing;
+% 				{RespawnMapId,RespawnPos}->
+% 					put(creature_info, set_pos_to_roleinfo(get(creature_info), RespawnPos)),
+% 					put(map_info,set_mapid_to_mapinfo(get(map_info), RespawnMapId))
+% 			end;
+% 		_->
+% 			nothing
+% 	end,
+% %%	end,
+% 	%%血量修正
+% 	case is_dead() of
+% 		true->	
+% 			ModifyHp = erlang:trunc(get_hpmax_from_roleinfo(get(creature_info))*10/100), 			
+% 			put(creature_info, set_state_to_roleinfo(get(creature_info), gaming)),
+% 			put(creature_info, set_life_to_roleinfo(get(creature_info), ModifyHp ));		
+% 		_->
+% 			nothing
+% 	end.
 
-uninit(uninit,RoleId) ->
-	try
-		relocating_on_uninit()
-	catch
-		E:R-> base_logger_util:info_msg("base_role_op:uninit dead_on_uninit error ~p:~p ~p ~n",[E,R,erlang:get_stacktrace()])
-	end,
-	try
-		group_op:hook_on_offline()			%%组队
-	catch
-		E1:R1-> base_logger_util:info_msg("base_role_op:uninit group_op:logout error ~p:~p ~p ~n",[E1,R1,erlang:get_stacktrace()])
-	end,
-	try
-		guild_op:on_leave()			%%公会
-	catch
-		E2:R2-> base_logger_util:info_msg("base_role_op:uninit guild_op:on_leave error ~p:~p ~p ~n",[E2,R2,erlang:get_stacktrace()])
-	end,
-	try
-		instance_op:on_offline()	%%副本
-	catch
-		E3:R3-> base_logger_util:info_msg("base_role_op:uninit instance_op:on_offline() error ~p:~p ~p ~n",[E3,R3,erlang:get_stacktrace()])
-	end,
-	try
-		battle_ground_op:hook_on_offline()
-	catch
-		E31:R31-> base_logger_util:info_msg("base_role_op:uninit battle_ground_op:hook_on_offline error ~p:~p ~p ~n",[E31,R31,erlang:get_stacktrace()])
-	end,	
-	try
-		friend_op:offline_notice()	%%好友
-	catch
-		E4:R4-> base_logger_util:info_msg("base_role_op:uninit friend_op:offline_notice() ~p:~p ~p ~n",[E4,R4,erlang:get_stacktrace()])
-	end,
-	try
-		loop_tower_op:on_offline()	%%轮回塔
-	catch
-		E5:R5-> base_logger_util:info_msg("base_role_op:uninit loop_tower_op:on_offline() error ~p:~p ~p ~n",[E5,R5,erlang:get_stacktrace()])
-	end,
-	try
-		series_kill:on_offline()
-	catch
-		E6:R6-> base_logger_util:info_msg("base_role_op:uninit series_kill:on_offline() error ~p:~p ~p ~n",[E6,R6,erlang:get_stacktrace()])
-	end,
-	try		
-		timelimit_gift_op:on_playeroffline()
-	catch
-		E8:R8-> base_logger_util:info_msg("base_role_op:uninit timelimit_gift_op:on_playeroffline() error ~p:~p ~p ~n",[E8,R8,erlang:get_stacktrace()])
-	end,
-	try
-		answer_op:hook_on_offline()	%%答题
-	catch
-		E9:R9-> base_logger_util:info_msg("base_role_op:uninit answer_op:hook_on_offline() error ~p:~p ~p ~n",[E9,R9,erlang:get_stacktrace()])
-	end,
-	try
-		congratulations_op:hook_on_offline()	%%新手祝贺
-	catch
-		E10:R10-> base_logger_util:info_msg("base_role_op:uninit congratulations_op:hook_on_offline() error ~p:~p ~p ~n",[E10,R10,erlang:get_stacktrace()])
-	end,
-	try
-		fatigue:on_playeroffline()
-	catch
-		E11:R11-> base_logger_util:info_msg("base_role_op:uninit fatigue:on_playeroffline() error ~p:~p ~p ~n",[E11,R11,erlang:get_stacktrace()])
-	end,
-	try
-		offline_exp_op:hook_on_offline()	%%离线经验
-	catch
-		E12:R12-> base_logger_util:info_msg("base_role_op:uninit offline_exp_op:hook_on_offline() error ~p:~p ~p ~n",[E12,R12,erlang:get_stacktrace()])
-	end,
-	try
-		venation_op:hook_on_offline()	    %%经脉
-	catch
-		E13:R13-> base_logger_util:info_msg("base_role_op:uninit venation_op:hook_on_offline error ~p:~p ~p ~n",[E13,R13,erlang:get_stacktrace()])
-	end,
-	try
-		continuous_logging_op:on_player_offline()	   
-	catch
-		E14:R14-> base_logger_util:info_msg("base_role_op:uninit continuous_logging_op:on_player_offline error ~p:~p ~p ~n",[E14,R14,erlang:get_stacktrace()])
-	end,
-	try
-		role_game_rank:on_player_offline()	   
-	catch
-		E15:R15-> base_logger_util:info_msg("base_role_op:uninit role_game_rank:on_player_offline error ~p:~p ~p ~n",[E15,R15,erlang:get_stacktrace()])
-	end,
-	try			%%元宝消耗兑换礼券
-		gold_exchange:hook_on_offline()
-	catch
-		E17:R17-> base_logger_util:info_msg("base_role_op:uninit gold_exchage:hook_on_offline ~p:~p ~p ~n",[E17,R17,erlang:get_stacktrace()])
-	end,
-	try
-		role_treasure_transport:hook_on_offline()
-	catch
-		E18:R18-> base_logger_util:info_msg("base_role_op:uninit role_treasure_transport:hook_on_offline ~p:~p ~p ~n",[E18,R18,erlang:get_stacktrace()])
-	end,
-	try			%%元宝消耗兑换物品
-		consume_return:hook_on_offline()
-	catch
-		E19:R19-> base_logger_util:info_msg("base_role_op:uninit consume_return:hook_on_offline ~p:~p ~p ~n",[E19,R19,erlang:get_stacktrace()])
-	end,
-	try			
-		spa_op:hook_on_offline()
-	catch
-		E20:R20-> base_logger_util:info_msg("base_role_op:uninit spa_op:hook_on_offline() ~p:~p ~p ~n",[E20,R20,erlang:get_stacktrace()])
-	end,	
-	try			%%主线
-		role_mainline:uninit()
-	catch
-		Emainline:Rmainline-> base_logger_util:info_msg("base_role_op:uninit role_mainline:uninit ~p:~p ~p ~n",[Emainline,Rmainline,erlang:get_stacktrace()])
-	end,
-	try	
-		guildbattle_op:hook_offline()
-	catch
-		Eguildbattle:Rguildbattle-> base_logger_util:info_msg("base_role_op:uninit guildbattle_op:hook_offline() ~p:~p ~p ~n",[Eguildbattle,Rguildbattle,erlang:get_stacktrace()])
-	end,
-	try	
-		loop_instance_op:uninit()
-	catch
-		ELoopInstance:RLoopInstance-> base_logger_util:info_msg("base_role_op:uninit loop_Instance_op:uninit() ~p:~p ~p ~n",[ELoopInstance,RLoopInstance,erlang:get_stacktrace()])
-	end,
-	uninit(change_map,RoleId),
-	OnlineTIME = trunc(timer:now_diff(base_timer_server:get_correct_now(),get(login_time))/1000000),	
-	gm_logger_role:role_logout(RoleId,get(client_ip),OnlineTIME,get(level));
+% uninit(uninit,RoleId) ->
+% 	try
+% 		relocating_on_uninit()
+% 	catch
+% 		E:R-> base_logger_util:info_msg("base_role_op:uninit dead_on_uninit error ~p:~p ~p ~n",[E,R,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		group_op:hook_on_offline()			%%组队
+% 	catch
+% 		E1:R1-> base_logger_util:info_msg("base_role_op:uninit group_op:logout error ~p:~p ~p ~n",[E1,R1,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		guild_op:on_leave()			%%公会
+% 	catch
+% 		E2:R2-> base_logger_util:info_msg("base_role_op:uninit guild_op:on_leave error ~p:~p ~p ~n",[E2,R2,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		instance_op:on_offline()	%%副本
+% 	catch
+% 		E3:R3-> base_logger_util:info_msg("base_role_op:uninit instance_op:on_offline() error ~p:~p ~p ~n",[E3,R3,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		battle_ground_op:hook_on_offline()
+% 	catch
+% 		E31:R31-> base_logger_util:info_msg("base_role_op:uninit battle_ground_op:hook_on_offline error ~p:~p ~p ~n",[E31,R31,erlang:get_stacktrace()])
+% 	end,	
+% 	try
+% 		friend_op:offline_notice()	%%好友
+% 	catch
+% 		E4:R4-> base_logger_util:info_msg("base_role_op:uninit friend_op:offline_notice() ~p:~p ~p ~n",[E4,R4,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		loop_tower_op:on_offline()	%%轮回塔
+% 	catch
+% 		E5:R5-> base_logger_util:info_msg("base_role_op:uninit loop_tower_op:on_offline() error ~p:~p ~p ~n",[E5,R5,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		series_kill:on_offline()
+% 	catch
+% 		E6:R6-> base_logger_util:info_msg("base_role_op:uninit series_kill:on_offline() error ~p:~p ~p ~n",[E6,R6,erlang:get_stacktrace()])
+% 	end,
+% 	try		
+% 		timelimit_gift_op:on_playeroffline()
+% 	catch
+% 		E8:R8-> base_logger_util:info_msg("base_role_op:uninit timelimit_gift_op:on_playeroffline() error ~p:~p ~p ~n",[E8,R8,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		answer_op:hook_on_offline()	%%答题
+% 	catch
+% 		E9:R9-> base_logger_util:info_msg("base_role_op:uninit answer_op:hook_on_offline() error ~p:~p ~p ~n",[E9,R9,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		congratulations_op:hook_on_offline()	%%新手祝贺
+% 	catch
+% 		E10:R10-> base_logger_util:info_msg("base_role_op:uninit congratulations_op:hook_on_offline() error ~p:~p ~p ~n",[E10,R10,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		fatigue:on_playeroffline()
+% 	catch
+% 		E11:R11-> base_logger_util:info_msg("base_role_op:uninit fatigue:on_playeroffline() error ~p:~p ~p ~n",[E11,R11,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		offline_exp_op:hook_on_offline()	%%离线经验
+% 	catch
+% 		E12:R12-> base_logger_util:info_msg("base_role_op:uninit offline_exp_op:hook_on_offline() error ~p:~p ~p ~n",[E12,R12,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		venation_op:hook_on_offline()	    %%经脉
+% 	catch
+% 		E13:R13-> base_logger_util:info_msg("base_role_op:uninit venation_op:hook_on_offline error ~p:~p ~p ~n",[E13,R13,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		continuous_logging_op:on_player_offline()	   
+% 	catch
+% 		E14:R14-> base_logger_util:info_msg("base_role_op:uninit continuous_logging_op:on_player_offline error ~p:~p ~p ~n",[E14,R14,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		role_game_rank:on_player_offline()	   
+% 	catch
+% 		E15:R15-> base_logger_util:info_msg("base_role_op:uninit role_game_rank:on_player_offline error ~p:~p ~p ~n",[E15,R15,erlang:get_stacktrace()])
+% 	end,
+% 	try			%%元宝消耗兑换礼券
+% 		gold_exchange:hook_on_offline()
+% 	catch
+% 		E17:R17-> base_logger_util:info_msg("base_role_op:uninit gold_exchage:hook_on_offline ~p:~p ~p ~n",[E17,R17,erlang:get_stacktrace()])
+% 	end,
+% 	try
+% 		role_treasure_transport:hook_on_offline()
+% 	catch
+% 		E18:R18-> base_logger_util:info_msg("base_role_op:uninit role_treasure_transport:hook_on_offline ~p:~p ~p ~n",[E18,R18,erlang:get_stacktrace()])
+% 	end,
+% 	try			%%元宝消耗兑换物品
+% 		consume_return:hook_on_offline()
+% 	catch
+% 		E19:R19-> base_logger_util:info_msg("base_role_op:uninit consume_return:hook_on_offline ~p:~p ~p ~n",[E19,R19,erlang:get_stacktrace()])
+% 	end,
+% 	try			
+% 		spa_op:hook_on_offline()
+% 	catch
+% 		E20:R20-> base_logger_util:info_msg("base_role_op:uninit spa_op:hook_on_offline() ~p:~p ~p ~n",[E20,R20,erlang:get_stacktrace()])
+% 	end,	
+% 	try			%%主线
+% 		role_mainline:uninit()
+% 	catch
+% 		Emainline:Rmainline-> base_logger_util:info_msg("base_role_op:uninit role_mainline:uninit ~p:~p ~p ~n",[Emainline,Rmainline,erlang:get_stacktrace()])
+% 	end,
+% 	try	
+% 		guildbattle_op:hook_offline()
+% 	catch
+% 		Eguildbattle:Rguildbattle-> base_logger_util:info_msg("base_role_op:uninit guildbattle_op:hook_offline() ~p:~p ~p ~n",[Eguildbattle,Rguildbattle,erlang:get_stacktrace()])
+% 	end,
+% 	try	
+% 		loop_instance_op:uninit()
+% 	catch
+% 		ELoopInstance:RLoopInstance-> base_logger_util:info_msg("base_role_op:uninit loop_Instance_op:uninit() ~p:~p ~p ~n",[ELoopInstance,RLoopInstance,erlang:get_stacktrace()])
+% 	end,
+% 	uninit(change_map,RoleId),
+% 	OnlineTIME = trunc(timer:now_diff(base_timer_server:get_correct_now(),get(login_time))/1000000),	
+% 	gm_logger_role:role_logout(RoleId,get(client_ip),OnlineTIME,get(level));
 
-uninit(change_map,RoleId) ->
-	async_save_to_roledb(),
-	dmp_op:flush_bundle(RoleId),
-	gm_logger_role:role_flush_items(RoleId,get(items_info)),
-	trade_role:interrupt(),
-	% role_private_option:flush(),
-	mall_op:save_to_db(),
-	open_service_activities:on_player_off_line(),
-	vip_op:hook_on_offline(),
-	goals_op:save_to_db().
-	%%fatigue:on_playeroffline().
+% uninit(change_map,RoleId) ->
+% 	async_save_to_roledb(),
+% 	dmp_op:flush_bundle(RoleId),
+% 	gm_logger_role:role_flush_items(RoleId,get(items_info)),
+% 	trade_role:interrupt(),
+% 	role_private_option:flush(),
+% 	mall_op:save_to_db(),
+% 	open_service_activities:on_player_off_line(),
+% 	vip_op:hook_on_offline(),
+% 	goals_op:save_to_db().
+% 	%%fatigue:on_playeroffline().
 
 init_roleinfo(Role_id,GS_MapInfo,GS_GateInfo,GS_system_role_info) ->
+	?ZSS(),
 	put(creature_info,create_roleinfo()),
 	Role_pid = get_pid_from_gs_system_roleinfo(GS_system_role_info),
 	Role_node = get_node_from_gs_system_roleinfo(GS_system_role_info),
@@ -594,7 +739,8 @@ init_roleinfo(Role_id,GS_MapInfo,GS_GateInfo,GS_system_role_info) ->
 	% 		send_data_to_gate(NewCommerMsg);
 	% 	_->
 	% 		nothing
-	% end,	
+	% end,
+	apply_component(role_packet, new_player_notify, [OffLine]),	
 	%% 注册全局角色信息
 	RoleProc = make_role_proc_name(Role_id),
 	Rolenode = get_node_from_gs_system_roleinfo(GS_system_role_info),
@@ -612,84 +758,123 @@ init_roleinfo(Role_id,GS_MapInfo,GS_GateInfo,GS_system_role_info) ->
 	set_leave_attack_time([],{0,0,0}),
 	put(last_cast_time,{0,0,0}),
 	put(last_nor_cast_time,{0,0,0}),
-	NowLevelExp = role_level_db:get_level_experience(Role_Level),
-	NexLevelexp = role_level_db:get_level_experience(Role_Level+1),
-	put(current_exp,Expr+NowLevelExp),							%%初始化总经验	
-	case NexLevelexp of
-		noleve -> LevelupExp = 0;
-		_ -> %%LevelupExp = erlang:min(2147483647,NexLevelexp - NowLevelExp)				%%升级所需经验
-			LevelupExp = NexLevelexp - NowLevelExp
-	end,
+	% NowLevelExp = role_level_db:get_level_experience(Role_Level),
+	% put(current_exp,Expr+NowLevelExp),							%%初始化总经验
+	apply_component(role_level_component,init_current_exp,[Expr,Role_Level]),
+	% NexLevelexp = role_level_db:get_level_experience(Role_Level+1),
+	% case NexLevelexp of
+	% 	noleve -> LevelupExp = 0;
+	% 	_ -> %%LevelupExp = erlang:min(2147483647,NexLevelexp - NowLevelExp)				%%升级所需经验
+	% 		LevelupExp = NexLevelexp - NowLevelExp
+	% end,
+	LevelupExp = apply_component(role_level_component,get_next_level_exp,[Role_Level]),
 	% %%初始化全局进程信息
 	% role_global_op:init(),
+	apply_component(role_global_op,init,[]),
 	% %%初始化交易
 	% trade_role:init(),	
-	% %%初始化物品信息
+	apply_component(trade_role,init,[]),
+	%初始化物品信息
 	% items_op:load_from_db(Role_id),
-	% %%初始化buff		
+	apply_component(items_op,load_from_db,[Role_id]),
+	%初始化buff		
 	% buffer_op:init(),		
-	% %%初始化掉落槽列表
+	apply_component(buffer_op,init,[]),
+	%初始化掉落槽列表
 	% loot_op:init_loot_list(),
-	% %%初始化包裹信息，装备槽信息	
+	apply_component(loot_op,init_loot_list,[]),
+	%初始化包裹信息，装备槽信息	
 	% package_op:init_package(PackSize),
+	apply_component(package_op,init_package,[PackSize]),
 	
 	% %%初始化任务列表
 	% quest_op:init(),
+	apply_component(quest_op,init,[]),
 	% %%循环任务
 	% everquest_op:init(),
+	apply_component(everquest_op,init,[]),
 	% quest_op:load_from_db(Role_id),
+	apply_component(quest_op,load_from_db,[Role_id]),
 	% %%初始化好友列表,广播上线通知
 	% friend_op:load_friend_from_db(Role_id),
+	apply_component(friend_op,load_friend_from_db,[Role_id]),
 	% friend_op:load_befriend_from_db(Role_id),
+	apply_component(friend_op,load_befriend_from_db,[Role_id]),
 	% friend_op:load_black_from_db(Role_id),
+	apply_component(friend_op,load_black_from_db,[Role_id]),
 	% friend_op:load_signature_from_db(Role_id),
+	apply_component(friend_op,load_signature_from_db,[Role_id]),
 	% %%初始化成就信息
 	% achieve_op:load_achieve_role_from_db(Role_id),
+	apply_component(achieve_op,load_achieve_role_from_db,[Role_id]),
 	% %%丹药
 	% furnace_op:load_from_db(Role_id),
+	apply_component(furnace_op,load_from_db,[Role_id]),
 	% %%占星
 	% astrology_op:init(Role_id,Role_Level),%（因为提交丹药代码，占星完成功能后打开）
+	apply_component(astrology_op,init,[Role_id,Role_Level]),
 	% %%初始化目标信息
 	% goals_op:load_role_goals_from_db(Role_id),
+	apply_component(goals_op,load_role_goals_from_db,[Role_id]),
 	% %%新手祝贺
 	% congratulations_op:load_from_db(Role_id),
+	apply_component(congratulations_op,load_from_db,[Role_id]),
 	% %%离线经验
 	% offline_exp_op:load_from_db(Role_id),
+	apply_component(offline_exp_op,load_from_db,[Role_id]),
 	% %%初始化buff
 	% buffer_op:init(),
+	apply_component(buffer_op,init,[]),
 	% %%初始化副本信息
-	% instance_op:load_from_db(Role_id),
+	instance_op:load_from_db(Role_id),
+	% apply_component(instance_op,load_from_db,[Role_id]),
 	% %% 初始化副本品质信息
 	% instance_quality_op:load_from_db(Role_id),
+	apply_component(instance_quality_op,load_from_db,[Role_id]),
 	% %%初始化战场信息
 	% battle_ground_op:init(),
+	apply_component(battle_ground_op,init,[Role_id]),
 	% %%初始化轮回塔信息
 	% loop_tower_op:load_from_db(Role_id),
+	apply_component(loop_tower_op,load_from_db,[Role_id]),
 	% %%初始化VIP信息
 	% vip_op:load_from_db(Role_id),
+	apply_component(vip_op,load_from_db,[Role_id]),
 	% %%初始化排行榜查看信息
 	% role_game_rank:load_from_db(Role_id),
+	apply_component(role_game_rank,load_from_db,[Role_id]),
 	% %%初始化角色权限
 	% gm_role_privilege_op:load_from_db(Role_id),
+	apply_component(gm_role_privilege_op,load_from_db,[Role_id]),
 	% %%初始化最近购买信息
 	% mall_op:load_role_latest_from_db(Role_id),
+	apply_component(mall_op,load_role_latest_from_db,[Role_id]),
 	% mall_op:load_role_buy_item_log_from_db(Role_id),
+	apply_component(mall_op,load_role_buy_item_log_from_db,[Role_id]),
 	% %%初始化宝箱仓库
 	% treasure_storage_op:init(),
+	apply_component(treasure_storage_op,init,[]),
 	% %%初始化宝箱
 	% role_levelup_opt:init(Role_id),
+	apply_component(role_levelup_opt,init,[Role_id]),
 	% Viptag = vip_op:get_role_vip(),
+	Viptag = apply_component(vip_op,get_role_vip,[]),
 	% %%初始化连斩
 	% series_kill:init(),
+	apply_component(series_kill,init,[]),
 	% %%初始化打坐
 	% role_sitdown_op:init(),
-	% rand:seed(exsplus,os:timestamp()),
+	apply_component(role_sitdown_op,init,[]),
+	rand:seed(exsplus,os:timestamp()),
 	% %%初始化技能
 	% skill_op:init_skill_info(Role_id),
+	apply_component(skill_op,init_skill_info,[Role_id]),
 	% %%棋魂初始化
 	% role_chess_spirits:init(),
+	apply_component(role_chess_spirits,init,[Role_id]),
 	% %%暴龙初始化
 	% role_dragon_fight:init(),
+	apply_component(role_dragon_fight,init,[Role_id]),
 	% %%摆摊
 	% case StallName of
 	% 	[]->
@@ -697,30 +882,45 @@ init_roleinfo(Role_id,GS_MapInfo,GS_GateInfo,GS_system_role_info) ->
 	% 	_->
 	% 		auction_op:load_from_db(StallName)
 	% end,
+	apply_component(auction_op_component,load_from_db,[StallName,Role_name]),
 	% %%新手卡
 	% role_giftcard_op:hook_on_online(Role_id),
+	apply_component(role_giftcard_op,hook_on_online,[Role_id]),
 	% %%初始化宠物
 	% pet_op:load_from_db(PetInfo),
+	apply_component(pet_op,load_from_db,[PetInfo]),
 	
 	% %%初始化经脉
 	% venation_op:init(),
+	apply_component(venation_op,init,[]),
 	% %%初始化称号
 	% designation_op:init(Role_id),
+	apply_component(designation_op,init,[Role_id]),
 	% %%初始化飞剑信息
 	% wing_op:init_wing_info(Role_id),
-	% CurDesignation = get(cur_designation),
-	% %%计算初始人物属性,buffer的在on_into_world里添加
+	apply_component(wing_op,init_wing_info,[Role_id]),
+	CurDesignation = get(cur_designation),
+	%%计算初始人物属性,buffer的在on_into_world里添加
 	% {Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
 	% Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
-	% Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = compute_attrs(init,Role_Level),	
+	% Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = compute_attrs(init,Role_Level),
+	{Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
+	Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
+	Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = apply_component(role_attr_component,compute_attrs,[init,Role_Level],{power,hprecover,criDerate,
+	mprecover,1,meleeimmunity,rangeimmunity,magicimmunity,hpmax,mpmax,stamina,strength,
+	intelligence,agile,meleedefense,rangedefense,magicdefense,hitrate,dodge,criticalrate,toughness,imprisonment_resist,silence_resist,
+	daze_resist,poison_resist,normal_resist,gighting_Force}),
 	% %%获取公会信息
 	% guild_op:init(GuildId,LineId,Role_Level,MapId),
-  
+	apply_component(guild_op,init,[GuildId,LineId,Role_Level,MapId]),
 	% GuildName = guild_util:get_guild_name(),
+	GuildName = apply_component(guild_util,get_guild_name,[]),
 	% GuildPosting = guild_util:get_guild_posting(),
+	GuildPosting = apply_component(guild_util,get_guild_posting,[]),
 	% %%头衔
 	% AllIcons = role_game_rank:get_all_role_types(Role_id),
-	%%PK信息
+	AllIcons = apply_component(role_game_rank,get_all_role_types,[Role_id]),
+	%PK信息
 	{Pkmodel,Crime} = PvPInfo, 
 	%%init
 	RoleState = gaming,
@@ -743,102 +943,142 @@ init_roleinfo(Role_id,GS_MapInfo,GS_GateInfo,GS_system_role_info) ->
 		RoleBuffs,Viptag,AllIcons,Crime,Pkmodel,Path,GS_GateInfo,GS_MapInfo,RoleServerId,CurDesignation,Treasure_transport,Fighting_Force,Honor)),
 	% %%温泉
 	% spa_op:init(),
+	apply_component(spa_op,init,[]),
 	% %%初始化离线经验
 	% offline_exp_op:offline_exp_init(),
+	apply_component(offline_exp_op,offline_exp_init,[]),
 	% %%初始化全服运镖
 	% role_treasure_transport:hook_on_line(),
+	apply_component(role_treasure_transport,hook_on_line,[]),
 	% %%初始化灵力信息
 	% %%NewSoulPowerInfo = 
 	% role_soulpower:init(SoulPowerInfo),
+	apply_component(role_soulpower,init,[SoulPowerInfo]),
 	% %%初始化pk
 	% pvp_op:init(),
+	apply_component(pvp_op,init,[]),
 	% %%装备信息
 	% {ClotheTemId,ArmTemId} = item_util:get_role_cloth_and_arm_dispaly(),
-	% put(creature_info,set_cloth_to_roleinfo(get(creature_info),ClotheTemId)),
-	% put(creature_info,set_arm_to_roleinfo(get(creature_info),ArmTemId)),
- %  	%%初始化抽奖
- %  	lottery_op:on_playeronline(),		
-	% %%初始化限时礼包
-	% %%第一次登陆 小花园 不进行初始化 修改到离开小花园后  so ugly!
-	% case MapId of
-	% 	?JACKAROO_MAP->	
-	% 		nothing;
-	% 	_->
-	% 		timelimit_gift_op:on_playeronline()
-	% end,
- %  	%%挂机初始化
+	{ClotheTemId,ArmTemId} = apply_component(item_util,get_role_cloth_and_arm_dispaly,[],{clotheTemId,armTemId}),
+	put(creature_info,set_cloth_to_roleinfo(get(creature_info),ClotheTemId)),
+	put(creature_info,set_arm_to_roleinfo(get(creature_info),ArmTemId)),
+  	% %%初始化抽奖
+  	% lottery_op:on_playeronline(),
+  	apply_component(venation_op,init,[]),
+	%%初始化限时礼包
+	%%第一次登陆 小花园 不进行初始化 修改到离开小花园后  so ugly!
+	case MapId of
+		?JACKAROO_MAP->	
+			nothing;
+		_->
+			% timelimit_gift_op:on_playeronline()
+			apply_component(timelimit_gift_op,on_playeronline,[])
+	end,
+  	%%挂机初始化
 	% block_training_op:load_from_db(TrainingInfo),
+	apply_component(block_training_op,load_from_db,[TrainingInfo]),
 	% case get(is_adult) of
 	% 	false-> fatigue:on_playeronline(get(account_id));
 	% 	true->ignor
 	% end,
+	apply_component(role_fatigue_component,on_playeronline,[]),
 	
 	% spiritspower_op:init(),
+	apply_component(spiritspower_op,init,[]),
 	
 	%%init里需要发给客户端的一堆信息:
 	%%发送人物数据
 	send_role_attribute(get(creature_info)),
-% 	%%发送宠物数据
-% 	pet_op:send_init_data(),
-% 	%%初始化组队列表
-% 	group_op:load_from_db(GroupID),
-% 	update_role_info(Role_id,get(creature_info)),
-% 	%%发送好友数据
-% 	friend_op:send_friend_list(),
-% 	friend_op:send_black_list(),
-% 	friend_op:send_signature(),
-	
-% 	%%邮件初始化		应该在所有的邮件发送之前
-%   	mail_op:on_playeronline(),
+	% %%发送宠物数据
+	% pet_op:send_init_data(),
+	apply_component(pet_op,send_init_data,[]),
+	% %%初始化组队列表
+	% group_op:load_from_db(GroupID),
+	apply_component(group_op,load_from_db,[GroupID]),
+	update_role_info(Role_id,get(creature_info)),
+	% %%发送好友数据
+	% friend_op:send_friend_list(),
+	apply_component(friend_op,send_friend_list,[]),
+	% friend_op:send_black_list(),
+	apply_component(friend_op,send_black_list,[]),
+	% friend_op:send_signature(),
+	apply_component(friend_op,send_signature,[]),
+
+	% %%邮件初始化		应该在所有的邮件发送之前
+	% mail_op:on_playeronline(),
+ 	apply_component(mail_op,on_playeronline,[]),
   	
-% 	%%成就信息初始化给client
-% 	achieve_op:achieve_init(),
+	% %%成就信息初始化给client
+	% achieve_op:achieve_init(),
+	apply_component(achieve_op,achieve_init,[]),
 	
-% 	%%初始化活跃度
-% 	activity_value_op:init(),
+	% %%初始化活跃度
+	% activity_value_op:init(),
+	apply_component(activity_value_op,init,[]),
 	
-% 	%%发送VIP日奖励信息
-% 	vip_op:vip_init(),
-% 	activity_state_op:init(),
-% 	%%初始化人物商城积分
-% 	mall_op:init_role_mall_integral(Role_id),
-% 	%%初始化开服活动
-% 	open_service_activities:load_from_db(Role_id),
-% 	%%初始化宠物仓库
-% %% 	explore_storage_op:init(Role_id),
-% 	%%初始化宠物探险
-% %% 	pet_explore_op:on_playeronline(Role_id),
-% 	first_charge_gift_op:init(),
-% 	%%初始化玩家最近购买物品
-% 	mall_op:init_role_latest_buy(),
-% 	mall_op:init_hot_item(),
-% 	%%初始化宠物排行榜
-% 	pet_op:init_pet_talent_rank_sort(),
+	% %%发送VIP日奖励信息
+	% vip_op:vip_init(),
+	apply_component(vip_op,vip_init,[]),
+	% activity_state_op:init(),
+	apply_component(activity_state_op,init,[]),
+	% %%初始化人物商城积分
+	% mall_op:init_role_mall_integral(Role_id),
+	apply_component(mall_op,init_role_mall_integral,[Role_id]),
+	% %%初始化开服活动
+	% open_service_activities:load_from_db(Role_id),
+	apply_component(open_service_activities,load_from_db,[Role_id]),
+	%%初始化宠物仓库
+%% 	explore_storage_op:init(Role_id),
+	%%初始化宠物探险
+%% 	pet_explore_op:on_playeronline(Role_id),
+	% first_charge_gift_op:init(),
+	apply_component(first_charge_gift_op,init,[]),
+	%初始化玩家最近购买物品
+	% mall_op:init_role_latest_buy(),
+	apply_component(mall_op,init_role_latest_buy,[]),
+	% mall_op:init_hot_item(),
+	apply_component(mall_op,init_hot_item,[]),
+	%初始化宠物排行榜
+	% pet_op:init_pet_talent_rank_sort(),
+	apply_component(pet_op,init_pet_talent_rank_sort,[]),
 	
-% 	%%初始答题
-% 	answer_op:init(Role_id),
-%   	role_server_travel:init(),
-%   	%%初始化消耗元宝兑换礼券活动
-% 	gold_exchange:init(),
-% 	%%初始化消耗元宝兑换物品活动
-% 	consume_return:init(Role_id),
-% 	%%初始化运镖
-% 	role_treasure_transport:load_from_db(Role_id),
-% 	%%初始化主线
-% 	role_mainline:init(),
-% 	%%初始化帮会副本
-% 	guild_instance:hook_on_line(),
-% 	%%帮会战 国王争夺战
-% 	guildbattle_op:init(),
-% 	%%国家模块 after guild init
-% 	country_op:init(),
-% 	festival_op:init_tab_isshow(),
-% 	loop_instance_op:init(),
-  	%%buff信息要等客户端map加载完成后发送
+	%初始答题
+	% answer_op:init(Role_id),
+	apply_component(answer_op,init,[Role_id]),
+  	role_server_travel:init(),
+  	%初始化消耗元宝兑换礼券活动
+	% gold_exchange:init(),
+	apply_component(gold_exchange,init,[]),
+	%初始化消耗元宝兑换物品活动
+	% consume_return:init(Role_id),
+	apply_component(consume_return,init,[Role_id]),
+	%初始化运镖
+	% role_treasure_transport:load_from_db(Role_id),
+	apply_component(role_treasure_transport,load_from_db,[Role_id]),
+	%初始化主线
+	% role_mainline:init(),
+	apply_component(role_mainline,init,[]),
+	%初始化帮会副本
+	% guild_instance:hook_on_line(),
+	apply_component(guild_instance,hook_on_line,[]),
+	%帮会战 国王争夺战
+	% guildbattle_op:init(),
+	apply_component(guildbattle_op,init,[]),
+	%国家模块 after guild init
+	% country_op:init(),
+	apply_component(country_op,init,[]),
+	% festival_op:init_tab_isshow(),
+	apply_component(festival_op,init_tab_isshow,[]),
+	% loop_instance_op:init(),
+	apply_component(loop_instance_op,init,[]),
+  	%buff信息要等客户端map加载完成后发送
 	put(init_buffer_tmp,AllBuffersInfo),
 	% continuous_logging_op:load_from_db(Role_id),
- %    invite_friend_op:load_from_db(Role_id),
+	apply_component(continuous_logging_op,load_from_db,[Role_id]),
+    % invite_friend_op:load_from_db(Role_id),
+    apply_component(invite_friend_op,load_from_db,[Role_id]),
 	% goals_op:init_role_goals().
+	apply_component(goals_op,init_role_goals,[]),
 	ok.
 
 get_position_from_dbrecord(Result) ->
@@ -859,15 +1099,22 @@ roleinfo(AOI_roles_info) ->
 %% 客户端发送地图加载完成消息
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 map_complete_online()->
-	items_op:check_item_overdue_interval(),
-	battle_ground_op:hook_on_online(),
+	% items_op:check_item_overdue_interval(),
+	apply_component(items_op,check_item_overdue_interval,[]),
+	% battle_ground_op:hook_on_online(),
+	apply_component(battle_ground_op,hook_on_online,[]),
 	Power = get_power_from_roleinfo(get(creature_info)),
 	Class = get_class_from_roleinfo(get(creature_info)),
-	gm_logger_role:role_power_gather(get(roleid),Power,Class,get(level)),
-	pet_op:hook_on_online_join_map(),
-	role_dragon_fight:hook_on_map_complate_online(),
-	role_game_rank:gather_role_rank(),
-	activity_manager:role_online_notify(get(roleid)).
+	% gm_logger_role:role_power_gather(get(roleid),Power,Class,get(level)),
+	apply_component(gm_logger_role,role_power_gather,[get(roleid),Power,Class,get(level)]),
+	% pet_op:hook_on_online_join_map(),
+	apply_component(pet_op,hook_on_online_join_map,[]),
+	% role_dragon_fight:hook_on_map_complate_online(),
+	apply_component(role_dragon_fight,hook_on_map_complate_online,[]),
+	% role_game_rank:gather_role_rank(),
+	apply_component(role_game_rank,gather_role_rank,[]),
+	% activity_manager:role_online_notify(get(roleid)).
+	apply_component(activity_manager,role_online_notify,[get(roleid)]).
 	
 map_complete(SelfInfo, MapInfo) ->	
 	case get(init_buffer_tmp) of
@@ -881,11 +1128,11 @@ map_complete(SelfInfo, MapInfo) ->
 			map_complete_online()
 	end,
 	MapId = get_mapid_from_mapinfo(MapInfo),
-	case map_info_db:get_map_info(MapId) of
+	case base_map_info_db:get_map_info(MapId) of
 		[]->
 			nothing;
 		MapProtoInfo->
-			RestrictItems = map_info_db:get_restrict_items(MapProtoInfo),
+			RestrictItems = base_map_info_db:get_restrict_items(MapProtoInfo),
 			put(restrict_items,RestrictItems),
 			map_script:run_script(on_join,MapProtoInfo)
 	end,
@@ -918,18 +1165,18 @@ send_role_attribute(RoleInfo) ->
 	base_tcp_client_statem:object_update_create(GateProc,CreateObj),
   	object_update:send_pending_update().
 	
-send_items_onhands()->
-	%%发送
-	HandsonItemid = package_op:get_items_id_on_hands(),
-	HandsonItemInfo = lists:map(fun(Id)->items_op:get_item_info(Id)end,HandsonItemid),
-	Message = role_packet:encode_init_onhands_item_s2c(HandsonItemInfo),
-	send_data_to_gate(Message).
+% send_items_onhands()->
+% 	%%发送
+% 	HandsonItemid = package_op:get_items_id_on_hands(),
+% 	HandsonItemInfo = lists:map(fun(Id)->items_op:get_item_info(Id)end,HandsonItemid),
+% 	Message = role_packet:encode_init_onhands_item_s2c(HandsonItemInfo),
+% 	send_data_to_gate(Message).
 
-send_items_on_storage(NpcId)->
-	StorageIds = package_op:get_items_id_on_storage(),
-	StorageInfo = lists:map(fun(Id)->items_op:get_item_info_storage(Id) end,StorageIds),
-	Message = role_packet:encode_npc_storage_items_s2c(NpcId,StorageInfo),
-	send_data_to_gate(Message).
+% send_items_on_storage(NpcId)->
+% 	StorageIds = package_op:get_items_id_on_storage(),
+% 	StorageInfo = lists:map(fun(Id)->items_op:get_item_info_storage(Id) end,StorageIds),
+% 	Message = role_packet:encode_npc_storage_items_s2c(NpcId,StorageInfo),
+% 	send_data_to_gate(Message).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%						玩家Timer					   %%
@@ -970,7 +1217,8 @@ handle_db_save_timer(Now)->
 			gm_logger_role:role_flush_items(RoleId,get(items_info)),
 			%%删除过期物品
 			items_op:check_item_overdue_interval(),
-			async_save_to_roledb(),
+			% async_save_to_roledb(),
+			apply_component(role_uninit_component,async_save_to_roledb,[]),
 			dmp_op:flush_bundle(RoleId),
 			%%做一下排行榜数据更新
 			role_game_rank:gather_role_rank(),
@@ -979,18 +1227,18 @@ handle_db_save_timer(Now)->
 			nothing
 	end.
 	
-async_save_to_roledb()->
-	{A,B,C}=base_timer_server:get_correct_now(),%%%%%%%%%@@wb20130604 测试压力，临时修改
-	put(db_save_time,{A,B+rand:uniform(10),C}),%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 	put(db_save_time,base_timer_server:get_correct_now()),
-	async_write_to_roledb(),
-	%%物品要同步写
-	items_op:save_to_db(),
-	quest_op:async_write_to_db(),
-	skill_op:async_save_to_db(),
-	instance_op:write_to_db(),
-	pet_op:save_to_db().
-	%%timelimit_gift_op:save_to_db().
+% async_save_to_roledb()->
+% 	{A,B,C}=base_timer_server:get_correct_now(),%%%%%%%%%@@wb20130604 测试压力，临时修改
+% 	put(db_save_time,{A,B+rand:uniform(10),C}),%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% 	put(db_save_time,base_timer_server:get_correct_now()),
+% 	async_write_to_roledb(),
+% 	%%物品要同步写
+% 	items_op:save_to_db(),
+% 	quest_op:async_write_to_db(),
+% 	skill_op:async_save_to_db(),
+% 	instance_op:write_to_db(),
+% 	pet_op:save_to_db().
+% 	%%timelimit_gift_op:save_to_db().
 	
 %%save_to_db()->
 %%	write_to_roledb(),
@@ -1173,7 +1421,8 @@ on_dead()->
 	put(creature_info, set_state_to_roleinfo(get(creature_info), deading)),
 	buffer_op:stop_mprecover(),
 	buffer_op:stop_hprecover(),
-	self_update_and_broad([{state,?CREATURE_STATE_DEAD}]),
+	% self_update_and_broad([{state,?CREATURE_STATE_DEAD}]),
+	apply_component(role_update_broad_component,self_update_and_broad,[[{state,?CREATURE_STATE_DEAD}]]),
 	creature_op:clear_all_buff_for_type(?MODULE,?BUFF_CANCEL_TYPE_DEAD).
 		
 is_dead()->
@@ -1219,9 +1468,11 @@ proc_respawn(?RESPAWN_WITH_CHTHEAL_INSITU)->
 					item_util:consume_items_by_classid(?ITEM_TYPE_RESAWN,1),
 					respawn_chtheal_insitu();
 				false->
-					case check_money(?MONEY_GOLD,?RESPAWN_WITH_CHTHEAL_INSITU_GOLD) of
+					% case check_money(?MONEY_GOLD,?RESPAWN_WITH_CHTHEAL_INSITU_GOLD) of
+					case apply_component(role_money_component,check_money,[?MONEY_GOLD,?RESPAWN_WITH_CHTHEAL_INSITU_GOLD]) of
 						true->
-							money_change(?MONEY_GOLD,-?RESPAWN_WITH_CHTHEAL_INSITU_GOLD,lost_respawn),
+							% money_change(?MONEY_GOLD,-?RESPAWN_WITH_CHTHEAL_INSITU_GOLD,lost_respawn),
+							apply_component(role_money_component,money_change,[?MONEY_GOLD,-?RESPAWN_WITH_CHTHEAL_INSITU_GOLD,lost_respawn]),
 							respawn_chtheal_insitu();
 						_->	
 							base_logger_util:info_msg("proc_respawn insitu no item or money ~p ~n",[get(roleid)])
@@ -1242,7 +1493,8 @@ respawn_chtheal_insitu()->
 	put(creature_info, set_life_to_roleinfo(get(creature_info), MaxHp )),
 	put(creature_info, set_mana_to_roleinfo(get(creature_info), MaxMp )),					
 	update_role_info(MyId ,get(creature_info)),
-	self_update_and_broad([{mp,MaxMp},{hp,MaxHp},{state,?CREATURE_STATE_GAME}]),
+	% self_update_and_broad([{mp,MaxMp},{hp,MaxHp},{state,?CREATURE_STATE_GAME}]),
+	apply_component(role_update_broad_component,self_update_and_broad,[[{mp,MaxMp},{hp,MaxHp},{state,?CREATURE_STATE_GAME}]]),
 	Role_Class = get_class_from_roleinfo( get(creature_info)),
 	Role_Level = get_level_from_roleinfo( get(creature_info)),
 	%%不会触发map_complate,需要自己启动恢复buff
@@ -1273,15 +1525,18 @@ respawn_inpoint_with_states(NewHp,NewMp)->
 			leave_map(get(creature_info),get(map_info)),								
 			put(creature_info, set_pos_to_roleinfo(get(creature_info), {RespawnPosX,RespawnPosY})),								
 			update_role_info(get(roleid) ,get(creature_info)),
-			only_self_update([{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME},{posx,RespawnPosX},{posy,RespawnPosY}]),
+			% only_self_update([{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME},{posx,RespawnPosX},{posy,RespawnPosY}]),
+			apply_component(role_update_broad_component,only_self_update,[[{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME},{posx,RespawnPosX},{posy,RespawnPosY}]]),
 			%%加入grid							
 			map_complete(get(creature_info), get(map_info));									
 		true->
 			%%切换地图	
 			update_role_info(get(roleid) ,get(creature_info)),
 			LineId = get_lineid_from_mapinfo(get(map_info)),							
-			only_self_update([{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME}]),
-			transport(get(creature_info), get(map_info),LineId,RespawnMapId,{RespawnPosX,RespawnPosY})	
+			% only_self_update([{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME}]),
+			apply_component(role_update_broad_component,only_self_update,[[{mp,NewMp},{hp,NewHp},{state,?CREATURE_STATE_GAME}]]),
+			% transport(get(creature_info), get(map_info),LineId,RespawnMapId,{RespawnPosX,RespawnPosY})	
+			apply_component(instance_op_component,transport,[get(creature_info), get(map_info),LineId,RespawnMapId,{RespawnPosX,RespawnPosY}])
 	end.		
 	
 %%
@@ -1458,52 +1713,54 @@ send_to_other_client_roleinfo(RoleInfo,Message)->
 %%计算玩家属性改变，升级和初始化需要全部重新计算
 
 %%初始化计算TODO:current_buffer提前设置
-compute_attrs(init,Level) ->
-	Class = get(classid),
-	%%初始计算	
-	{OriCurrentAttributes,_OriCurrentBuffers,_OriChangeAttribute} = compute_buffers:compute(Class, Level, [], [], [], [],[],[],[],[]),
-	put(current_attribute,OriCurrentAttributes),
-	%%获取装备属性
-	BaseAttr = get_role_base_attr(),
-	OtherAttr = get_role_other_attr(),
-	put(base_attr,BaseAttr),
-	put(other_attr,OtherAttr),
+% compute_attrs(init,Level) ->
+% 	?ZSS(),
+% 	Class = get(classid),
+% 	%%初始计算	
+% 	% {OriCurrentAttributes,_OriCurrentBuffers,_OriChangeAttribute} = compute_buffers:compute(Class, Level, [], [], [], [],[],[],[],[]),
+% 	{OriCurrentAttributes,_OriCurrentBuffers,_OriChangeAttribute} = apply_component(compute_buffers,compute,[Class, Level, [], [], [], [],[],[],[],[]],{oriCurrentAttributes,oriCurrentBuffers,oriChangeAttribute}),
+% 	put(current_attribute,OriCurrentAttributes),
+% 	%%获取装备属性
+% 	BaseAttr = get_role_base_attr(),
+% 	OtherAttr = get_role_other_attr(),
+% 	put(base_attr,BaseAttr),
+% 	put(other_attr,OtherAttr),
 	
-	%%属性计算
-	{CurrentAttributes,_CurrentBuffers, _ChangeAttribute} 
-	= compute_buffers:compute(Class, Level, get(current_attribute), get(current_buffer), [], [],BaseAttr,[],OtherAttr,[]),
-	put(current_attribute, CurrentAttributes),
-	Power = attribute:get_current(CurrentAttributes,power),
-	Hprecover = attribute:get_current(CurrentAttributes,hprecover),
-	CriDerate = attribute:get_current(CurrentAttributes,criticaldestroyrate),
-	Mprecover = attribute:get_current(CurrentAttributes,mprecover),
-	MovespeedRate = attribute:get_current(CurrentAttributes,movespeed),
-	Meleeimmunity = attribute:get_current(CurrentAttributes,meleeimmunity),
-	Rangeimmunity = attribute:get_current(CurrentAttributes,rangeimmunity),
-	Magicimmunity = attribute:get_current(CurrentAttributes,magicimmunity),
-	Hpmax = attribute:get_current(CurrentAttributes,hpmax),
-	Mpmax = attribute:get_current(CurrentAttributes,mpmax),
-	Stamina = attribute:get_current(CurrentAttributes,stamina),
-	Strength = attribute:get_current(CurrentAttributes,strength),
-	Intelligence = attribute:get_current(CurrentAttributes,intelligence),
-	Agile = attribute:get_current(CurrentAttributes,agile),
-	Meleedefense = attribute:get_current(CurrentAttributes,meleedefense),
-	Rangedefense = attribute:get_current(CurrentAttributes,rangedefense),
-	Magicdefense = attribute:get_current(CurrentAttributes,magicdefense),
-	Hitrate = attribute:get_current(CurrentAttributes,hitrate),
-	Dodge = attribute:get_current(CurrentAttributes,dodge),
-	Criticalrate = attribute:get_current(CurrentAttributes,criticalrate),
-	Toughness = attribute:get_current(CurrentAttributes,toughness),
-	Imprisonment_resist = attribute:get_current(CurrentAttributes,imprisonment_resist),
-	Silence_resist = attribute:get_current(CurrentAttributes,silence_resist),
-	Daze_resist = attribute:get_current(CurrentAttributes,daze_resist),
-	Poison_resist = attribute:get_current(CurrentAttributes,poison_resist),
-	Normal_resist = attribute:get_current(CurrentAttributes,normal_resist),
-	Fighting_force = role_fighting_force:computter_fight_force(Hpmax,Power,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,
-					  CriDerate,Toughness,Meleeimmunity,Rangeimmunity,Magicimmunity),
-	{Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
-	Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
-	Daze_resist,Poison_resist,Normal_resist,Fighting_force}.
+% 	%%属性计算
+% 	{CurrentAttributes,_CurrentBuffers, _ChangeAttribute} 
+% 	= compute_buffers:compute(Class, Level, get(current_attribute), get(current_buffer), [], [],BaseAttr,[],OtherAttr,[]),
+% 	put(current_attribute, CurrentAttributes),
+% 	Power = attribute:get_current(CurrentAttributes,power),
+% 	Hprecover = attribute:get_current(CurrentAttributes,hprecover),
+% 	CriDerate = attribute:get_current(CurrentAttributes,criticaldestroyrate),
+% 	Mprecover = attribute:get_current(CurrentAttributes,mprecover),
+% 	MovespeedRate = attribute:get_current(CurrentAttributes,movespeed),
+% 	Meleeimmunity = attribute:get_current(CurrentAttributes,meleeimmunity),
+% 	Rangeimmunity = attribute:get_current(CurrentAttributes,rangeimmunity),
+% 	Magicimmunity = attribute:get_current(CurrentAttributes,magicimmunity),
+% 	Hpmax = attribute:get_current(CurrentAttributes,hpmax),
+% 	Mpmax = attribute:get_current(CurrentAttributes,mpmax),
+% 	Stamina = attribute:get_current(CurrentAttributes,stamina),
+% 	Strength = attribute:get_current(CurrentAttributes,strength),
+% 	Intelligence = attribute:get_current(CurrentAttributes,intelligence),
+% 	Agile = attribute:get_current(CurrentAttributes,agile),
+% 	Meleedefense = attribute:get_current(CurrentAttributes,meleedefense),
+% 	Rangedefense = attribute:get_current(CurrentAttributes,rangedefense),
+% 	Magicdefense = attribute:get_current(CurrentAttributes,magicdefense),
+% 	Hitrate = attribute:get_current(CurrentAttributes,hitrate),
+% 	Dodge = attribute:get_current(CurrentAttributes,dodge),
+% 	Criticalrate = attribute:get_current(CurrentAttributes,criticalrate),
+% 	Toughness = attribute:get_current(CurrentAttributes,toughness),
+% 	Imprisonment_resist = attribute:get_current(CurrentAttributes,imprisonment_resist),
+% 	Silence_resist = attribute:get_current(CurrentAttributes,silence_resist),
+% 	Daze_resist = attribute:get_current(CurrentAttributes,daze_resist),
+% 	Poison_resist = attribute:get_current(CurrentAttributes,poison_resist),
+% 	Normal_resist = attribute:get_current(CurrentAttributes,normal_resist),
+% 	Fighting_force = role_fighting_force:computter_fight_force(Hpmax,Power,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,
+% 					  CriDerate,Toughness,Meleeimmunity,Rangeimmunity,Magicimmunity),
+% 	{Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
+% 	Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
+% 	Daze_resist,Poison_resist,Normal_resist,Fighting_force}.
 	
 read_from_roledb(Role_id)->
 	RoleInfo = base_role_db:get_role_info(Role_id),
@@ -1534,36 +1791,36 @@ read_from_roledb(Role_id)->
 	Honor = base_role_db:get_honor(RoleInfo),
 	{Role_pos,Silver,BoundSilver,Role_Level,Gold,Ticket,Role_Class,Expr,Hp,Mp,Role_name,ClassBase,Commoncool,PackSize,GroupID,Gender,GuildId,AllBuffersInfo,TrainingInfo,OffLine,PvPinfo,PetInfo,SoulPowerInfo,StallName,Honor}.
 	
-async_write_to_roledb()->
-	RoleInfo = get(creature_info),
-	RoleId = get_id_from_roleinfo(RoleInfo),
-	Pos = get_pos_from_roleinfo(RoleInfo),
-	Silver = get_silver_from_roleinfo(RoleInfo),
-	BoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
-	Level = get_level_from_roleinfo(RoleInfo),
-	Gold = get_gold_from_roleinfo(RoleInfo),
-	Gift = get_ticket_from_roleinfo(RoleInfo),
-	Exp = get_exp_from_roleinfo(RoleInfo),
-	Hp = get_life_from_roleinfo(RoleInfo),
-	Mana = get_mana_from_roleinfo(RoleInfo),
-	Mapid = get_mapid_from_mapinfo(get(map_info)),
-	Packagesize = package_op:get_size(),	
-	Bufflist = buffer_op:export_for_db(),
-	GroupId = group_op:get_id(),
-	GuildId = guild_util:get_guild_id(),
-	TrainInfo = block_training_op:export_for_db(),
-	Account = get(account_id),
-	Name = get_name_from_roleinfo(RoleInfo),
-	Sex = get_gender_from_roleinfo(RoleInfo),
-	Class = get_class_from_roleinfo(RoleInfo),
-	Honor = get_honor_from_roleinfo(RoleInfo),
-	FightForce = get_fighting_force_from_roleinfo(RoleInfo),
-	PvPInfo = {get_pkmodel_from_roleinfo(RoleInfo),get_crime_from_roleinfo(RoleInfo)},
-	Pet = pet_op:save_roleinfo_to_db(),
-	Offline = base_timer_server:get_correct_now(),
-	SoulPower = role_soulpower:export_for_db(),
-	StallName = auction_op:export_for_db(),
-	base_role_db:async_write_roleattr({RoleId,Account,Name,Sex,Class,Level,Exp,Hp,Mana,Gold,Gift,Silver,BoundSilver,Mapid,Pos,Bufflist,TrainInfo,Packagesize,GroupId,GuildId,PvPInfo,Pet,Offline,SoulPower,StallName,Honor,FightForce}).
+% async_write_to_roledb()->
+% 	RoleInfo = get(creature_info),
+% 	RoleId = get_id_from_roleinfo(RoleInfo),
+% 	Pos = get_pos_from_roleinfo(RoleInfo),
+% 	Silver = get_silver_from_roleinfo(RoleInfo),
+% 	BoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
+% 	Level = get_level_from_roleinfo(RoleInfo),
+% 	Gold = get_gold_from_roleinfo(RoleInfo),
+% 	Gift = get_ticket_from_roleinfo(RoleInfo),
+% 	Exp = get_exp_from_roleinfo(RoleInfo),
+% 	Hp = get_life_from_roleinfo(RoleInfo),
+% 	Mana = get_mana_from_roleinfo(RoleInfo),
+% 	Mapid = get_mapid_from_mapinfo(get(map_info)),
+% 	Packagesize = package_op:get_size(),	
+% 	Bufflist = buffer_op:export_for_db(),
+% 	GroupId = group_op:get_id(),
+% 	GuildId = guild_util:get_guild_id(),
+% 	TrainInfo = block_training_op:export_for_db(),
+% 	Account = get(account_id),
+% 	Name = get_name_from_roleinfo(RoleInfo),
+% 	Sex = get_gender_from_roleinfo(RoleInfo),
+% 	Class = get_class_from_roleinfo(RoleInfo),
+% 	Honor = get_honor_from_roleinfo(RoleInfo),
+% 	FightForce = get_fighting_force_from_roleinfo(RoleInfo),
+% 	PvPInfo = {get_pkmodel_from_roleinfo(RoleInfo),get_crime_from_roleinfo(RoleInfo)},
+% 	Pet = pet_op:save_roleinfo_to_db(),
+% 	Offline = base_timer_server:get_correct_now(),
+% 	SoulPower = role_soulpower:export_for_db(),
+% 	StallName = auction_op:export_for_db(),
+% 	base_role_db:async_write_roleattr({RoleId,Account,Name,Sex,Class,Level,Exp,Hp,Mana,Gold,Gift,Silver,BoundSilver,Mapid,Pos,Bufflist,TrainInfo,Packagesize,GroupId,GuildId,PvPInfo,Pet,Offline,SoulPower,StallName,Honor,FightForce}).
 		
 	
 %%write_to_roledb()->
@@ -1965,7 +2222,8 @@ proc_attack_judged_error(JudgeResult,SelfId, SkillID, TargetID)->
 
 apply_skill_attr_changed(SelfInfo,ChangedAttr)->
 	lists:foldl(fun(Attr,Info)->
-			self_update_and_broad([Attr]),					%%TODO:或许有一些不需要广播,以后看技能需求
+			% self_update_and_broad([Attr]),					%%TODO:或许有一些不需要广播,以后看技能需求
+			apply_component(role_update_broad_component,self_update_and_broad,[[Attr]]),
 			role_attr:to_creature_info(Attr,Info)						
 		end,SelfInfo,ChangedAttr).
 
@@ -1973,6 +2231,7 @@ apply_skill_attr_changed(SelfInfo,ChangedAttr)->
 %% 切换并更新角色状态
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 switch_to_gaming_state(RoleId) ->
+	?ZSS(),
 	put(creature_info, set_state_to_roleinfo(get(creature_info), gaming)),	    
 	update_role_info(RoleId, get(creature_info)),
 	gaming.
@@ -1990,7 +2249,8 @@ switch_to_moving_state(_RoleId,Path) ->
 update_role_info()->
 	update_role_info(get(roleid),get(creature_info)).	
 update_role_info(RoleId, RoleInfo) ->
-	role_manager:regist_role_info(RoleId, RoleInfo).
+	?ZSS("RoleId:~p RoleInfo:~p",[RoleId,RoleInfo]),
+	base_role_manager:regist_role_info(RoleId, RoleInfo).
 
 %%TODO:crash后暂时直接退出
 crash_store() ->
@@ -2008,9 +2268,10 @@ kick_out(KickRoleId)->
 			base_tcp_client_statem:kick_client(GateProc )
 	end,
     %%%%如果玩家信息还在,进行退出清理
-    do_cleanup(uninit,KickRoleId),
+    % do_cleanup(uninit,KickRoleId),
+    apply_component(instance_op_component,do_cleanup,[uninit,KickRoleId]),
     %%停止进程(不重启,无论如何都要做此步!)
-	role_manager:stop_self_process(get(map_info),node(),KickRoleId).
+	base_role_manager:stop_self_process(get(map_info),node(),KickRoleId).
 
 crash_recovery(RoleInfo) ->
 	%% 说明: 我们先暂时保证游戏的逻辑正确性, 对于游戏容错的处理如果前期做的很多，则有很多问题不能及时暴露，
@@ -2021,156 +2282,158 @@ crash_recovery(RoleInfo) ->
 	put(gate_info, GateInfo),
 	put(creature_info, RoleInfo).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 进程退出做一些清理工作:Tag:change_map / uninit
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-do_cleanup(Tag,RoleId)->
-		MapInfo = get(map_info),
-		RoleInfo = get(creature_info),						
-		try	
-			case Tag of 
-				uninit->				%%下线不会执行change_map里的script on_leave,所以这里要主动掉一下.	
-					map_script:run_script(on_leave);
-				_->
-					nothing
-			end,	
-			leave_map(RoleInfo, MapInfo)		%%离开地图
-		catch
-			E1:R1-> base_logger_util:info_msg("base_role_op:do_cleanup creature_op:leave_map error ~p:~p~n",[E1,R1])
-		end,			
-		try
-			uninit(Tag,RoleId)							%%卸载
-		catch
-			E2:R2-> base_logger_util:info_msg("base_role_op:do_cleanup uninit error ~p:~p ~p ~n",[E2,R2,erlang:get_stacktrace()])
-		end,	
-		if
-			Tag =:= uninit-> 
-				%%从全局角色信息中卸载
-				role_server_travel:hook_on_offline(),
-				role_pos_db:unreg_role_pos_to_mnesia(RoleId);
-			true->
-				nothing
-		end,
-		try
-			%%从ets卸载
-			role_manager:unregist_role_info(RoleId),
-			pet_manager:unregist_pet_info(pet_op:get_out_pet_id())
-		catch
-			E4:R4-> base_logger_util:info_msg("base_role_op:do_cleanup unregist_role_info error ~p:~p~n",[E4,R4])
-		end.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% 进程退出做一些清理工作:Tag:change_map / uninit
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% do_cleanup(Tag,RoleId)->
+% 		MapInfo = get(map_info),
+% 		RoleInfo = get(creature_info),						
+% 		try	
+% 			case Tag of 
+% 				uninit->				%%下线不会执行change_map里的script on_leave,所以这里要主动掉一下.	
+% 					map_script:run_script(on_leave);
+% 				_->
+% 					nothing
+% 			end,	
+% 			leave_map(RoleInfo, MapInfo)		%%离开地图
+% 		catch
+% 			E1:R1-> base_logger_util:info_msg("base_role_op:do_cleanup creature_op:leave_map error ~p:~p~n",[E1,R1])
+% 		end,			
+% 		try
+% 			% uninit(Tag,RoleId)							%%卸载
+% 			apply_component(role_uninit_component,uninit,[Tag,RoleId])
+% 		catch
+% 			E2:R2-> base_logger_util:info_msg("base_role_op:do_cleanup uninit error ~p:~p ~p ~n",[E2,R2,erlang:get_stacktrace()])
+% 		end,	
+% 		if
+% 			Tag =:= uninit-> 
+% 				%%从全局角色信息中卸载
+% 				role_server_travel:hook_on_offline(),
+% 				role_pos_db:unreg_role_pos_to_mnesia(RoleId);
+% 			true->
+% 				nothing
+% 		end,
+% 		try
+% 			%%从ets卸载
+% 			base_role_manager:unregist_role_info(RoleId),
+% 			pet_manager:unregist_pet_info(pet_op:get_out_pet_id())
+% 		catch
+% 			E4:R4-> base_logger_util:info_msg("base_role_op:do_cleanup unregist_role_info error ~p:~p~n",[E4,R4])
+% 		end.
 	
 
-on_change_map(_NewMapId,_LineId,NewMapProcName)->
-	map_script:run_script(on_leave),
-	instance_op:on_change_map(NewMapProcName),
-	%%这个操作可能会导致玩家进程状态变化,由map_complate重新进入地图的时候,再设置玩家进程状态
-	role_sitdown_op:hook_on_action_sync_interrupt(base_timer_server:get_correct_now(),leave_map).	
+% on_change_map(_NewMapId,_LineId,NewMapProcName)->
+% 	map_script:run_script(on_leave),
+% 	instance_op:on_change_map(NewMapProcName),
+% 	%%这个操作可能会导致玩家进程状态变化,由map_complate重新进入地图的时候,再设置玩家进程状态
+% 	role_sitdown_op:hook_on_action_sync_interrupt(base_timer_server:get_correct_now(),leave_map).	
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 在同一节点更换地图
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-change_map_in_same_node(MapInfo,NewNode,NewMapProcName,NewMapId,LineId,X,Y) ->
-	on_change_map(NewMapId,LineId,NewMapProcName),
-	RoleInfo = get(creature_info),
-	leave_map(RoleInfo, MapInfo),
-	GS_system_map_info = #gs_system_map_info{map_id=NewMapId,
-						 line_id=LineId, 
-						 map_proc=NewMapProcName, 
-						 map_node=NewNode},                                    
-	put(map_info, create_mapinfo(NewMapId, LineId,NewNode, NewMapProcName, ?GRID_WIDTH)),	
-	put(creature_info, set_path_to_roleinfo(get(creature_info), [])),
-	put(creature_info, set_pos_to_roleinfo(get(creature_info), {X, Y})),
-	put(creature_info, set_mapinfo_to_roleinfo(get(creature_info), GS_system_map_info)), 
-	update_role_info(get(roleid), get(creature_info)),
-	%%node未改变,需要更新Line,MapId
-	role_pos_util:update_role_line_map(get(roleid),LineId,NewMapId),
-	NpcInfoDB = npc_op:make_npcinfo_db_name(NewMapProcName),
-	put(npcinfo_db,NpcInfoDB),
-	Map_db = base_map_db_processor_server:make_db_name(NewMapId),
-	put(map_db,Map_db),			
-	put(last_req_pos,{X, Y}),
-	%%通知guild节点 更新line mapid
-	guild_op:change_map(LineId,NewMapId),
-	notify_gate_map_change(RoleInfo, NewMapId),
-	notify_client_map_change(NewMapId, LineId, X, Y).
+% change_map_in_same_node(MapInfo,NewNode,NewMapProcName,NewMapId,LineId,X,Y) ->
+% 	on_change_map(NewMapId,LineId,NewMapProcName),
+% 	RoleInfo = get(creature_info),
+% 	leave_map(RoleInfo, MapInfo),
+% 	GS_system_map_info = #gs_system_map_info{map_id=NewMapId,
+% 						 line_id=LineId, 
+% 						 map_proc=NewMapProcName, 
+% 						 map_node=NewNode},                                    
+% 	put(map_info, create_mapinfo(NewMapId, LineId,NewNode, NewMapProcName, ?GRID_WIDTH)),	
+% 	put(creature_info, set_path_to_roleinfo(get(creature_info), [])),
+% 	put(creature_info, set_pos_to_roleinfo(get(creature_info), {X, Y})),
+% 	put(creature_info, set_mapinfo_to_roleinfo(get(creature_info), GS_system_map_info)), 
+% 	update_role_info(get(roleid), get(creature_info)),
+% 	%%node未改变,需要更新Line,MapId
+% 	role_pos_util:update_role_line_map(get(roleid),LineId,NewMapId),
+% 	NpcInfoDB = npc_op:make_npcinfo_db_name(NewMapProcName),
+% 	put(npcinfo_db,NpcInfoDB),
+% 	Map_db = base_map_db_util:make_db_name(NewMapId),
+% 	put(map_db,Map_db),			
+% 	put(last_req_pos,{X, Y}),
+% 	%%通知guild节点 更新line mapid
+% 	guild_op:change_map(LineId,NewMapId),
+% 	notify_gate_map_change(RoleInfo, NewMapId),
+% 	notify_client_map_change(NewMapId, LineId, X, Y).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 在不同一节点更换地图: 开始阶段
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-change_map_in_other_node_begin(MapInfo, NewNode, NewMapProcName, NewMapId, LineId, X, Y) ->
-	on_change_map(NewMapId,LineId,NewMapProcName),
-	RoleInfo = get(creature_info),
-	Gs_New_Map_info = set_proc_to_mapinfo(MapInfo, NewMapProcName),
-	Gs_New_Map_info1 = set_node_to_mapinfo(Gs_New_Map_info, NewNode),
-	Gs_New_Map_info2 = set_mapid_to_mapinfo(Gs_New_Map_info1, NewMapId),
-	Gs_New_Map_info3 = set_lineid_to_mapinfo(Gs_New_Map_info2,LineId),
-	role_server_travel:hook_on_trans_map_by_node(Gs_New_Map_info3),
-	case role_manager:start_copy_role(Gs_New_Map_info3, RoleInfo, get(gate_info),X,Y,
-	export_for_copy()) of
-		error->
-			role_server_travel:hook_on_trans_map_faild(),
-			Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_MAPID),
-			send_data_to_gate(Message),						
-			base_logger_util:info_msg("change_map_in_other_node_begin error ~p ~n",[get(roleid)]);
-		ok->
-			%%先把内存拷贝过去,才离开当前地图,所以在do_cleanup(change_map)里不能做改变内存的操作
-			do_cleanup(change_map,get(roleid)),
-			role_manager:stop_self_process(get(map_info),node(),get(roleid))
-	end.
+% change_map_in_other_node_begin(MapInfo, NewNode, NewMapProcName, NewMapId, LineId, X, Y) ->
+% 	on_change_map(NewMapId,LineId,NewMapProcName),
+% 	RoleInfo = get(creature_info),
+% 	Gs_New_Map_info = set_proc_to_mapinfo(MapInfo, NewMapProcName),
+% 	Gs_New_Map_info1 = set_node_to_mapinfo(Gs_New_Map_info, NewNode),
+% 	Gs_New_Map_info2 = set_mapid_to_mapinfo(Gs_New_Map_info1, NewMapId),
+% 	Gs_New_Map_info3 = set_lineid_to_mapinfo(Gs_New_Map_info2,LineId),
+% 	role_server_travel:hook_on_trans_map_by_node(Gs_New_Map_info3),
+% 	case base_role_manager:start_copy_role(Gs_New_Map_info3, RoleInfo, get(gate_info),X,Y,
+% 	export_for_copy()) of
+% 		error->
+% 			role_server_travel:hook_on_trans_map_faild(),
+% 			Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_MAPID),
+% 			send_data_to_gate(Message),						
+% 			base_logger_util:info_msg("change_map_in_other_node_begin error ~p ~n",[get(roleid)]);
+% 		ok->
+% 			%%先把内存拷贝过去,才离开当前地图,所以在do_cleanup(change_map)里不能做改变内存的操作
+% 			% do_cleanup(change_map,get(roleid)),
+% 			apply_component(instance_op_component,do_cleanup,[change_map,get(roleid)]),
+% 			base_role_manager:stop_self_process(get(map_info),node(),get(roleid))
+% 	end.
 	
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 在不同一节点更换地图: 切换阶段
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-change_map_in_other_node_end(RoleInfo, MapInfo, X, Y) ->
-        %%向http_client 发送更改map消息
-	MapInfo = get(map_info),
-	LineId = get_lineid_from_mapinfo(MapInfo),
-	NewMapId = get_mapid_from_mapinfo(MapInfo),
-	%%通知guild节点 更新line mapid
-	guild_op:change_map(LineId,NewMapId),
-	%% 通知服务器通知客户端
-	notify_gate_map_change(RoleInfo, NewMapId),
-	notify_client_map_change(NewMapId, LineId, X, Y).
+% change_map_in_other_node_end(RoleInfo, MapInfo, X, Y) ->
+%         %%向http_client 发送更改map消息
+% 	MapInfo = get(map_info),
+% 	LineId = get_lineid_from_mapinfo(MapInfo),
+% 	NewMapId = get_mapid_from_mapinfo(MapInfo),
+% 	%%通知guild节点 更新line mapid
+% 	guild_op:change_map(LineId,NewMapId),
+% 	%% 通知服务器通知客户端
+% 	notify_gate_map_change(RoleInfo, NewMapId),
+% 	notify_client_map_change(NewMapId, LineId, X, Y).
 
-notify_client_map_change(NewMapId, LineId, X, Y) ->
-	send_data_to_gate(role_packet:encode_role_map_change_s2c({X,Y}, NewMapId, LineId)).
+% notify_client_map_change(NewMapId, LineId, X, Y) ->
+% 	send_data_to_gate(role_packet:encode_role_map_change_s2c({X,Y}, NewMapId, LineId)).
 
-notify_gate_map_change(RoleInfo, NewMapId) ->
-	GateProc = get_proc_from_gs_system_gateinfo(get(gate_info)),
-	GateNode = get_node_from_gs_system_gateinfo(get(gate_info)),
-	RoleId = creature_op:get_id_from_creature_info(RoleInfo),
-	base_tcp_client_statem:mapid_change(GateNode, GateProc, node(), NewMapId, make_role_proc_name(RoleId)).
+% notify_gate_map_change(RoleInfo, NewMapId) ->
+% 	GateProc = get_proc_from_gs_system_gateinfo(get(gate_info)),
+% 	GateNode = get_node_from_gs_system_gateinfo(get(gate_info)),
+% 	RoleId = creature_op:get_id_from_creature_info(RoleInfo),
+% 	base_tcp_client_statem:mapid_change(GateNode, GateProc, node(), NewMapId, make_role_proc_name(RoleId)).
 
-change_line(LineId)->
-	MapInfo = get(map_info),
-	RoleInfo = get(creature_info),
-	MapId = get_mapid_from_mapinfo(MapInfo ),
-	OldMapNode = get_node_from_mapinfo(MapInfo),
-	{X,Y} = get_pos_from_roleinfo(RoleInfo ),
-	BaseCheck = (not instance_op:is_in_instance()) and (not is_dead()), 
-	if
-		BaseCheck->									%%副本中不允许换线
-			case is_leave_attack() of
-				true->
-				    case lines_manager:get_map_name(LineId, MapId) of
-						{ok,{MapNode,MapProcName}}->
-							case OldMapNode =:= MapNode of
-								true ->				
-									change_map_in_same_node(MapInfo,MapNode,MapProcName,MapId,LineId,X,Y);
-								false ->				
-									change_map_in_other_node_begin(MapInfo,MapNode,MapProcName,MapId,LineId,X,Y)
-							end;
-						_->
-							nothing
-					end;
-				_->
-					Message = role_packet:encode_map_change_failed_s2c(?ERROR_NOT_LEAVE_ATTACK),
-					send_data_to_gate(Message)			
-			end;
-		true->
-			nothing
-	end.
+% change_line(LineId)->
+% 	MapInfo = get(map_info),
+% 	RoleInfo = get(creature_info),
+% 	MapId = get_mapid_from_mapinfo(MapInfo ),
+% 	OldMapNode = get_node_from_mapinfo(MapInfo),
+% 	{X,Y} = get_pos_from_roleinfo(RoleInfo ),
+% 	BaseCheck = (not instance_op:is_in_instance()) and (not is_dead()), 
+% 	if
+% 		BaseCheck->									%%副本中不允许换线
+% 			case is_leave_attack() of
+% 				true->
+% 				    case lines_manager:get_map_name(LineId, MapId) of
+% 						{ok,{MapNode,MapProcName}}->
+% 							case OldMapNode =:= MapNode of
+% 								true ->				
+% 									change_map_in_same_node(MapInfo,MapNode,MapProcName,MapId,LineId,X,Y);
+% 								false ->				
+% 									change_map_in_other_node_begin(MapInfo,MapNode,MapProcName,MapId,LineId,X,Y)
+% 							end;
+% 						_->
+% 							nothing
+% 					end;
+% 				_->
+% 					Message = role_packet:encode_map_change_failed_s2c(?ERROR_NOT_LEAVE_ATTACK),
+% 					send_data_to_gate(Message)			
+% 			end;
+% 		true->
+% 			nothing
+% 	end.
 	
 %%触发传送点	
 touch_teleporter(RoleInfo, MapInfo, TargetMap, TransId) ->
@@ -2195,41 +2458,41 @@ touch_teleporter(RoleInfo, MapInfo, TargetMap, TransId) ->
         end.
 %%	end.
 
-get_best_map(MapId,LineIdOri)->
-	case (LineIdOri =:= ?INSTANCE_LINEID) and instance_op:is_in_instance() of		%%transport in instance
-		true->
-			LineId = instance_op:get_old_line();
-		_->
-			LineId = LineIdOri
-	end,
-	case lines_manager:get_map_name(LineId, MapId) of
-			{ok,{MapNode,MapProcName}}->{ok,{LineId,MapNode,MapProcName}};
-			{error}-> %%当前地图对应的线路错误
-				case lines_manager:get_line_status(MapId)  of	 %%获取线路状态
-					error-> {error};
-					LineInfos->
-						{NewLineId,_RoleCount}=line_util:get_min_count_of_lines(LineInfos), %%得到最小人数的线路
-						case lines_manager:get_map_name(NewLineId, MapId) of %%再次查询地图和节点
-							{ok,{MapNode,MapProcName}}->{ok,{NewLineId,MapNode,MapProcName}};
-							{error}-> {error}
-						end
-				end
-	end.
-transport(RoleInfo, MapInfo,LineId,MapId,{X,Y} = Coord) ->		
-        OldMapNode = get_node_from_mapinfo(MapInfo),
-        case get_best_map(MapId,LineId) of
-			{ok,{NewLineId,MapNode,MapProcName}}->
-				case OldMapNode =:= MapNode of
-					true ->
-						change_map_in_same_node(MapInfo,MapNode,MapProcName,MapId,NewLineId,X,Y);
-					false ->
-						change_map_in_other_node_begin(MapInfo,MapNode,MapProcName,MapId,NewLineId,X,Y)
-				end;
-			{error}->
-				Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_MAPID),
-				send_data_to_gate(Message),
-				base_logger_util:info_msg("MAP CHANGE failed lines_manager:get_map_name error!!!!!!!!!\n")
-		end.  
+% get_best_map(MapId,LineIdOri)->
+% 	case (LineIdOri =:= ?INSTANCE_LINEID) and instance_op:is_in_instance() of		%%transport in instance
+% 		true->
+% 			LineId = instance_op:get_old_line();
+% 		_->
+% 			LineId = LineIdOri
+% 	end,
+% 	case lines_manager:get_map_name(LineId, MapId) of
+% 			{ok,{MapNode,MapProcName}}->{ok,{LineId,MapNode,MapProcName}};
+% 			{error}-> %%当前地图对应的线路错误
+% 				case lines_manager:get_line_status(MapId)  of	 %%获取线路状态
+% 					error-> {error};
+% 					LineInfos->
+% 						{NewLineId,_RoleCount}=line_util:get_min_count_of_lines(LineInfos), %%得到最小人数的线路
+% 						case lines_manager:get_map_name(NewLineId, MapId) of %%再次查询地图和节点
+% 							{ok,{MapNode,MapProcName}}->{ok,{NewLineId,MapNode,MapProcName}};
+% 							{error}-> {error}
+% 						end
+% 				end
+% 	end.
+% transport(RoleInfo, MapInfo,LineId,MapId,{X,Y} = Coord) ->		
+%         OldMapNode = get_node_from_mapinfo(MapInfo),
+%         case get_best_map(MapId,LineId) of
+% 			{ok,{NewLineId,MapNode,MapProcName}}->
+% 				case OldMapNode =:= MapNode of
+% 					true ->
+% 						change_map_in_same_node(MapInfo,MapNode,MapProcName,MapId,NewLineId,X,Y);
+% 					false ->
+% 						change_map_in_other_node_begin(MapInfo,MapNode,MapProcName,MapId,NewLineId,X,Y)
+% 				end;
+% 			{error}->
+% 				Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_MAPID),
+% 				send_data_to_gate(Message),
+% 				base_logger_util:info_msg("MAP CHANGE failed lines_manager:get_map_name error!!!!!!!!!\n")
+% 		end.  
 
 
 transport_by_npc(RoleInfo, MapInfo, NpcId,Id)->
@@ -2248,7 +2511,7 @@ timer_check(RoleInfo, LastTick, NowTime) ->
 %%					base_logger_util:info_msg("too long time no event ,exit this processor \n"),
 					%%RoleId = get_id_from_roleinfo(RoleInfo),
 					%%Pid = creature_op:get_pid_from_creature_info(get(creature_info)),
-					%%role_manager:stop_role_processor(node(),RoleId,Pid,uninit);
+					%%base_role_manager:stop_role_processor(node(),RoleId,Pid,uninit);
 					todo;
 				false ->
 					%% 未超时
@@ -2256,20 +2519,20 @@ timer_check(RoleInfo, LastTick, NowTime) ->
 			end
 	end.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 返回快捷栏的内容
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-send_display_hotbar(RoleInfo) ->
-	RoleId = get_id_from_roleinfo(RoleInfo),
-	EntryList = skill_db:get_quick_bar(RoleId),
-	Message = role_packet:encode_display_hotbar_s2c(EntryList),
-	send_data_to_gate(Message).
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% 返回快捷栏的内容
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% send_display_hotbar(RoleInfo) ->
+% 	RoleId = get_id_from_roleinfo(RoleInfo),
+% 	EntryList = skill_db:get_quick_bar(RoleId),
+% 	Message = role_packet:encode_display_hotbar_s2c(EntryList),
+% 	send_data_to_gate(Message).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 更新快捷栏的内容
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-update_hotbar(SlotId, ClassId, EntryId) ->
-	skill_db:update_quick_bar(get(roleid), SlotId, ClassId, EntryId).
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% 更新快捷栏的内容
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% update_hotbar(SlotId, ClassId, EntryId) ->
+% 	skill_db:update_quick_bar(get(roleid), SlotId, ClassId, EntryId).
 
 process_sing_complete(RoleInfo, TargetID, SkillID, SkillLevel, FlyTime) ->
 	SelfID = get_id_from_roleinfo(RoleInfo),
@@ -2387,18 +2650,19 @@ apply_buffers_with_starttime(NewBuffers_with_Time)->
 				nothing
 	end.
 	
-init_buffers_by_node(NewBuffers_with_Time)->
-	%% 触发由Buffer导致的事件
- 	lists:foreach(fun({BufferID, BufferLevel,StartTime,CasterInfo}) ->
-				      buffer_op:generate_interval(BufferID, BufferLevel, 0,StartTime,CasterInfo)
-			  end, NewBuffers_with_Time).
+% init_buffers_by_node(NewBuffers_with_Time)->
+% 	%% 触发由Buffer导致的事件
+%  	lists:foreach(fun({BufferID, BufferLevel,StartTime,CasterInfo}) ->
+% 				      buffer_op:generate_interval(BufferID, BufferLevel, 0,StartTime,CasterInfo)
+% 			  end, NewBuffers_with_Time).
 	
 %%init使用,不用处理覆盖
 init_buffers_on_role(NewBuffers_with_Time)->
 	NewBuffers = lists:map(fun({Id,Level,_,_})-> {Id,Level} end,NewBuffers_with_Time),	
 	case (NewBuffers =/= []) of
 		true->
-			recompute_attr( NewBuffers, []),					
+			% recompute_attr( NewBuffers, []),
+			apply_component(role_attr_component,recompute_attr,[ NewBuffers, []]),				
 			put(current_buffer, lists:ukeymerge(1, NewBuffers, get(current_buffer))),		
 			apply_buffers_with_starttime(NewBuffers_with_Time);
 		false->
@@ -2437,7 +2701,8 @@ be_add_buffer(NewBuffersOri,CasterInfo) ->
 			{NewBuffers2,RemoveBuff} = lists:foldl(Fun,{[],[]},NewBuffers),
 			case (RemoveBuff =/= []) or (NewBuffers2 =/= []) of
 				true->			
-					recompute_attr( NewBuffers2, RemoveBuff),
+					% recompute_attr( NewBuffers2, RemoveBuff),
+					apply_component(role_attr_component,recompute_attr,[NewBuffers2, RemoveBuff]),
 					put(current_buffer, lists:ukeymerge(1, NewBuffers2, get(current_buffer))),
 					NewBuffers_with_Time = lists:map(fun({BufferID, BufferLevel})->{BufferID, BufferLevel,base_timer_server:get_correct_now(),CasterInfo} end,NewBuffers2),
 					apply_buffers_with_starttime(NewBuffers_with_Time),
@@ -2460,7 +2725,8 @@ stop_move(RoleInfo)->
 %%单独完整删除一个buff
 remove_buffer({BufferId,BufferLevel}) ->
 	remove_without_compute({BufferId,BufferLevel}),
-	recompute_attr([],[{BufferId,BufferLevel}]).
+	% recompute_attr([],[{BufferId,BufferLevel}]).
+	apply_component(role_attr_component,recompute_attr,[[],[{BufferId,BufferLevel}]]).
 
 %%删除多个BuffList:{BuffId,Level}	
 remove_buffers([])->
@@ -2470,7 +2736,8 @@ remove_buffers(OriBuffList)->
 	lists:foreach(fun(BuffInfo)->
 			remove_without_compute(BuffInfo)
 		end,BuffList),
-	recompute_attr([],BuffList).	
+	% recompute_attr([],BuffList).
+	apply_component(role_attr_component,recompute_attr,[[],BuffList]).
 
 %%没有update_role_info&&没有重新计算属性
 remove_without_compute({BufferId,BufferLevel})->
@@ -2491,77 +2758,77 @@ remove_without_compute({BufferId,BufferLevel})->
 			nothing
 	end.
 
-%%重新计算buff
-recompute_attr(NewBuffers2,RemoveBuff)->
-	BaseAttr = get(base_attr),
-	RemoveBaseAttr = [],
-	OtherAttr = get(other_attr),
-	RemoveAotherAttr = [], 
-	recompute_attr(NewBuffers2,RemoveBuff,BaseAttr,RemoveBaseAttr,OtherAttr,RemoveAotherAttr).
+% %%重新计算buff
+% recompute_attr(NewBuffers2,RemoveBuff)->
+% 	BaseAttr = get(base_attr),
+% 	RemoveBaseAttr = [],
+% 	OtherAttr = get(other_attr),
+% 	RemoveAotherAttr = [], 
+% 	recompute_attr(NewBuffers2,RemoveBuff,BaseAttr,RemoveBaseAttr,OtherAttr,RemoveAotherAttr).
 
-%%重新计算基础属性（装备，修为，技能 ）	
-recompute_base_attr()->
-	RemoveBaseAttr = get(base_attr),
-	NewBaseAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_base_attr()),
-	put(base_attr,NewBaseAttr),
-	OtherAttr = get(other_attr),
-	RemoveOtherAttr = [], 
-	recompute_attr([], [],NewBaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).
+% %%重新计算基础属性（装备，修为，技能 ）	
+% recompute_base_attr()->
+% 	RemoveBaseAttr = get(base_attr),
+% 	NewBaseAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_base_attr()),
+% 	put(base_attr,NewBaseAttr),
+% 	OtherAttr = get(other_attr),
+% 	RemoveOtherAttr = [], 
+% 	recompute_attr([], [],NewBaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).
 	
-%%重新计算其他属性（宠物等）	
-recompute_other_attr()->
-	RemoveOtherAttr = get(other_attr),
-	OtherAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_other_attr()),
-	put(other_attr,OtherAttr),
-	BaseAttr = get(base_attr),
-	RemoveBaseAttr = [], 
-	recompute_attr([], [],BaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).
+% %%重新计算其他属性（宠物等）	
+% recompute_other_attr()->
+% 	RemoveOtherAttr = get(other_attr),
+% 	OtherAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_other_attr()),
+% 	put(other_attr,OtherAttr),
+% 	BaseAttr = get(base_attr),
+% 	RemoveBaseAttr = [], 
+% 	recompute_attr([], [],BaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).
 	
 
 %%
 %%重新计算装备的属性
 %%
-recompute_equipment_attr()->
-	recompute_base_attr().
+% recompute_equipment_attr()->
+% 	recompute_base_attr().
 	
-recompute_venation_attr()->
-	recompute_base_attr().	
+% recompute_venation_attr()->
+% 	recompute_base_attr().	
 
-recompute_designation_attr()->
-	recompute_other_attr().
+% recompute_designation_attr()->
+% 	recompute_other_attr().
 	
-recompute_skill_attr()->
-	recompute_base_attr().
+% recompute_skill_attr()->
+% 	recompute_base_attr().
 	
-recompute_pet_attr()->
-	recompute_other_attr().
+% recompute_pet_attr()->
+% 	recompute_other_attr().
 	
 		
-%%重新计算所有属性和buff	新增buff,删除buff,调用在删除或新增buff之后又需要计算装备更换时,省去一次recompute_attr
-recompute_all_attr_after_buff(NewBuffers,RemoveBuff)->
-	RemoveBaseAttr = get(base_attr),
-	NewBaseAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_base_attr()),
-	put(base_attr,NewBaseAttr),
-	RemoveOtherAttr = get(other_attr),
-	OtherAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_other_attr()),		 
-	put(other_attr,OtherAttr),
-	recompute_attr(NewBuffers,RemoveBuff,NewBaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).		
+% %%重新计算所有属性和buff	新增buff,删除buff,调用在删除或新增buff之后又需要计算装备更换时,省去一次recompute_attr
+% recompute_all_attr_after_buff(NewBuffers,RemoveBuff)->
+% 	RemoveBaseAttr = get(base_attr),
+% 	NewBaseAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_base_attr()),
+% 	put(base_attr,NewBaseAttr),
+% 	RemoveOtherAttr = get(other_attr),
+% 	OtherAttr = lists:filter(fun({_,Value})->Value=/=0 end,get_role_other_attr()),		 
+% 	put(other_attr,OtherAttr),
+% 	recompute_attr(NewBuffers,RemoveBuff,NewBaseAttr,RemoveBaseAttr,OtherAttr,RemoveOtherAttr).		
 
-recompute_attr(NewBuffers2,RemoveBuff,BaseAttr,RemoveAttr,OtherAttr,RemoveOtherAttr)->
-	SelfId = get(roleid),
-	{NewAttributes, _CurrentBuffers, ChangeAttribute} = 
-	compute_buffers:compute(get(classid), get(level), get(current_attribute), get(current_buffer), NewBuffers2, RemoveBuff,BaseAttr,RemoveAttr,OtherAttr,RemoveOtherAttr),
-	%%应用属性改变
-	put(current_attribute, NewAttributes),
-	OriInfo = get(creature_info),
-	NewInfo = lists:foldl(fun(Attr,Info)->					
-				 	role_attr:to_creature_info(Attr,Info)
-				 end,OriInfo,ChangeAttribute),	
-	put(creature_info,NewInfo),
-	update_role_info(SelfId,get(creature_info)),
-	%%发送属性改变
-	ChangeAttribute_Hp_Mp = role_attr:preform_to_attrs(ChangeAttribute),
-	self_update_and_broad(ChangeAttribute_Hp_Mp).
+% recompute_attr(NewBuffers2,RemoveBuff,BaseAttr,RemoveAttr,OtherAttr,RemoveOtherAttr)->
+% 	SelfId = get(roleid),
+% 	{NewAttributes, _CurrentBuffers, ChangeAttribute} = 
+% 	compute_buffers:compute(get(classid), get(level), get(current_attribute), get(current_buffer), NewBuffers2, RemoveBuff,BaseAttr,RemoveAttr,OtherAttr,RemoveOtherAttr),
+% 	%%应用属性改变
+% 	put(current_attribute, NewAttributes),
+% 	OriInfo = get(creature_info),
+% 	NewInfo = lists:foldl(fun(Attr,Info)->					
+% 				 	role_attr:to_creature_info(Attr,Info)
+% 				 end,OriInfo,ChangeAttribute),	
+% 	put(creature_info,NewInfo),
+% 	update_role_info(SelfId,get(creature_info)),
+% 	%%发送属性改变
+% 	ChangeAttribute_Hp_Mp = role_attr:preform_to_attrs(ChangeAttribute),
+% 	self_update_and_broad(ChangeAttribute_Hp_Mp).
 
 can_move(RoleInfo) ->
 	Deading = is_dead(),
@@ -2626,7 +2893,8 @@ obtain_exp(AddExp)->
 			update_role_info(RoleId,get(creature_info)),
 			if
 				(Exp =/= 0) -> 
-					only_self_update([{expr, NewExp}]);
+					% only_self_update([{expr, NewExp}]);
+					apply_component(role_update_broad_component,only_self_update,[[{expr, NewExp}]]);
 				true->
 					nothing
 			end; 	
@@ -2643,7 +2911,8 @@ obtain_honor(AddValue)->
 	Honor = get_honor_from_roleinfo(get(creature_info)),
 	CurHonor = Honor + AddValue,
 	put(creature_info,set_honor_to_roleinfo(get(creature_info),CurHonor)),
-	only_self_update([{honor, CurHonor}]).
+	% only_self_update([{honor, CurHonor}]).
+	apply_component(role_update_broad_component,only_self_update,[[{honor, CurHonor}]]).
 
 %%
 %%获得灵力
@@ -2655,7 +2924,8 @@ obtain_soulpower(AddValue)->
 			RoleInfo = get(creature_info),
 			update_role_info(get_id_from_roleinfo(RoleInfo),RoleInfo),
 			CurSoulPower = role_soulpower:get_cursoulpower(),
-			only_self_update([{soulpower, CurSoulPower}]);
+			% only_self_update([{soulpower, CurSoulPower}]);
+			apply_component(role_update_broad_component,only_self_update,[[{soulpower, CurSoulPower}]]);
 		_->
 			nothing
 	end.
@@ -2669,7 +2939,8 @@ consume_soulpower(Value)->
 			RoleInfo = get(creature_info),
 			update_role_info(get_id_from_roleinfo(RoleInfo),RoleInfo),
 			CurSoulPower = role_soulpower:get_cursoulpower(),
-			only_self_update([{soulpower, CurSoulPower}]);
+			% only_self_update([{soulpower, CurSoulPower}]);
+			apply_component(role_update_broad_component,only_self_update,[[{soulpower, CurSoulPower}]]);
 		_->
 			nothing
 	end. 
@@ -2685,8 +2956,10 @@ update_maxsoulpower(MaxValue)->
 	RoleInfo = get(creature_info),
 	CurSoulPower = role_soulpower:get_cursoulpower(),
 	update_role_info(get_id_from_roleinfo(RoleInfo),RoleInfo),
-	only_self_update([{soulpower, CurSoulPower}]),
-	only_self_update([{maxsoulpower, MaxValue}]).
+	% only_self_update([{soulpower, CurSoulPower}]),
+	apply_component(role_update_broad_component,only_self_update,[[{soulpower, CurSoulPower}]]),
+	% only_self_update([{maxsoulpower, MaxValue}]).
+	apply_component(role_update_broad_component,only_self_update,[[{maxsoulpower, MaxValue}]]).
 	
 %%升级,属性改变
 level_up(NewLevel,LeftExp)->
@@ -2701,9 +2974,15 @@ level_up(NewLevel,LeftExp)->
 	pet_op:hook_on_role_levelup(NewLevel),
 	role_soulpower:hook_on_role_levelup(OldLevel,NewLevel),
 	congratulations_op:hook_on_role_levelup(NewLevel),
+	% {Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
+	% Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
+	% Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = compute_attrs(init,NewLevel),
 	{Power,Hprecover,CriDerate,Mprecover,MovespeedRate,Meleeimmunity,Rangeimmunity,Magicimmunity,Hpmax,Mpmax,Stamina,Strength,
 	Intelligence,Agile,Meleedefense,Rangedefense,Magicdefense,Hitrate,Dodge,Criticalrate,Toughness,Imprisonment_resist,Silence_resist,
-	Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = compute_attrs(init,NewLevel),
+	Daze_resist,Poison_resist,Normal_resist,Fighting_Force} = apply_component(role_attr_component,compute_attrs,[init,NewLevel],{power,hprecover,criDerate,
+	mprecover,1,meleeimmunity,rangeimmunity,magicimmunity,hpmax,mpmax,stamina,strength,
+	intelligence,agile,meleedefense,rangedefense,magicdefense,hitrate,dodge,criticalrate,toughness,imprisonment_resist,silence_resist,
+	daze_resist,poison_resist,normal_resist,gighting_Force}),
 	MoveSpeed = erlang:trunc(?BASE_MOVE_SPEED*(100+ MovespeedRate)/100),
 	put(creature_info, set_level_to_roleinfo(get(creature_info), NewLevel)),
 	put(creature_info, set_speed_to_roleinfo(get(creature_info),  MoveSpeed)),
@@ -2770,7 +3049,8 @@ level_up(NewLevel,LeftExp)->
 				{maxsoulpower,role_soulpower:get_maxsoulpower()},
 				{fighting_force, Fighting_Force}
   				],  				
-  	self_update_and_broad(Attributes),
+  	% self_update_and_broad(Attributes),
+  	apply_component(role_update_broad_component,self_update_and_broad,[Attributes]),
   	%%升级调用抽奖
 	role_mainline:hook_level_up(),
   	lottery_op:on_playerlevelup(),
@@ -2911,7 +3191,8 @@ teams_loot(NpcId,ProtoId,Pos,OriMoney,OriExp)->
 			%% send to client 
 			SendMoneyMsg = role_packet:encode_money_from_monster_s2c(NpcId,ProtoId,Money),
 			send_data_to_gate(SendMoneyMsg),
-			money_change(?MONEY_BOUND_SILVER,Money,got_monster); 		%%怪物只掉普通金币
+			% money_change(?MONEY_BOUND_SILVER,Money,got_monster); 		%%怪物只掉普通金币
+			apply_component(role_money_component,money_change,[?MONEY_BOUND_SILVER,Money,got_monster]);
 		true->
 			nothing
 	end,
@@ -3369,152 +3650,152 @@ send_pet_info_from_gmpetinfo(ServerId,GmPetInfo,RoldId)->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-%%
-%%获取人物的基础属性 包含装备和修为
-%%
-get_role_base_attr()->
-	%venation_op:get_venation_attr() ++ get_all_bodyitems_attr() ++ get_skill_add_attr()++wing_op:wing_to_attr_role().
-	venation_op:get_venation_attr() ++ get_all_bodyitems_attr() ++ get_skill_add_attr().
+% %%
+% %%获取人物的基础属性 包含装备和修为
+% %%
+% get_role_base_attr()->
+% 	%venation_op:get_venation_attr() ++ get_all_bodyitems_attr() ++ get_skill_add_attr()++wing_op:wing_to_attr_role().
+% 	venation_op:get_venation_attr() ++ get_all_bodyitems_attr() ++ get_skill_add_attr().
 	
-%%
-%%获取人物的其他属性,WB20130417 add achieve
-%%
-get_role_other_attr()->
-	designation_op:get_designation_attr() ++ get_pet_add_attr()++achieve_op:get_achieve_add_attr()++furnace_op:get_furnace_add_attribute()++astrology_op:get_astrology_add_attribute().
+% %%
+% %%获取人物的其他属性,WB20130417 add achieve
+% %%
+% get_role_other_attr()->
+% 	designation_op:get_designation_attr() ++ get_pet_add_attr()++achieve_op:get_achieve_add_attr()++furnace_op:get_furnace_add_attribute()++astrology_op:get_astrology_add_attribute().
 		
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%得到目前身上所有物品属性，计算套装和全星触发
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%						
-get_all_bodyitems_attr()->
-	BodyItemsId = package_op:get_body_items_id(),
-	BodyItemsInfo = lists:map(fun(Id)-> items_op:get_item_info(Id) end,BodyItemsId ),
-	ItemsAttr1 = lists:foldl(fun(ItemInfo,Attr)->
-			case ItemInfo =/= [] of
-				true ->
-					items_op:get_item_attr(ItemInfo)++Attr ;
-				false ->	
-					base_logger_util:info_msg("get_all_bodyitems_attr,error Itemid in ~p ~n",[BodyItemsId]),
-					Attr
-			end
-			end,[],BodyItemsInfo),
-	EnchantmensetsItems = lists:filter(fun(ItemInfoTmp)->
-					Slot = get_slot_from_iteminfo(ItemInfoTmp),
-					(Slot =/= ?MANTEAU_SLOT) and (Slot =/= ?FASHION_SLOT) and (Slot =/= ?RIDE_SLOT)
-				end,BodyItemsInfo),
-	case erlang:length(EnchantmensetsItems) >= ?SLOT_BODY_ENDEX -3 of
-		true ->				%% 原始装备属性+全星属性+套装属性 
-			MinEnchant = get_item_enchantmentset(BodyItemsInfo),
-			apply_enchantments_changed(MinEnchant),
-			ItemsAttr2 = get_item_enchantmentset_attr(MinEnchant) ++  get_equip_set_attr(BodyItemsInfo)++ItemsAttr1;							
-		false ->			%%装备不足，只计算套装属性
-			apply_enchantments_changed(0),
-			ItemsAttr2 =  get_equip_set_attr(BodyItemsInfo) ++ ItemsAttr1
-	end,
-	%% 当前宠物添加的属性
-%%	ItemsAttr3 = get_pet_add_attr() ++ get_skill_add_attr() ++ ItemsAttr2,
-	%% 经脉添加的属性
-%%	ItemsAttr4 = venation_op:get_venation_attr() ++ ItemsAttr3,
-%%	ItemsAttr5 = designation_op:get_designation_attr()++ItemsAttr4,
-%%	ItemsAttr5.
-	ItemsAttr2.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%得到目前身上所有物品属性，计算套装和全星触发
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%						
+% get_all_bodyitems_attr()->
+% 	BodyItemsId = package_op:get_body_items_id(),
+% 	BodyItemsInfo = lists:map(fun(Id)-> items_op:get_item_info(Id) end,BodyItemsId ),
+% 	ItemsAttr1 = lists:foldl(fun(ItemInfo,Attr)->
+% 			case ItemInfo =/= [] of
+% 				true ->
+% 					items_op:get_item_attr(ItemInfo)++Attr ;
+% 				false ->	
+% 					base_logger_util:info_msg("get_all_bodyitems_attr,error Itemid in ~p ~n",[BodyItemsId]),
+% 					Attr
+% 			end
+% 			end,[],BodyItemsInfo),
+% 	EnchantmensetsItems = lists:filter(fun(ItemInfoTmp)->
+% 					Slot = get_slot_from_iteminfo(ItemInfoTmp),
+% 					(Slot =/= ?MANTEAU_SLOT) and (Slot =/= ?FASHION_SLOT) and (Slot =/= ?RIDE_SLOT)
+% 				end,BodyItemsInfo),
+% 	case erlang:length(EnchantmensetsItems) >= ?SLOT_BODY_ENDEX -3 of
+% 		true ->				%% 原始装备属性+全星属性+套装属性 
+% 			MinEnchant = get_item_enchantmentset(BodyItemsInfo),
+% 			apply_enchantments_changed(MinEnchant),
+% 			ItemsAttr2 = get_item_enchantmentset_attr(MinEnchant) ++  get_equip_set_attr(BodyItemsInfo)++ItemsAttr1;							
+% 		false ->			%%装备不足，只计算套装属性
+% 			apply_enchantments_changed(0),
+% 			ItemsAttr2 =  get_equip_set_attr(BodyItemsInfo) ++ ItemsAttr1
+% 	end,
+% 	%% 当前宠物添加的属性
+% %%	ItemsAttr3 = get_pet_add_attr() ++ get_skill_add_attr() ++ ItemsAttr2,
+% 	%% 经脉添加的属性
+% %%	ItemsAttr4 = venation_op:get_venation_attr() ++ ItemsAttr3,
+% %%	ItemsAttr5 = designation_op:get_designation_attr()++ItemsAttr4,
+% %%	ItemsAttr5.
+% 	ItemsAttr2.
 
-%%得到当前宠物附加给角色的属性
-get_pet_add_attr()->
-	pet_op:get_pet_add_attr().
+% %%得到当前宠物附加给角色的属性
+% get_pet_add_attr()->
+% 	pet_op:get_pet_add_attr().
 
-%%被动技能附加属性	
-get_skill_add_attr()->
-	SkillBuff = skill_op:get_skill_add_attr(),
-	SkillBuff.	
+% %%被动技能附加属性	
+% get_skill_add_attr()->
+% 	SkillBuff = skill_op:get_skill_add_attr(),
+% 	SkillBuff.	
 	
-%%当前生星套装{MinLevel,MinEnchant}	
-%%get_item_enchantmentset(BodyItemsInfo)->
-%%	{MinLevel,MinEnchant} = lists:foldl(fun(Info,{MinLevelTmp,MinEnt})->
-%%									Ent = get_enchantments_from_iteminfo(Info),
-%%									Level = get_level_from_iteminfo(Info),
-%%									Slot = get_slot_from_iteminfo(Info),
-%%									case (Slot =:= ?MANTEAU_SLOT) or (Slot =:= ?FASHION_SLOT) or (Slot =:= ?RIDE_SLOT) of
-%%										true ->
-%%											 {MinLevelTmp,MinEnt};
-%%										false ->	 
-%%											if
-%%												(Level < MinLevelTmp)->
-%%													NewLevel = Level ;
-%%												true->
-%%													NewLevel = MinLevelTmp
-%%											end, 	 
-%%											if 
-%%												(Ent < MinEnt) -> {NewLevel,Ent};
-%%												true -> {NewLevel,MinEnt}
-%%											end
-%%									end
-%%								end,{?ROLE_MAX_LEVEL,?MAX_ENCHANTMENTS+1},BodyItemsInfo),
-%%	if
-%%		MinEnchant=:= ?MAX_ENCHANTMENTS+1->
-%%			{MinLevel,0};
-%%		true->	
-%%			{MinLevel,MinEnchant}
-%%	end.
+% %%当前生星套装{MinLevel,MinEnchant}	
+% %%get_item_enchantmentset(BodyItemsInfo)->
+% %%	{MinLevel,MinEnchant} = lists:foldl(fun(Info,{MinLevelTmp,MinEnt})->
+% %%									Ent = get_enchantments_from_iteminfo(Info),
+% %%									Level = get_level_from_iteminfo(Info),
+% %%									Slot = get_slot_from_iteminfo(Info),
+% %%									case (Slot =:= ?MANTEAU_SLOT) or (Slot =:= ?FASHION_SLOT) or (Slot =:= ?RIDE_SLOT) of
+% %%										true ->
+% %%											 {MinLevelTmp,MinEnt};
+% %%										false ->	 
+% %%											if
+% %%												(Level < MinLevelTmp)->
+% %%													NewLevel = Level ;
+% %%												true->
+% %%													NewLevel = MinLevelTmp
+% %%											end, 	 
+% %%											if 
+% %%												(Ent < MinEnt) -> {NewLevel,Ent};
+% %%												true -> {NewLevel,MinEnt}
+% %%											end
+% %%									end
+% %%								end,{?ROLE_MAX_LEVEL,?MAX_ENCHANTMENTS+1},BodyItemsInfo),
+% %%	if
+% %%		MinEnchant=:= ?MAX_ENCHANTMENTS+1->
+% %%			{MinLevel,0};
+% %%		true->	
+% %%			{MinLevel,MinEnchant}
+% %%	end.
 
-get_item_enchantmentset(BodyItemsInfo)->
-	MinEnchant = lists:foldl(fun(Info,MinEnt)->
-		Ent = get_enchantments_from_iteminfo(Info),
-		Level = get_level_from_iteminfo(Info),
-		Slot = get_slot_from_iteminfo(Info),
-		case (Slot =:= ?MANTEAU_SLOT) or (Slot =:= ?FASHION_SLOT) or (Slot =:= ?RIDE_SLOT) of
-			true ->
-				MinEnt;
-			false ->	 
-				if 
-					(Ent < MinEnt) -> 
-						Ent;
-					true -> 
-						MinEnt
-				end
-		end
-	end,?MAX_ENCHANTMENTS+1,BodyItemsInfo),
-	if
-		MinEnchant=:= ?MAX_ENCHANTMENTS+1->
-			0;
-		true->	
-			MinEnchant
-	end.
+% get_item_enchantmentset(BodyItemsInfo)->
+% 	MinEnchant = lists:foldl(fun(Info,MinEnt)->
+% 		Ent = get_enchantments_from_iteminfo(Info),
+% 		Level = get_level_from_iteminfo(Info),
+% 		Slot = get_slot_from_iteminfo(Info),
+% 		case (Slot =:= ?MANTEAU_SLOT) or (Slot =:= ?FASHION_SLOT) or (Slot =:= ?RIDE_SLOT) of
+% 			true ->
+% 				MinEnt;
+% 			false ->	 
+% 				if 
+% 					(Ent < MinEnt) -> 
+% 						Ent;
+% 					true -> 
+% 						MinEnt
+% 				end
+% 		end
+% 	end,?MAX_ENCHANTMENTS+1,BodyItemsInfo),
+% 	if
+% 		MinEnchant=:= ?MAX_ENCHANTMENTS+1->
+% 			0;
+% 		true->	
+% 			MinEnchant
+% 	end.
 	
-%%生星套装属性
-%%get_item_enchantmentset_attr(MinLevel,MinEnchant)->
-%%	if 
-%%		(MinEnchant=:=0)->
-%%			[];
-%%		true ->
-%%			case enchantments_db:get_enchantments_info(equipment_op:get_item_level_star(MinLevel,MinEnchant)) of
-%%				[]->
-%%					[];
-%%				EnchantmentInfo->
-%%					enchantments_db:get_enchantments_set_attr(EnchantmentInfo)
-%%			end
-%%	end.
+% %%生星套装属性
+% %%get_item_enchantmentset_attr(MinLevel,MinEnchant)->
+% %%	if 
+% %%		(MinEnchant=:=0)->
+% %%			[];
+% %%		true ->
+% %%			case enchantments_db:get_enchantments_info(equipment_op:get_item_level_star(MinLevel,MinEnchant)) of
+% %%				[]->
+% %%					[];
+% %%				EnchantmentInfo->
+% %%					enchantments_db:get_enchantments_set_attr(EnchantmentInfo)
+% %%			end
+% %%	end.
 
-get_item_enchantmentset_attr(MinEnchant)->
-	if 
-		(MinEnchant=:=0)->
-			[];
-		true ->
-			case enchantments_db:get_enchantments_info(MinEnchant) of
-				[]->
-					[];
-				EnchantmentInfo->
-					enchantments_db:get_enchantments_set_attr(EnchantmentInfo)
-			end
-	end.
+% get_item_enchantmentset_attr(MinEnchant)->
+% 	if 
+% 		(MinEnchant=:=0)->
+% 			[];
+% 		true ->
+% 			case enchantments_db:get_enchantments_info(MinEnchant) of
+% 				[]->
+% 					[];
+% 				EnchantmentInfo->
+% 					enchantments_db:get_enchantments_set_attr(EnchantmentInfo)
+% 			end
+% 	end.
 
-apply_enchantments_changed(Enchant)->
-	case get_view_from_roleinfo(get(creature_info)) of
-		Enchant->
-			nothing;
-		_->
-			put(creature_info,set_view_to_roleinfo(get(creature_info),Enchant)),
-			self_update_and_broad([{view,Enchant}])
-	end.
+% apply_enchantments_changed(Enchant)->
+% 	case get_view_from_roleinfo(get(creature_info)) of
+% 		Enchant->
+% 			nothing;
+% 		_->
+% 			put(creature_info,set_view_to_roleinfo(get(creature_info),Enchant)),
+% 			self_update_and_broad([{view,Enchant}])
+% 	end.
 					
 %%套装属性
 get_equip_set_attr(BodyItemsInfo)->
@@ -3685,7 +3966,8 @@ process_swap_equip(SrcSlot,DesSlot)->
 	case DesCanPut and SrcCanPut of
 		true ->			
 			process_swap_item(SrcSlot,DesSlot),					%%交换槽位
-			recompute_base_attr(),	
+			% recompute_base_attr(),	
+			apply_component(role_attr_component,recompute_base_attr,[]),
 			achieve_op:hook_on_swap_equipment(SrcSlot,DesSlot,SrcInfo,DesInfo),
 			goals_op:hook_on_swap_equipment(SrcSlot,DesSlot,SrcInfo,DesInfo),
 			role_fighting_force:hook_on_change_role_fight_force(),
@@ -3708,7 +3990,8 @@ redisplay_cloth_and_arm()->
 	put(creature_info,set_cloth_to_roleinfo(get(creature_info),ClotheTemId)),
 	put(creature_info,set_arm_to_roleinfo(get(creature_info),ArmItemId)),
 	update_role_info(get(roleid),get(creature_info)),
-	self_update_and_broad([{arm,ArmItemId},{cloth,ClotheTemId}]).	
+	% self_update_and_broad([{arm,ArmItemId},{cloth,ClotheTemId}]).
+	apply_component(role_update_broad_component,self_update_and_broad,[[{arm,ArmItemId},{cloth,ClotheTemId}]]).
 
 %%处理装备装备绑定和激活过期
 proc_equip_changed_for_equip(Slot)->
@@ -3916,401 +4199,401 @@ proc_egg_script(Type,ItemInfo,Script,Proto)->
 	
 
 
-%%
-%%return true|false
-%%	
-check_money_old(MoneyType, MoneyCount)->
-	case MoneyType of
-		?MONEY_BOUND_SILVER ->
-			BoundSilver = get_boundsilver_from_roleinfo(get(creature_info)),
-			Silver = get_silver_from_roleinfo(get(creature_info)),
-			(BoundSilver + Silver) >= abs(MoneyCount);
-		?MONEY_SILVER ->
-			get_silver_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
-		?MONEY_GOLD ->
-			AccountName = get(account_id),
-			case dal:read_rpc(account, AccountName) of
-				{ok,[Account]}->
-					#account{username=User,roleids=RoleIds,gold=OGold} = Account,
-					if 
-						OGold >= abs(MoneyCount) ->
-							true;
-						true->
-							false
-					end;
-				_->
-					base_logger_util:info_msg(" check_money error !!! ~p ~n",[AccountName]),
-					false		
-			end;			
-		?MONEY_TICKET->
-			get_ticket_from_roleinfo(get(creature_info))>= abs(MoneyCount);
-		?MONEY_CHARGE_INTEGRAL->
-			{Charge_integral,_} = get(role_mall_integral),
-			Charge_integral >= abs(MoneyCount);
-		?MONEY_CONSUMPTION_INTEGRAL->
-			{_,Consume_integral} = get(role_mall_integral),
-			Consume_integral >= abs(MoneyCount);
-		?MONEY_HONOR-> 
-			Honor = get_honor_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
-		_->
-			false
-	end.
+% %%
+% %%return true|false
+% %%	
+% check_money_old(MoneyType, MoneyCount)->
+% 	case MoneyType of
+% 		?MONEY_BOUND_SILVER ->
+% 			BoundSilver = get_boundsilver_from_roleinfo(get(creature_info)),
+% 			Silver = get_silver_from_roleinfo(get(creature_info)),
+% 			(BoundSilver + Silver) >= abs(MoneyCount);
+% 		?MONEY_SILVER ->
+% 			get_silver_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
+% 		?MONEY_GOLD ->
+% 			AccountName = get(account_id),
+% 			case dal:read_rpc(account, AccountName) of
+% 				{ok,[Account]}->
+% 					#account{username=User,roleids=RoleIds,gold=OGold} = Account,
+% 					if 
+% 						OGold >= abs(MoneyCount) ->
+% 							true;
+% 						true->
+% 							false
+% 					end;
+% 				_->
+% 					base_logger_util:info_msg(" check_money error !!! ~p ~n",[AccountName]),
+% 					false		
+% 			end;			
+% 		?MONEY_TICKET->
+% 			get_ticket_from_roleinfo(get(creature_info))>= abs(MoneyCount);
+% 		?MONEY_CHARGE_INTEGRAL->
+% 			{Charge_integral,_} = get(role_mall_integral),
+% 			Charge_integral >= abs(MoneyCount);
+% 		?MONEY_CONSUMPTION_INTEGRAL->
+% 			{_,Consume_integral} = get(role_mall_integral),
+% 			Consume_integral >= abs(MoneyCount);
+% 		?MONEY_HONOR-> 
+% 			Honor = get_honor_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
+% 		_->
+% 			false
+% 	end.
 
-account_charge(IncGold,NewGold)->
-	put(creature_info,set_gold_to_roleinfo(get(creature_info), NewGold)),
-	NewAttrGold =[{gold, NewGold}],
-	only_self_update(NewAttrGold).
-%% 	achieve_op:achieve_update({money},[?MONEY_GOLD],NewGold).
+% account_charge(IncGold,NewGold)->
+% 	put(creature_info,set_gold_to_roleinfo(get(creature_info), NewGold)),
+% 	NewAttrGold =[{gold, NewGold}],
+% 	only_self_update(NewAttrGold).
+% %% 	achieve_op:achieve_update({money},[?MONEY_GOLD],NewGold).
 
-%%zhangting 获取当前账户
-get_curr_account()->
-	 AccountName = get(account_id),
-	 case dal:read_rpc(account, AccountName) of
-				{ok,[Account]}->
-					Account;
-				_->
-					base_logger_util:info_msg(" get_curr_account error !!! ~p ~n",[AccountName]),
-					[]		
-	 end.			
+% %%zhangting 获取当前账户
+% get_curr_account()->
+% 	 AccountName = get(account_id),
+% 	 case dal:read_rpc(account, AccountName) of
+% 				{ok,[Account]}->
+% 					Account;
+% 				_->
+% 					base_logger_util:info_msg(" get_curr_account error !!! ~p ~n",[AccountName]),
+% 					[]		
+% 	 end.			
 
-check_money(MoneyType, MoneyCount)->
-	case MoneyType of
-		?MONEY_BOUND_SILVER ->
-			BoundSilver = get_boundsilver_from_roleinfo(get(creature_info)),
-			Silver = get_silver_from_roleinfo(get(creature_info)),
-			(BoundSilver + Silver) >= abs(MoneyCount);
-		?MONEY_SILVER ->
-			get_silver_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
-		?MONEY_GOLD ->
-			AccountName = get(account_id),
-			case dal:read_rpc(account, AccountName) of
-				{ok,[Account]}->
-					#account{username=User,roleids=RoleIds,gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = Account,
-				   case base_env_ets:get(use_qq_pay_flag, 0) of
-				     0-> 
-					     if Local_gold >= abs(MoneyCount) ->true;true->false end;
-					 1-> 
-					     if QQ_gold >= abs(MoneyCount) ->true;true->false end;   
-				     2->	  
-					     if OGold >= abs(MoneyCount) ->true;true->false end
-				   end;
+% check_money(MoneyType, MoneyCount)->
+% 	case MoneyType of
+% 		?MONEY_BOUND_SILVER ->
+% 			BoundSilver = get_boundsilver_from_roleinfo(get(creature_info)),
+% 			Silver = get_silver_from_roleinfo(get(creature_info)),
+% 			(BoundSilver + Silver) >= abs(MoneyCount);
+% 		?MONEY_SILVER ->
+% 			get_silver_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
+% 		?MONEY_GOLD ->
+% 			AccountName = get(account_id),
+% 			case dal:read_rpc(account, AccountName) of
+% 				{ok,[Account]}->
+% 					#account{username=User,roleids=RoleIds,gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = Account,
+% 				   case base_env_ets:get(use_qq_pay_flag, 0) of
+% 				     0-> 
+% 					     if Local_gold >= abs(MoneyCount) ->true;true->false end;
+% 					 1-> 
+% 					     if QQ_gold >= abs(MoneyCount) ->true;true->false end;   
+% 				     2->	  
+% 					     if OGold >= abs(MoneyCount) ->true;true->false end
+% 				   end;
 					
-				_->
-					base_logger_util:info_msg(" check_money error !!! ~p ~n",[AccountName]),
-					false		
-			end;			
-		?MONEY_TICKET->
-			get_ticket_from_roleinfo(get(creature_info))>= abs(MoneyCount);
-		?MONEY_CHARGE_INTEGRAL->
-			{Charge_integral,_} = get(role_mall_integral),
-			Charge_integral >= abs(MoneyCount);
-		?MONEY_CONSUMPTION_INTEGRAL->
-			{_,Consume_integral} = get(role_mall_integral),
-			Consume_integral >= abs(MoneyCount);
-		?MONEY_HONOR-> 
-			Honor = get_honor_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
-		_->
-			false
-	end.
+% 				_->
+% 					base_logger_util:info_msg(" check_money error !!! ~p ~n",[AccountName]),
+% 					false		
+% 			end;			
+% 		?MONEY_TICKET->
+% 			get_ticket_from_roleinfo(get(creature_info))>= abs(MoneyCount);
+% 		?MONEY_CHARGE_INTEGRAL->
+% 			{Charge_integral,_} = get(role_mall_integral),
+% 			Charge_integral >= abs(MoneyCount);
+% 		?MONEY_CONSUMPTION_INTEGRAL->
+% 			{_,Consume_integral} = get(role_mall_integral),
+% 			Consume_integral >= abs(MoneyCount);
+% 		?MONEY_HONOR-> 
+% 			Honor = get_honor_from_roleinfo(get(creature_info)) >= abs(MoneyCount);
+% 		_->
+% 			false
+% 	end.
 
 
-money_change(MoneyType, MoneyCount,Reason) ->
-  if 	(MoneyType =:= ?MONEY_GOLD ) and (MoneyCount =/= 0) ->
-	   if MoneyCount>0 ->
-       	  case base_env_ets:get(use_qq_pay_flag, 0) of
-			     1-> 
-				    nothing;
-			     _->	
-				     #account{username=User, gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = get_curr_account(),
-                   money_change_gold(MoneyType, MoneyCount,Reason,0,MoneyCount+Local_gold)
-			    end;
-		true->
-          online_gold_change(MoneyType, MoneyCount,Reason)
-		end;
-  true->
-      money_change_not_gold(MoneyType, MoneyCount,Reason)
-  end.
+% money_change(MoneyType, MoneyCount,Reason) ->
+%   if 	(MoneyType =:= ?MONEY_GOLD ) and (MoneyCount =/= 0) ->
+% 	   if MoneyCount>0 ->
+%        	  case base_env_ets:get(use_qq_pay_flag, 0) of
+% 			     1-> 
+% 				    nothing;
+% 			     _->	
+% 				     #account{username=User, gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = get_curr_account(),
+%                    money_change_gold(MoneyType, MoneyCount,Reason,0,MoneyCount+Local_gold)
+% 			    end;
+% 		true->
+%           online_gold_change(MoneyType, MoneyCount,Reason)
+% 		end;
+%   true->
+%       money_change_not_gold(MoneyType, MoneyCount,Reason)
+%   end.
 
 
-online_gold_change(MoneyType, MoneyCount,Reason) ->
-	ReasonList=
-		case erlang:is_atom(Reason)		of
-			true->erlang:atom_to_list(Reason);
-			_->Reason
-		end,
+% online_gold_change(MoneyType, MoneyCount,Reason) ->
+% 	ReasonList=
+% 		case erlang:is_atom(Reason)		of
+% 			true->erlang:atom_to_list(Reason);
+% 			_->Reason
+% 		end,
 													  
-    #account{username=User, gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = get_curr_account(),
-	Amt=abs(MoneyCount),
-	 case base_env_ets:get(use_qq_pay_flag, 0) of
-	  0->	 money_change_gold(MoneyType, MoneyCount,Reason,0,Local_gold-Amt);
-	  1-> 
-          {ok,Balance}= qq_gold_op:do_qq_pay(Amt,ReasonList),
-          money_change_gold(MoneyType, MoneyCount,Reason,Balance,0);
-	  2->	  
+%     #account{username=User, gold=OGold,qq_gold=QQ_gold,local_gold=Local_gold} = get_curr_account(),
+% 	Amt=abs(MoneyCount),
+% 	 case base_env_ets:get(use_qq_pay_flag, 0) of
+% 	  0->	 money_change_gold(MoneyType, MoneyCount,Reason,0,Local_gold-Amt);
+% 	  1-> 
+%           {ok,Balance}= qq_gold_op:do_qq_pay(Amt,ReasonList),
+%           money_change_gold(MoneyType, MoneyCount,Reason,Balance,0);
+% 	  2->	  
        
-		  if QQ_gold> Amt ->
-		     {ok,Balance}=  qq_gold_op:do_qq_pay(Amt,ReasonList),
-			  money_change_gold(MoneyType, MoneyCount,Reason,Balance,Local_gold);
-		  true->
-			  if QQ_gold>0 ->
-                {ok,Balance} = qq_gold_op:do_qq_pay(QQ_gold,ReasonList), 
-                  money_change_gold(MoneyType, MoneyCount,Reason,Balance,Local_gold - (Amt-QQ_gold));
-             true->
-  				  money_change_gold(MoneyType, MoneyCount,Reason,0,Local_gold-Amt)
-			  end
-         end
-	  end.
+% 		  if QQ_gold> Amt ->
+% 		     {ok,Balance}=  qq_gold_op:do_qq_pay(Amt,ReasonList),
+% 			  money_change_gold(MoneyType, MoneyCount,Reason,Balance,Local_gold);
+% 		  true->
+% 			  if QQ_gold>0 ->
+%                 {ok,Balance} = qq_gold_op:do_qq_pay(QQ_gold,ReasonList), 
+%                   money_change_gold(MoneyType, MoneyCount,Reason,Balance,Local_gold - (Amt-QQ_gold));
+%              true->
+%   				  money_change_gold(MoneyType, MoneyCount,Reason,0,Local_gold-Amt)
+% 			  end
+%          end
+% 	  end.
 
 
-money_change_gold(MoneyType, MoneyCount,Reason,QQ_gold,Local_gold) ->
-	RoleInfo = get(creature_info),
-	AccountName = get(account_id),
-	Roleid = get(roleid),
-	Transaction = 
-	fun()->
-		case mnesia:read(account, AccountName) of
-			[]->
-				[];
-			[Account]->
-				#account{username=User, gold=OGold} = Account,
-				NewGold = OGold+MoneyCount,
-				NewAccount = Account#account{gold=NewGold,qq_gold=QQ_gold,local_gold=Local_gold},
-				mnesia:write(NewAccount),
-				NewAccount
-		end
-	end,
-	case dal:run_transaction_rpc(Transaction) of
-		{failed,badrpc,_Reason}->
-			base_logger_util:info_msg("money_change gold badrpc error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-		{faild,Reason}->
-			base_logger_util:info_msg("money_change gold faild error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-		{ok,[]}->
-			base_logger_util:info_msg("money_change gold Account error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-		{ok,Result}->
-			#account{username=User,roleids=RoleIds,gold=ReGold} = Result,
-			NewRoleInfo = set_gold_to_roleinfo(RoleInfo, ReGold),
-			NewAttrGold =[{gold, ReGold}],
-			only_self_update(NewAttrGold),
-			put(creature_info, NewRoleInfo),
-%% 			achieve_op:achieve_update({money},[?MONEY_GOLD],ReGold),	
-			gold_exchange:consume_gold_change(-MoneyCount,Reason),
-			consume_return:gold_change(-MoneyCount,Reason),
-			gm_logger_role:role_gold_change(User,Roleid,MoneyCount,ReGold,Reason),
-			FRole = fun(RoleId) ->
-				case role_pos_util:where_is_role(RoleId) of
-					[]->
-						nothing;
-					RolePos->
-						if
-							RoleId =/= Roleid->
-								Node = role_pos_db:get_role_mapnode(RolePos),
-								Proc = role_pos_db:get_role_pid(RolePos),
-								role_processor:account_charge(Node, Proc, {account_charge,MoneyCount,ReGold});
-							true->
-								nothing
-						end
-				end
-			end,
-			lists:foreach(FRole, RoleIds);
-		_->
-			base_logger_util:info_msg("money_change gold unknow error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount])
-	end.
+% money_change_gold(MoneyType, MoneyCount,Reason,QQ_gold,Local_gold) ->
+% 	RoleInfo = get(creature_info),
+% 	AccountName = get(account_id),
+% 	Roleid = get(roleid),
+% 	Transaction = 
+% 	fun()->
+% 		case mnesia:read(account, AccountName) of
+% 			[]->
+% 				[];
+% 			[Account]->
+% 				#account{username=User, gold=OGold} = Account,
+% 				NewGold = OGold+MoneyCount,
+% 				NewAccount = Account#account{gold=NewGold,qq_gold=QQ_gold,local_gold=Local_gold},
+% 				mnesia:write(NewAccount),
+% 				NewAccount
+% 		end
+% 	end,
+% 	case dal:run_transaction_rpc(Transaction) of
+% 		{failed,badrpc,_Reason}->
+% 			base_logger_util:info_msg("money_change gold badrpc error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 		{faild,Reason}->
+% 			base_logger_util:info_msg("money_change gold faild error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 		{ok,[]}->
+% 			base_logger_util:info_msg("money_change gold Account error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 		{ok,Result}->
+% 			#account{username=User,roleids=RoleIds,gold=ReGold} = Result,
+% 			NewRoleInfo = set_gold_to_roleinfo(RoleInfo, ReGold),
+% 			NewAttrGold =[{gold, ReGold}],
+% 			only_self_update(NewAttrGold),
+% 			put(creature_info, NewRoleInfo),
+% %% 			achieve_op:achieve_update({money},[?MONEY_GOLD],ReGold),	
+% 			gold_exchange:consume_gold_change(-MoneyCount,Reason),
+% 			consume_return:gold_change(-MoneyCount,Reason),
+% 			gm_logger_role:role_gold_change(User,Roleid,MoneyCount,ReGold,Reason),
+% 			FRole = fun(RoleId) ->
+% 				case role_pos_util:where_is_role(RoleId) of
+% 					[]->
+% 						nothing;
+% 					RolePos->
+% 						if
+% 							RoleId =/= Roleid->
+% 								Node = role_pos_db:get_role_mapnode(RolePos),
+% 								Proc = role_pos_db:get_role_pid(RolePos),
+% 								role_processor:account_charge(Node, Proc, {account_charge,MoneyCount,ReGold});
+% 							true->
+% 								nothing
+% 						end
+% 				end
+% 			end,
+% 			lists:foreach(FRole, RoleIds);
+% 		_->
+% 			base_logger_util:info_msg("money_change gold unknow error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount])
+% 	end.
 
 
   
-money_change_not_gold(MoneyType, MoneyCount,Reason) ->
-	RoleInfo = get(creature_info),
-	if
-		(MoneyType =:=?MONEY_BOUND_SILVER) and (MoneyCount=/= 0) ->
-			%% 银币	
-			HasBoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
-			case HasBoundSilver + MoneyCount < 0 of
-				true->		
-					NewSilver = 0,
-					money_change(?MONEY_SILVER,HasBoundSilver + MoneyCount,Reason);
-				_->
-					NewSilver = HasBoundSilver + MoneyCount
-			end,
-			NewRoleInfo = set_boundsilver_to_roleinfo(get(creature_info), NewSilver),
-			NewAttrSilver = [{boundsilver, NewSilver}],
-			only_self_update(NewAttrSilver),
-			gm_logger_role:role_boundsilver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-%% 			achieve_op:achieve_update({money},[?MONEY_BOUND_SILVER],NewSilver);	
-		(MoneyType =:= ?MONEY_SILVER) and (MoneyCount=/= 0) ->
-			NewSilver = get_silver_from_roleinfo(RoleInfo)+ MoneyCount,	
-			NewRoleInfo = set_silver_to_roleinfo(RoleInfo, NewSilver),
-			NewAttrSilver = [{silver, NewSilver}],	
-			only_self_update(NewAttrSilver),
-			gm_logger_role:role_silver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-		(MoneyType =:= ?MONEY_TICKET) and (MoneyCount=/= 0)->
-			%% 礼券
-			NewTick = get_ticket_from_roleinfo(RoleInfo) + MoneyCount,
-			NewRoleInfo = set_ticket_to_roleinfo(RoleInfo, NewTick),
-			NewAttrTick = [{ticket, NewTick}],
-			only_self_update(NewAttrTick),
-			gm_logger_role:role_ticket_change(get(roleid),MoneyCount,NewTick,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-%% 			achieve_op:achieve_update({money},[?MONEY_TICKET],NewTick);
-		(MoneyType =:= ?MONEY_CHARGE_INTEGRAL) and (MoneyCount=/= 0)->
-			{Charge_integral,Consume_integral} = get(role_mall_integral),
-			NewCharge_Integral = Charge_integral + MoneyCount,
-			put(role_mall_integral,{NewCharge_Integral,Consume_integral}),
-			mall_integral_db:add_role_mall_integral(get(roleid),NewCharge_Integral,Consume_integral),
-			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=NewCharge_Integral,by_item_integral=Consume_integral}),
-			send_data_to_gate(Message),
-			gm_logger_role:role_charge_integral_change(get(roleid),MoneyCount,NewCharge_Integral,Reason,get(level));
-		(MoneyType =:= ?MONEY_CONSUMPTION_INTEGRAL) and (MoneyCount=/= 0)->
-			{Charge_integral,Consume_integral} = get(role_mall_integral),
-			NewConsum_Integral = Consume_integral + MoneyCount,
-			put(role_mall_integral,{Charge_integral,NewConsum_Integral}),
-			mall_integral_db:add_role_mall_integral(get(roleid),Charge_integral,NewConsum_Integral),
-			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=Charge_integral,by_item_integral=NewConsum_Integral}),
-			send_data_to_gate(Message),
-			gm_logger_role:role_consume_integral_change(get(roleid),MoneyCount,NewConsum_Integral,Reason,get(level));
-		(MoneyType =:= ?MONEY_HONOR) and (MoneyCount=/= 0)->
-			NewHonor = get_honor_from_roleinfo(RoleInfo) + MoneyCount,
-			NewRoleInfo = set_honor_to_roleinfo(RoleInfo, NewHonor),
-			NewAttrHonor = [{honor, NewHonor}],
-			only_self_update(NewAttrHonor),
-			put(creature_info, NewRoleInfo),
-			gm_logger_role:role_honor_change(get(roleid),MoneyCount,NewHonor,Reason,get(level));
-		(MoneyType =:= ?TYPE_GUILD_CONTRIBUTION) and (MoneyCount=/= 0)->
-			case guild_util:is_have_guild() of
-				true->
-					guild_op:contribute(MoneyCount);
-				_->
-					ignor
-			end;
-		true->
-			nothing
-	end.
+% money_change_not_gold(MoneyType, MoneyCount,Reason) ->
+% 	RoleInfo = get(creature_info),
+% 	if
+% 		(MoneyType =:=?MONEY_BOUND_SILVER) and (MoneyCount=/= 0) ->
+% 			%% 银币	
+% 			HasBoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
+% 			case HasBoundSilver + MoneyCount < 0 of
+% 				true->		
+% 					NewSilver = 0,
+% 					money_change(?MONEY_SILVER,HasBoundSilver + MoneyCount,Reason);
+% 				_->
+% 					NewSilver = HasBoundSilver + MoneyCount
+% 			end,
+% 			NewRoleInfo = set_boundsilver_to_roleinfo(get(creature_info), NewSilver),
+% 			NewAttrSilver = [{boundsilver, NewSilver}],
+% 			only_self_update(NewAttrSilver),
+% 			gm_logger_role:role_boundsilver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% %% 			achieve_op:achieve_update({money},[?MONEY_BOUND_SILVER],NewSilver);	
+% 		(MoneyType =:= ?MONEY_SILVER) and (MoneyCount=/= 0) ->
+% 			NewSilver = get_silver_from_roleinfo(RoleInfo)+ MoneyCount,	
+% 			NewRoleInfo = set_silver_to_roleinfo(RoleInfo, NewSilver),
+% 			NewAttrSilver = [{silver, NewSilver}],	
+% 			only_self_update(NewAttrSilver),
+% 			gm_logger_role:role_silver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% 		(MoneyType =:= ?MONEY_TICKET) and (MoneyCount=/= 0)->
+% 			%% 礼券
+% 			NewTick = get_ticket_from_roleinfo(RoleInfo) + MoneyCount,
+% 			NewRoleInfo = set_ticket_to_roleinfo(RoleInfo, NewTick),
+% 			NewAttrTick = [{ticket, NewTick}],
+% 			only_self_update(NewAttrTick),
+% 			gm_logger_role:role_ticket_change(get(roleid),MoneyCount,NewTick,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% %% 			achieve_op:achieve_update({money},[?MONEY_TICKET],NewTick);
+% 		(MoneyType =:= ?MONEY_CHARGE_INTEGRAL) and (MoneyCount=/= 0)->
+% 			{Charge_integral,Consume_integral} = get(role_mall_integral),
+% 			NewCharge_Integral = Charge_integral + MoneyCount,
+% 			put(role_mall_integral,{NewCharge_Integral,Consume_integral}),
+% 			mall_integral_db:add_role_mall_integral(get(roleid),NewCharge_Integral,Consume_integral),
+% 			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=NewCharge_Integral,by_item_integral=Consume_integral}),
+% 			send_data_to_gate(Message),
+% 			gm_logger_role:role_charge_integral_change(get(roleid),MoneyCount,NewCharge_Integral,Reason,get(level));
+% 		(MoneyType =:= ?MONEY_CONSUMPTION_INTEGRAL) and (MoneyCount=/= 0)->
+% 			{Charge_integral,Consume_integral} = get(role_mall_integral),
+% 			NewConsum_Integral = Consume_integral + MoneyCount,
+% 			put(role_mall_integral,{Charge_integral,NewConsum_Integral}),
+% 			mall_integral_db:add_role_mall_integral(get(roleid),Charge_integral,NewConsum_Integral),
+% 			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=Charge_integral,by_item_integral=NewConsum_Integral}),
+% 			send_data_to_gate(Message),
+% 			gm_logger_role:role_consume_integral_change(get(roleid),MoneyCount,NewConsum_Integral,Reason,get(level));
+% 		(MoneyType =:= ?MONEY_HONOR) and (MoneyCount=/= 0)->
+% 			NewHonor = get_honor_from_roleinfo(RoleInfo) + MoneyCount,
+% 			NewRoleInfo = set_honor_to_roleinfo(RoleInfo, NewHonor),
+% 			NewAttrHonor = [{honor, NewHonor}],
+% 			only_self_update(NewAttrHonor),
+% 			put(creature_info, NewRoleInfo),
+% 			gm_logger_role:role_honor_change(get(roleid),MoneyCount,NewHonor,Reason,get(level));
+% 		(MoneyType =:= ?TYPE_GUILD_CONTRIBUTION) and (MoneyCount=/= 0)->
+% 			case guild_util:is_have_guild() of
+% 				true->
+% 					guild_op:contribute(MoneyCount);
+% 				_->
+% 					ignor
+% 			end;
+% 		true->
+% 			nothing
+% 	end.
 
 
-money_change_old(MoneyType, MoneyCount,Reason) ->
-	RoleInfo = get(creature_info),
-	if
-		(MoneyType =:=?MONEY_BOUND_SILVER) and (MoneyCount=/= 0) ->
-			%% 银币	
-			HasBoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
-			case HasBoundSilver + MoneyCount < 0 of
-				true->		
-					NewSilver = 0,
-					money_change(?MONEY_SILVER,HasBoundSilver + MoneyCount,Reason);
-				_->
-					NewSilver = HasBoundSilver + MoneyCount
-			end,
-			NewRoleInfo = set_boundsilver_to_roleinfo(get(creature_info), NewSilver),
-			NewAttrSilver = [{boundsilver, NewSilver}],
-			only_self_update(NewAttrSilver),
-			gm_logger_role:role_boundsilver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-%% 			achieve_op:achieve_update({money},[?MONEY_BOUND_SILVER],NewSilver);	
-		(MoneyType =:= ?MONEY_SILVER) and (MoneyCount=/= 0) ->
-			NewSilver = get_silver_from_roleinfo(RoleInfo)+ MoneyCount,	
-			NewRoleInfo = set_silver_to_roleinfo(RoleInfo, NewSilver),
-			NewAttrSilver = [{silver, NewSilver}],	
-			only_self_update(NewAttrSilver),
-			gm_logger_role:role_silver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-		(MoneyType =:= ?MONEY_GOLD ) and (MoneyCount =/= 0)->
-			AccountName = get(account_id),
-			Roleid = get(roleid),
-			Transaction = 
-			fun()->
-				case mnesia:read(account, AccountName) of
-					[]->
-						[];
-					[Account]->
-						#account{username=User, gold=OGold} = Account,
-						NewGold = OGold+MoneyCount,
-						NewAccount = Account#account{gold=NewGold},
-						mnesia:write(NewAccount),
-						NewAccount
-				end
-			end,
+% money_change_old(MoneyType, MoneyCount,Reason) ->
+% 	RoleInfo = get(creature_info),
+% 	if
+% 		(MoneyType =:=?MONEY_BOUND_SILVER) and (MoneyCount=/= 0) ->
+% 			%% 银币	
+% 			HasBoundSilver = get_boundsilver_from_roleinfo(RoleInfo),
+% 			case HasBoundSilver + MoneyCount < 0 of
+% 				true->		
+% 					NewSilver = 0,
+% 					money_change(?MONEY_SILVER,HasBoundSilver + MoneyCount,Reason);
+% 				_->
+% 					NewSilver = HasBoundSilver + MoneyCount
+% 			end,
+% 			NewRoleInfo = set_boundsilver_to_roleinfo(get(creature_info), NewSilver),
+% 			NewAttrSilver = [{boundsilver, NewSilver}],
+% 			only_self_update(NewAttrSilver),
+% 			gm_logger_role:role_boundsilver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% %% 			achieve_op:achieve_update({money},[?MONEY_BOUND_SILVER],NewSilver);	
+% 		(MoneyType =:= ?MONEY_SILVER) and (MoneyCount=/= 0) ->
+% 			NewSilver = get_silver_from_roleinfo(RoleInfo)+ MoneyCount,	
+% 			NewRoleInfo = set_silver_to_roleinfo(RoleInfo, NewSilver),
+% 			NewAttrSilver = [{silver, NewSilver}],	
+% 			only_self_update(NewAttrSilver),
+% 			gm_logger_role:role_silver_change(get(roleid),MoneyCount,NewSilver,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% 		(MoneyType =:= ?MONEY_GOLD ) and (MoneyCount =/= 0)->
+% 			AccountName = get(account_id),
+% 			Roleid = get(roleid),
+% 			Transaction = 
+% 			fun()->
+% 				case mnesia:read(account, AccountName) of
+% 					[]->
+% 						[];
+% 					[Account]->
+% 						#account{username=User, gold=OGold} = Account,
+% 						NewGold = OGold+MoneyCount,
+% 						NewAccount = Account#account{gold=NewGold},
+% 						mnesia:write(NewAccount),
+% 						NewAccount
+% 				end
+% 			end,
 
 
 
-			case dal:run_transaction_rpc(Transaction) of
-				{failed,badrpc,_Reason}->
-					base_logger_util:info_msg("money_change gold badrpc error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-				{faild,Reason}->
-					base_logger_util:info_msg("money_change gold faild error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-				{ok,[]}->
-					base_logger_util:info_msg("money_change gold Account error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
-				{ok,Result}->
-					#account{username=User,roleids=RoleIds,gold=ReGold} = Result,
-					NewRoleInfo = set_gold_to_roleinfo(RoleInfo, ReGold),
-					NewAttrGold =[{gold, ReGold}],
-					only_self_update(NewAttrGold),
-					put(creature_info, NewRoleInfo),
-%% 					achieve_op:achieve_update({money},[?MONEY_GOLD],ReGold),	
-					gold_exchange:consume_gold_change(-MoneyCount,Reason),
-					consume_return:gold_change(-MoneyCount,Reason),
-					gm_logger_role:role_gold_change(User,Roleid,MoneyCount,ReGold,Reason),
-					FRole = fun(RoleId) ->
-						case role_pos_util:where_is_role(RoleId) of
-							[]->
-								nothing;
-							RolePos->
-								if
-									RoleId =/= Roleid->
-										Node = role_pos_db:get_role_mapnode(RolePos),
-										Proc = role_pos_db:get_role_pid(RolePos),
-										role_processor:account_charge(Node, Proc, {account_charge,MoneyCount,ReGold});
-									true->
-										nothing
-								end
-						end
-					end,
-					lists:foreach(FRole, RoleIds);
-				_->
-					base_logger_util:info_msg("money_change gold unknow error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount])
-			end;	
-		(MoneyType =:= ?MONEY_TICKET) and (MoneyCount=/= 0)->
-			%% 礼券
-			NewTick = get_ticket_from_roleinfo(RoleInfo) + MoneyCount,
-			NewRoleInfo = set_ticket_to_roleinfo(RoleInfo, NewTick),
-			NewAttrTick = [{ticket, NewTick}],
-			only_self_update(NewAttrTick),
-			gm_logger_role:role_ticket_change(get(roleid),MoneyCount,NewTick,Reason,get(level)),
-			put(creature_info, NewRoleInfo);
-%% 			achieve_op:achieve_update({money},[?MONEY_TICKET],NewTick);
-		(MoneyType =:= ?MONEY_CHARGE_INTEGRAL) and (MoneyCount=/= 0)->
-			{Charge_integral,Consume_integral} = get(role_mall_integral),
-			NewCharge_Integral = Charge_integral + MoneyCount,
-			put(role_mall_integral,{NewCharge_Integral,Consume_integral}),
-			mall_integral_db:add_role_mall_integral(get(roleid),NewCharge_Integral,Consume_integral),
-			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=NewCharge_Integral,by_item_integral=Consume_integral}),
-			send_data_to_gate(Message),
-			gm_logger_role:role_charge_integral_change(get(roleid),MoneyCount,NewCharge_Integral,Reason,get(level));
-		(MoneyType =:= ?MONEY_CONSUMPTION_INTEGRAL) and (MoneyCount=/= 0)->
-			{Charge_integral,Consume_integral} = get(role_mall_integral),
-			NewConsum_Integral = Consume_integral + MoneyCount,
-			put(role_mall_integral,{Charge_integral,NewConsum_Integral}),
-			mall_integral_db:add_role_mall_integral(get(roleid),Charge_integral,NewConsum_Integral),
-			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=Charge_integral,by_item_integral=NewConsum_Integral}),
-			send_data_to_gate(Message),
-			gm_logger_role:role_consume_integral_change(get(roleid),MoneyCount,NewConsum_Integral,Reason,get(level));
-		(MoneyType =:= ?MONEY_HONOR) and (MoneyCount=/= 0)->
-			NewHonor = get_honor_from_roleinfo(RoleInfo) + MoneyCount,
-			NewRoleInfo = set_honor_to_roleinfo(RoleInfo, NewHonor),
-			NewAttrHonor = [{honor, NewHonor}],
-			only_self_update(NewAttrHonor),
-			put(creature_info, NewRoleInfo),
-			gm_logger_role:role_honor_change(get(roleid),MoneyCount,NewHonor,Reason,get(level));
-		(MoneyType =:= ?TYPE_GUILD_CONTRIBUTION) and (MoneyCount=/= 0)->
-			case guild_util:is_have_guild() of
-				true->
-					guild_op:contribute(MoneyCount);
-				_->
-					ignor
-			end;
-		true->
-			nothing
-	end.
+% 			case dal:run_transaction_rpc(Transaction) of
+% 				{failed,badrpc,_Reason}->
+% 					base_logger_util:info_msg("money_change gold badrpc error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 				{faild,Reason}->
+% 					base_logger_util:info_msg("money_change gold faild error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 				{ok,[]}->
+% 					base_logger_util:info_msg("money_change gold Account error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount]);
+% 				{ok,Result}->
+% 					#account{username=User,roleids=RoleIds,gold=ReGold} = Result,
+% 					NewRoleInfo = set_gold_to_roleinfo(RoleInfo, ReGold),
+% 					NewAttrGold =[{gold, ReGold}],
+% 					only_self_update(NewAttrGold),
+% 					put(creature_info, NewRoleInfo),
+% %% 					achieve_op:achieve_update({money},[?MONEY_GOLD],ReGold),	
+% 					gold_exchange:consume_gold_change(-MoneyCount,Reason),
+% 					consume_return:gold_change(-MoneyCount,Reason),
+% 					gm_logger_role:role_gold_change(User,Roleid,MoneyCount,ReGold,Reason),
+% 					FRole = fun(RoleId) ->
+% 						case role_pos_util:where_is_role(RoleId) of
+% 							[]->
+% 								nothing;
+% 							RolePos->
+% 								if
+% 									RoleId =/= Roleid->
+% 										Node = role_pos_db:get_role_mapnode(RolePos),
+% 										Proc = role_pos_db:get_role_pid(RolePos),
+% 										role_processor:account_charge(Node, Proc, {account_charge,MoneyCount,ReGold});
+% 									true->
+% 										nothing
+% 								end
+% 						end
+% 					end,
+% 					lists:foreach(FRole, RoleIds);
+% 				_->
+% 					base_logger_util:info_msg("money_change gold unknow error!!!! (account,~p) error! Gold ~p ",[AccountName,MoneyCount])
+% 			end;	
+% 		(MoneyType =:= ?MONEY_TICKET) and (MoneyCount=/= 0)->
+% 			%% 礼券
+% 			NewTick = get_ticket_from_roleinfo(RoleInfo) + MoneyCount,
+% 			NewRoleInfo = set_ticket_to_roleinfo(RoleInfo, NewTick),
+% 			NewAttrTick = [{ticket, NewTick}],
+% 			only_self_update(NewAttrTick),
+% 			gm_logger_role:role_ticket_change(get(roleid),MoneyCount,NewTick,Reason,get(level)),
+% 			put(creature_info, NewRoleInfo);
+% %% 			achieve_op:achieve_update({money},[?MONEY_TICKET],NewTick);
+% 		(MoneyType =:= ?MONEY_CHARGE_INTEGRAL) and (MoneyCount=/= 0)->
+% 			{Charge_integral,Consume_integral} = get(role_mall_integral),
+% 			NewCharge_Integral = Charge_integral + MoneyCount,
+% 			put(role_mall_integral,{NewCharge_Integral,Consume_integral}),
+% 			mall_integral_db:add_role_mall_integral(get(roleid),NewCharge_Integral,Consume_integral),
+% 			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=NewCharge_Integral,by_item_integral=Consume_integral}),
+% 			send_data_to_gate(Message),
+% 			gm_logger_role:role_charge_integral_change(get(roleid),MoneyCount,NewCharge_Integral,Reason,get(level));
+% 		(MoneyType =:= ?MONEY_CONSUMPTION_INTEGRAL) and (MoneyCount=/= 0)->
+% 			{Charge_integral,Consume_integral} = get(role_mall_integral),
+% 			NewConsum_Integral = Consume_integral + MoneyCount,
+% 			put(role_mall_integral,{Charge_integral,NewConsum_Integral}),
+% 			mall_integral_db:add_role_mall_integral(get(roleid),Charge_integral,NewConsum_Integral),
+% 			Message = login_pb:encode_change_role_mall_integral_s2c(#change_role_mall_integral_s2c{charge_integral=Charge_integral,by_item_integral=NewConsum_Integral}),
+% 			send_data_to_gate(Message),
+% 			gm_logger_role:role_consume_integral_change(get(roleid),MoneyCount,NewConsum_Integral,Reason,get(level));
+% 		(MoneyType =:= ?MONEY_HONOR) and (MoneyCount=/= 0)->
+% 			NewHonor = get_honor_from_roleinfo(RoleInfo) + MoneyCount,
+% 			NewRoleInfo = set_honor_to_roleinfo(RoleInfo, NewHonor),
+% 			NewAttrHonor = [{honor, NewHonor}],
+% 			only_self_update(NewAttrHonor),
+% 			put(creature_info, NewRoleInfo),
+% 			gm_logger_role:role_honor_change(get(roleid),MoneyCount,NewHonor,Reason,get(level));
+% 		(MoneyType =:= ?TYPE_GUILD_CONTRIBUTION) and (MoneyCount=/= 0)->
+% 			case guild_util:is_have_guild() of
+% 				true->
+% 					guild_op:contribute(MoneyCount);
+% 				_->
+% 					ignor
+% 			end;
+% 		true->
+% 			nothing
+% 	end.
 	
 %%改变同一模板物品个数	
 consume_items(TmplateId,Count)->
@@ -4400,22 +4683,22 @@ stop_move_broadcast_with_self(SelfInfo) ->
 	send_data_to_gate(StopMsg),									       
 	broadcast_message_to_aoi_client(StopMsg).	
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%									属性广播
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-only_self_update([])->
-	nothing;
-only_self_update(UpdateAttr)->
-	UpdateObj = object_update:make_update_attr(?UPDATETYPE_SELF,get(roleid),UpdateAttr),
-	GateProc = get_proc_from_gs_system_gateinfo(get(gate_info)),
-	base_tcp_client_statem:object_update_update(GateProc,UpdateObj).
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%									属性广播
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% only_self_update([])->
+% 	nothing;
+% only_self_update(UpdateAttr)->
+% 	UpdateObj = object_update:make_update_attr(?UPDATETYPE_SELF,get(roleid),UpdateAttr),
+% 	GateProc = get_proc_from_gs_system_gateinfo(get(gate_info)),
+% 	base_tcp_client_statem:object_update_update(GateProc,UpdateObj).
 	
-self_update_and_broad([])->
-	nothing;
-self_update_and_broad(UpdateAttr)->
-	only_self_update(UpdateAttr),
-	UpdateObj = object_update:make_update_attr(?UPDATETYPE_ROLE,get(roleid),UpdateAttr),
-	creature_op:direct_broadcast_to_aoi_gate({object_update_update,UpdateObj}).
+% self_update_and_broad([])->
+% 	nothing;
+% self_update_and_broad(UpdateAttr)->
+% 	only_self_update(UpdateAttr),
+% 	UpdateObj = object_update:make_update_attr(?UPDATETYPE_ROLE,get(roleid),UpdateAttr),
+% 	creature_op:direct_broadcast_to_aoi_gate({object_update_update,UpdateObj}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%									属性广播
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
@@ -4443,8 +4726,8 @@ set_leave_attack_time(EnemyId,Time)->
 			nothing
 	end.					
 				
-is_leave_attack()->
-	timer:now_diff(base_timer_server:get_correct_now(),get(leave_attack_time)) > ?LEAVE_ATTACK_TIME*1000.
+% is_leave_attack()->
+% 	timer:now_diff(base_timer_server:get_correct_now(),get(leave_attack_time)) > ?LEAVE_ATTACK_TIME*1000.
 				
 update_dsp_info(Damage)->
 	todo.	
@@ -4583,7 +4866,8 @@ role_recharge(Name,Money)->
 	end.
 
 role_online_recharge(RoleId,Money)->
-			money_change(?MONEY_GOLD,Money*10,role_recharge).
+	% money_change(?MONEY_GOLD,Money*10,role_recharge).
+	apply_component(role_money_component,money_change,[?MONEY_GOLD,Money*10,role_recharge]).
 
 reset_pet_advance_lucky({{Oyear,Omonth,Oday},{Ohour,_,_}})->
 			{{Nyear,Nmonth,Nday},{Nhour,_,_}}=calendar:now_to_local_time(os:timestamp()),
