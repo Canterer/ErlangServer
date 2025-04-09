@@ -52,7 +52,7 @@ start_instance(MapName,CreatInfo,MapId)->
 	catch
 		E:R ->
 			% instanceid_generator:safe_turnback_proc(MapName),
-			base_logger_util:info_msg("map_manager:start_instance error: ~p ~p,MapName ~p,ProtoId ~p,MapId ~p",[E,R,MapName,CreatInfo,MapId]),
+			base_logger_util:info_msg("base_map_manager_server:start_instance error: ~p ~p,MapName ~p,ProtoId ~p,MapId ~p",[E,R,MapName,CreatInfo,MapId]),
 			error
 	end.
 

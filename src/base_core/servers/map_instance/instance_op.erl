@@ -313,13 +313,13 @@ trans_to_dungeon(NeedCreate,MapProc,MapInfo,Coord,Type,ProtoInfo,ProcNode,MapId)
 				[]->
 					Goon = false,
 					ProcName = [],
-					base_logger_util:info_msg("map_manager:start_instance get_procname error ~n");
+					base_logger_util:info_msg("base_map_manager_server:start_instance get_procname error ~n");
 				{exsit,ProcName}->
 					base_logger_util:info_msg("instanceid_generator:get_procname InstanceId error ~p RoleId ~p ~n",[InstanceId,get(roleid)]),
 					Goon = false;
 				ProcName->
 					MyLevel = get_level_from_roleinfo(get(creature_info)),
-					case map_manager:start_instance(ProcName,{Creation,ProtoId,{MyLevel,?CREATOR_BY_SYSTEM}},MapId) of
+					case base_map_manager_server:start_instance(ProcName,{Creation,ProtoId,{MyLevel,?CREATOR_BY_SYSTEM}},MapId) of
 						ok->
 							CreateItems = instance_proto_db:get_create_item(ProtoInfo),
 							lists:foreach(fun({ItemTemp,Count})->base_role_op:consume_items(ItemTemp,Count) end,CreateItems),
@@ -327,7 +327,7 @@ trans_to_dungeon(NeedCreate,MapProc,MapInfo,Coord,Type,ProtoInfo,ProcNode,MapId)
 							Goon = true;				
 						error->
 							Goon = false,
-							base_logger_util:info_msg("map_manager:start_instance error ~n")
+							base_logger_util:info_msg("base_map_manager_server:start_instance error ~n")
 					end
 			end;
 		true->

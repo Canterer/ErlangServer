@@ -122,7 +122,11 @@ xxx_packet.erl	用于erlang数据封装成包packet，实质依赖login_pb.erl
 
 
 
-
+注意： Node-Line-Map关系
+	map1@ 搭配 line1   搭配mapid 1001 1002
+	map2@ 搭配 line2   搭配mapid 1001 1002
+	这里理解Line对应线路即服务器1区 XXX名字
+	instance 对应副本  单人或多人
 
 
 
@@ -149,6 +153,24 @@ base_role_app
 base_role_processor:init(start_one_role)
 	base_role_op:init()//初始化
 
+
+base_map_processor_server:join_instance 为角色进入地图的入口
+
+地图数据
+%%{Instanceid,Map_proc,protoid,Starttime,Lastpostion}
+%%lastpostion:{LineId,Mapid,{LastX,LastY}}
+Instanceid为0即为普通地图 否则为副本地图
+%%副本类型:
+-define(INSTANCE_TYPE_SINGLE,1).								%%单人
+-define(INSTANCE_TYPE_GROUP,2).									%%组队
+-define(INSTANCE_TYPE_GUILD,3).									%%公会
+-define(INSTANCE_TYPE_TANGLE_BATTLE,4).							%%群p
+-define(INSTANCE_TYPE_LOOP_TOWER,5).							%%轮回塔
+-define(INSTANCE_TYPE_YHZQ,6).									%%永恒之旗
+-define(INSTANCE_TYPE_SPA,7).									%%温泉
+-define(INSTANCE_TYPE_GUILDBATTLE,8).							%%国王争夺战
+-define(INSTANCE_TYPE_JSZD,9).									%%晶石争夺战
+-define(INSTANCE_TYPE_LOOP_INSTANCE,10).						%%组队多层副本
 
 role_packet 
 

@@ -105,6 +105,7 @@ linesinfo_to_record(LineInfos)->
 			  #li{lineid=LineId,rolecount=RoleCount}
 		  end, LineInfos).
 
+% 根据MapId 100 查询line状态
 async_get_line_info_by_mapid(MapId)->
 	?ZSS(),
 	case base_map_info_db:get_map_info(MapId) of

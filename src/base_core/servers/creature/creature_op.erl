@@ -1015,7 +1015,7 @@ call_creature_spawn(LineId,NpcId,CreatorTag)->
 			base_logger_util:info_msg("load_npc_to_map NpcId ~p ~n",[NpcId]);
 		NpcSpawnInfo->	
 			MapId = npc_db:get_spawn_mapid(NpcSpawnInfo),
-			MapProcName = map_manager:make_map_process_name(LineId,MapId),
+			MapProcName = base_map_manager_server:make_map_process_name(LineId,MapId),
 			NpcInfo = npc_db:set_spawn_mapid(NpcSpawnInfo,MapId),
 			load_npc_to_map(MapProcName,LineId,MapId,NpcInfo,CreatorTag)
 	end.
@@ -1089,7 +1089,7 @@ unload_npc_by_line(LineId,NpcId)->
 			base_logger_util:info_msg("unload_npc_by_line NpcId ~p ~n",[NpcId]);
 		NpcSpawnInfo->
 			MapId = npc_db:get_spawn_mapid(NpcSpawnInfo),	
-			MapProcName = map_manager:make_map_process_name(LineId,MapId),
+			MapProcName = base_map_manager_server:make_map_process_name(LineId,MapId),
 			NpcInfoDB = npc_op:make_npcinfo_db_name(MapProcName),
 			case npc_manager:get_npcinfo(NpcInfoDB,NpcId) of
 				undefined->

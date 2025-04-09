@@ -420,7 +420,7 @@ get_instance_id(MapProcName)->
 		InstanceId->
 			instance_pos_db:unreg_instance_pos_to_mnesia(InstanceId),
 			npc_manager:remove_all_npc(npc_manager:make_npc_manager_proc(MapProcName)),
-			map_manager:stop_instance(node(),MapProcName),
+			base_map_manager_server:stop_instance(node(),MapProcName),
 			instanceid_generator:safe_turnback_proc(MapProcName)
 	end,
 	{stop,normal,ProcState};

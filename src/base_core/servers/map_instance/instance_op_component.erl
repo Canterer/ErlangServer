@@ -20,11 +20,13 @@
 -include("instance_define.hrl").
 -include("map_def.hrl").
 
+% 角色进入地图
 instance_into_world(MapId,LineId,RoleInfo)->
 	%% 直接添加发送消息，改变位置消息
 	Position =  get_pos_from_roleinfo(RoleInfo),
 	IsInInstance = instance_op:is_in_instance(),
-	IsInInstance = false,
+	?ZSS("IsInInstance:~p",[IsInInstance]),
+	IsInInstance = true,
 	case IsInInstance of
 		false->		
 			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(base_map_info_db:get_map_info(MapId)))of
@@ -60,6 +62,7 @@ instance_into_world(MapId,LineId,RoleInfo)->
 					end	
 			end;
 		true->
+			% 内部触发 base_map_processor_server:join_instance 角色加入地图
 			instance_op:on_line_by_instance(MapId,LineId,get(map_info))	
 	end.
 
@@ -117,6 +120,7 @@ on_change_map(_NewMapId,_LineId,NewMapProcName)->
 	instance_op:on_change_map(NewMapProcName),
 	%%这个操作可能会导致玩家进程状态变化,由map_complate重新进入地图的时候,再设置玩家进程状态
 	% role_sitdown_op:hook_on_action_sync_interrupt(base_timer_server:get_correct_now(),leave_map).	
+	apply_component(role_sitdown_op,hook_on_action_sync_interrupt,[base_timer_server:get_correct_now(),leave_map]).	
 
 leave_map(RoleInfo,MapInfo)->
 	set_move_timer(0),
