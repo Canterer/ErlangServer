@@ -26,10 +26,9 @@ instance_into_world(MapId,LineId,RoleInfo)->
 	Position =  get_pos_from_roleinfo(RoleInfo),
 	IsInInstance = instance_op:is_in_instance(),
 	?ZSS("IsInInstance:~p",[IsInInstance]),
-	IsInInstance = true,
 	case IsInInstance of
 		false->		
-			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(base_map_info_db:get_map_info(MapId)))of
+			case ?CHECK_INSTANCE_MAP(base_map_info_db:get_is_instance(base_map_info_db:get_map_info(MapId))) of
 				true->			%%没在副本,但是在副本地图,数据存储有错误
 %% 					{RespawnMapId,Pos} = mapop:get_respawn_pos(base_map_db_util:make_db_name(?DEFAULT_MAP)),
                     %%目前没有../maps，暂时将此时复活点放在{300,{175,175}}
@@ -41,7 +40,7 @@ instance_into_world(MapId,LineId,RoleInfo)->
 								end,
 					transport(RoleInfo, get(map_info),LineId,RespawnMapId,Pos);
 				_->				%%未在副本地图
-					case server_travels_util:is_share_maps(MapId) of
+					case apply_component(server_travels_component,is_share_maps,[MapId],false) of
 						true->				%%玩家在跨服地图,传送到跨服地图
 							transport(RoleInfo, get(map_info),LineId,MapId,Position);
 						_->
@@ -124,8 +123,10 @@ on_change_map(_NewMapId,_LineId,NewMapProcName)->
 
 leave_map(RoleInfo,MapInfo)->
 	set_move_timer(0),
-	buffer_op:stop_mprecover(),
-	buffer_op:stop_hprecover(),
+	% buffer_op:stop_mprecover(),
+	apply_component(buffer_op,stop_mprecover,[]),
+	% buffer_op:stop_hprecover(),
+	apply_component(buffer_op,stop_hprecover,[]),
 	creature_op:leave_map(RoleInfo, MapInfo),
 	object_update:send_pending_update().
 
@@ -148,7 +149,8 @@ change_map_in_same_node(MapInfo,NewNode,NewMapProcName,NewMapId,LineId,X,Y) ->
 	update_role_info(get(roleid), get(creature_info)),
 	%%node未改变,需要更新Line,MapId
 	role_pos_util:update_role_line_map(get(roleid),LineId,NewMapId),
-	NpcInfoDB = npc_op:make_npcinfo_db_name(NewMapProcName),
+	% NpcInfoDB = npc_op:make_npcinfo_db_name(NewMapProcName),
+	NpcInfoDB = apply_component(npc_op,make_npcinfo_db_name,[NewMapProcName]),
 	put(npcinfo_db,NpcInfoDB),
 	Map_db = base_map_db_util:make_db_name(NewMapId),
 	put(map_db,Map_db),			
@@ -170,11 +172,11 @@ change_map_in_other_node_begin(MapInfo, NewNode, NewMapProcName, NewMapId, LineI
 	Gs_New_Map_info1 = set_node_to_mapinfo(Gs_New_Map_info, NewNode),
 	Gs_New_Map_info2 = set_mapid_to_mapinfo(Gs_New_Map_info1, NewMapId),
 	Gs_New_Map_info3 = set_lineid_to_mapinfo(Gs_New_Map_info2,LineId),
-	role_server_travel:hook_on_trans_map_by_node(Gs_New_Map_info3),
+	apply_component(role_server_travel,hook_on_trans_map_by_node,[Gs_New_Map_info3]),
 	RoleOpCopy = apply_component(role_op_copy_component,export_for_copy,[]),
 	case base_role_manager:start_copy_role(Gs_New_Map_info3, RoleInfo, get(gate_info),X,Y,RoleOpCopy) of
 		error->
-			role_server_travel:hook_on_trans_map_faild(),
+			apply_component(role_server_travel,hook_on_trans_map_faild,[]),
 			Message = role_packet:encode_map_change_failed_s2c(?ERRNO_JOIN_MAP_ERROR_MAPID),
 			% send_data_to_gate(Message),	
 			apply_component(send_to_gate_component,send_data_to_gate,[Message]),					

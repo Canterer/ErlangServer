@@ -39,10 +39,10 @@
 
 %%if is in share_node,regest the instance to every server,for player to find 
 reg_instance_pos_to_mnesia(Instanceid,Creation,StartTime,CanJoin,Node,Proc,MapId,Protoid,Members)->
-	server_travels_util:cast_for_all_server_with_self_if_share_node(?MODULE,reg_instance_pos_to_db,[Instanceid,Creation,StartTime,CanJoin,Node,Proc,MapId,Protoid,Members]).
+	apply_component(server_travels_component,cast_for_all_server_with_self_if_share_node,[?MODULE,reg_instance_pos_to_db,[Instanceid,Creation,StartTime,CanJoin,Node,Proc,MapId,Protoid,Members]]).
 
 unreg_instance_pos_to_mnesia(Instanceid)->
-	server_travels_util:cast_for_all_server_with_self_if_share_node(?MODULE,unreg_instance_pos_from_db,[Instanceid]).
+	apply_component(server_travels_component,cast_for_all_server_with_self_if_share_node,[?MODULE,unreg_instance_pos_from_db,[Instanceid]]).
 
 get_instance_pos_from_mnesia(Instanceid)->
 	role_server_travel:safe_do_in_travels(?MODULE,get_instance_pos_from_db,[Instanceid]).

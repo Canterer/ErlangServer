@@ -1,8 +1,21 @@
--module(server_travels_util).
+%% Description: 跨服组件
+-module(server_travels_component).
 
--compile(export_all).
+-export([
+	handle_event/4,
+	is_share_server/0,
+	is_has_share_map/0,
+	is_share_maps/1,
+	is_share_map_node/1,
+	get_serverid_by_roleid/1,
+	cast_for_all_server_with_self_if_share_node/3
+]).
 
+-include("base_component_shared.hrl").
 -include("common_define.hrl").
+
+handle_event(Event, EventContent, StateName, StateData) ->
+	unhandle.
 
 is_share_server()->
 	base_env_ets:get(share_map_server,0)=:=1.
@@ -30,9 +43,11 @@ get_serverid_by_roleid(RoleId)->
 cast_for_all_server(Module,Function,Args)->
 	case is_share_server() of
 		true->
-			map_travel_op:multicast_all_in_travel(Module,Function,Args);
+			% map_travel_op:multicast_all_in_travel(Module,Function,Args);
+			apply_component(map_travel_op,multicast_all_in_travel,[Module,Function,Args]);
 		_->	
-			case map_travel_op:multicast_all_not_in_travel(Module,Function,Args) of
+			case apply_component(map_travel_op,multicast_all_not_in_travel,[Module,Function,Args]) of
+			% case map_travel_op:multicast_all_not_in_travel(Module,Function,Args) of
 				false->
 					erlang:apply(Module, Function, Args);
 				_->
@@ -45,7 +60,8 @@ cast_for_all_server_with_self_if_share_node(Module,Function,Args)->
 	erlang:apply(Module, Function, Args),
 	case is_share_server() of
 		true->
-			map_travel_op:multicast_all_in_travel(Module,Function,Args);
+			% map_travel_op:multicast_all_in_travel(Module,Function,Args);
+			apply_component(map_travel_op,multicast_all_in_travel,[Module,Function,Args]);
 		_->
 			nothing
 	end.

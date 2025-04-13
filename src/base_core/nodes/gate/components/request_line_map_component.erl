@@ -144,7 +144,7 @@ start_game_after_line_fixed(LineId)->
 	GateProc = self(),%%get(procname),
 	case base_line_manager_server:get_map_name(LineId, MapId) of
 		{ok,{MapNodeTmp,MapProcNameTmp}}->
-			case server_travels_util:is_share_map_node(MapNodeTmp) of
+			case apply_component(server_travels_component,is_share_map_node,[MapNodeTmp], false) of
 				true->			%%玩家在跨服地图上,由于到从本地数据库中加载玩家数据,所以先在本地节点启动,之后再转移过去
 					[MapNode|_] = base_line_manager_server:get_map_nodes(),
 					MapProcName = undefined;

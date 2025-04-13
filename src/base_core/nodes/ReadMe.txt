@@ -113,6 +113,18 @@ base_map_info_db
 	初始化时通过db_operater_behaviour:init_ets(map_info, ?MAP_INFO_ETS, #map_info.mapid)通过数据库读取至表
 base_map_db_util
 	base_map_processor_server初始化时使用base_map_db_util:load_map_file从文件中读取内容写入ets中
+
+
+base_map_processor_server主要管理两种行为  
+	副本行为：
+		join_instance、leave_instance、destroy_instance
+		instance_pos_db用于管理 副本的状态数据 其中Members为join的RoleId
+	Grid：
+		地图分格(八分树) 记录每个Grid格子里的CreatureId(NPC和玩家)
+
+role_pos_db 记录所有在线玩家的数据
+creature_op 统计所有生物数据  角色、NPC、Pet
+gm_role_info、gm_npc_info、gm_pet_info 分别为role_struct.hrl、npc_struct.hrl、pet_struct.hrl
 	
 	
 xxx_db.erl 用于管理数据
@@ -153,7 +165,6 @@ base_role_app
 base_role_processor:init(start_one_role)
 	base_role_op:init()//初始化
 
-
 base_map_processor_server:join_instance 为角色进入地图的入口
 
 地图数据
@@ -171,6 +182,7 @@ Instanceid为0即为普通地图 否则为副本地图
 -define(INSTANCE_TYPE_GUILDBATTLE,8).							%%国王争夺战
 -define(INSTANCE_TYPE_JSZD,9).									%%晶石争夺战
 -define(INSTANCE_TYPE_LOOP_INSTANCE,10).						%%组队多层副本
+
 
 role_packet 
 

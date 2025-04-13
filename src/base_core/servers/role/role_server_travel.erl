@@ -16,7 +16,7 @@ hook_on_chat_in_view()->
 
 hook_on_trans_map_by_node(NewMapinfo)->
 	NewMapId = get_mapid_from_mapinfo(NewMapinfo),
-	case server_travels_util:is_share_maps(NewMapId) of
+	case apply_component(server_travels_component,is_share_maps,[NewMapId],false) of
 		true ->
 			on_trans_server(NewMapinfo);
 		_->
@@ -33,7 +33,7 @@ hook_on_trans_map_faild()->
 	LineId = get_lineid_from_mapinfo(get(map_info)), 
 	Node = get_node_from_mapinfo(get(map_info)), 
 	role_pos_db:update_role_line_map_node(get(roleid),LineId,MapId,Node),
-	case server_travels_util:is_share_maps(MapId) of 
+	case apply_component(server_travels_component,is_share_maps,[MapId],false) of 
 		true->
 			change_is_in_travel(true);
 		_->
@@ -81,7 +81,7 @@ get_my_source_node()->
 	get(role_source_node).
 
 is_same_source_role(RoleId)->
-	lists:member(server_travels_util:get_serverid_by_roleid(RoleId), get(source_servers_ids)).
+	lists:member(apply_component(server_travels_component,get_serverid_by_roleid,[RoleId],-1), get(source_servers_ids)).
 
 safe_do_in_travels(Module,Fun,Args)->
 	case get(is_in_travel) of
